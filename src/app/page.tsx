@@ -11,11 +11,12 @@ import {
   Divider,
   Stack,
   CircularProgress,
-  Paper,
+  Alert,
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { useAuth } from "@/lib/auth-context";
 
 const theme = createTheme({
   palette: {
@@ -41,36 +42,114 @@ const theme = createTheme({
 });
 
 export default function LandingPage() {
+  const {
+    user,
+    loading: authLoading,
+    error: authError,
+    signInWithGoogle,
+    logout,
+  } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [googleLoaded, setGoogleLoaded] = useState(false);
 
-  useEffect(() => {
-    // Load Google Sign-In script
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setGoogleLoaded(true);
-    document.head.appendChild(script);
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, []);
-
-  const handleGoogleSignIn = (response: any) => {
-    console.log("Google Sign-In response:", response);
-    setIsLoading(true);
-    // Handle the JWT token from Google Sign-In
-    // You can send this to your backend for verification
+  // Handle Google Sign-In
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("Sign-in error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // Handle guest access
   const handleGuestAccess = () => {
     setIsLoading(true);
-    // Handle guest access logic
+    // Implement guest access logic here
+    // You can redirect to a guest dashboard or set a guest session
+    console.log("Guest access initiated");
   };
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box
+          sx={{
+            minHeight: "100vh",
+            background: "linear-gradient(135deg, #B8360F 0%, #1A1A1A 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CircularProgress sx={{ color: "#E85D2A" }} />
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  // Show dashboard if user is logged in
+  if (user) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box
+          sx={{
+            minHeight: "100vh",
+            background: "linear-gradient(135deg, #B8360F 0%, #1A1A1A 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            py: 4,
+          }}
+        >
+          <Container maxWidth="sm">
+            <Card
+              sx={{
+                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                borderRadius: 3,
+              }}
+            >
+              <CardContent sx={{ p: 4 }}>
+                <Stack spacing={3} alignItems="center">
+                  <Typography variant="h5" sx={{ mb: 2 }}>
+                    Welcome, {user.displayName || user.email}!
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    You are successfully logged in with Firebase.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    onClick={logout}
+                    sx={{
+                      py: 1.5,
+                      fontWeight: 600,
+                      fontSize: "1rem",
+                      textTransform: "none",
+                      borderRadius: 1.5,
+                      background:
+                        "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, #C93F1A 0%, #D94E23 100%)",
+                      },
+                    }}
+                  >
+                    Sign Out
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Container>
+        </Box>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -123,6 +202,9 @@ export default function LandingPage() {
             >
               <CardContent sx={{ p: 4 }}>
                 <Stack spacing={3}>
+                  {/* Error Alert */}
+                  {authError && <Alert severity="error">{authError}</Alert>}
+
                   {/* Welcome Text */}
                   <Box sx={{ textAlign: "center" }}>
                     <Typography
@@ -144,44 +226,20 @@ export default function LandingPage() {
                     </Typography>
                   </Box>
 
-                  {/* Google Sign-In Button Container */}
-                  {googleLoaded && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "center",
-                        py: 1,
-                      }}
-                    >
-                      <div
-                        id="g_id_onload"
-                        data-client_id={
-                          process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-                        }
-                        data-callback="handleGoogleSignIn"
-                      ></div>
-                      <div
-                        id="g_id_signin"
-                        data-type="standard"
-                        data-size="large"
-                        data-theme="outline"
-                        data-text="signin_with"
-                        data-shape="rectangular"
-                        data-logo_alignment="left"
-                      ></div>
-                    </Box>
-                  )}
-
-                  {/* Divider */}
-                  <Divider sx={{ my: 1 }}>OR</Divider>
-
-                  {/* Guest Access Button */}
+                  {/* Google Sign-In Button */}
                   <Button
                     variant="contained"
                     size="large"
                     fullWidth
-                    onClick={handleGuestAccess}
+                    onClick={handleGoogleSignIn}
                     disabled={isLoading}
+                    startIcon={
+                      isLoading ? (
+                        <CircularProgress size={20} color="inherit" />
+                      ) : (
+                        <GoogleIcon />
+                      )
+                    }
                     sx={{
                       py: 1.5,
                       fontWeight: 600,
@@ -198,13 +256,40 @@ export default function LandingPage() {
                         background: "rgba(217, 78, 35, 0.5)",
                       },
                     }}
-                    startIcon={
-                      isLoading ? (
-                        <CircularProgress size={20} color="inherit" />
-                      ) : undefined
-                    }
                   >
-                    {isLoading ? "Signing in..." : "Continue as Guest"}
+                    {isLoading ? "Signing in..." : "Sign in with Google"}
+                  </Button>
+
+                  {/* Divider */}
+                  <Divider sx={{ my: 1 }}>OR</Divider>
+
+                  {/* Guest Access Button */}
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    fullWidth
+                    onClick={handleGuestAccess}
+                    disabled={isLoading}
+                    sx={{
+                      py: 1.5,
+                      fontWeight: 600,
+                      fontSize: "1rem",
+                      textTransform: "none",
+                      borderRadius: 1.5,
+                      borderColor: "#E85D2A",
+                      color: "#E85D2A",
+                      "&:hover": {
+                        borderColor: "#D94E23",
+                        color: "#D94E23",
+                        backgroundColor: "rgba(217, 78, 35, 0.08)",
+                      },
+                      "&:disabled": {
+                        borderColor: "rgba(217, 78, 35, 0.5)",
+                        color: "rgba(217, 78, 35, 0.5)",
+                      },
+                    }}
+                  >
+                    Continue as Guest
                   </Button>
                 </Stack>
               </CardContent>
