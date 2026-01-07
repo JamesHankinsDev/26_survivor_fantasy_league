@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Survivor Fantasy League',
-  description: 'Compete with friends in the ultimate Survivor Fantasy League experience',
+  title: "Survivor Fantasy League",
+  description:
+    "Compete with friends in the ultimate Survivor Fantasy League experience",
 };
 
 export default function RootLayout({

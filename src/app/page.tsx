@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -12,21 +12,21 @@ import {
   Stack,
   CircularProgress,
   Paper,
-} from '@mui/material';
-import GoogleIcon from '@mui/icons-material/Google';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+} from "@mui/material";
+import GoogleIcon from "@mui/icons-material/Google";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#E85D2A', // Warm orange
+      main: "#E85D2A", // Warm orange
     },
     secondary: {
-      main: '#20B2AA', // Aqua/Teal accent
+      main: "#20B2AA", // Aqua/Teal accent
     },
     background: {
-      default: '#f5f5f5',
+      default: "#f5f5f5",
     },
   },
   typography: {
@@ -46,8 +46,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     // Load Google Sign-In script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
     script.onload = () => setGoogleLoaded(true);
@@ -61,7 +61,7 @@ export default function LandingPage() {
   }, []);
 
   const handleGoogleSignIn = (response: any) => {
-    console.log('Google Sign-In response:', response);
+    console.log("Google Sign-In response:", response);
     setIsLoading(true);
     // Handle the JWT token from Google Sign-In
     // You can send this to your backend for verification
@@ -77,26 +77,26 @@ export default function LandingPage() {
       <CssBaseline />
       <Box
         sx={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #B8360F 0%, #1A1A1A 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #B8360F 0%, #1A1A1A 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           py: 4,
         }}
       >
         <Container maxWidth="sm">
           <Stack spacing={4} alignItems="center">
             {/* Header Section */}
-            <Box sx={{ textAlign: 'center', color: 'white' }}>
+            <Box sx={{ textAlign: "center", color: "white" }}>
               <Typography
                 variant="h3"
                 component="h1"
                 sx={{
                   mb: 2,
-                  fontSize: { xs: '2.5rem', sm: '3rem' },
+                  fontSize: { xs: "2.5rem", sm: "3rem" },
                   fontWeight: 800,
-                  letterSpacing: '-0.5px',
+                  letterSpacing: "-0.5px",
                 }}
               >
                 Survivor Fantasy League
@@ -106,7 +106,7 @@ export default function LandingPage() {
                 sx={{
                   opacity: 0.9,
                   fontWeight: 300,
-                  letterSpacing: '0.3px',
+                  letterSpacing: "0.3px",
                 }}
               >
                 Compete with friends in the ultimate Survivor experience
@@ -116,20 +116,20 @@ export default function LandingPage() {
             {/* Main Card */}
             <Card
               sx={{
-                width: '100%',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                width: "100%",
+                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
                 borderRadius: 3,
               }}
             >
               <CardContent sx={{ p: 4 }}>
                 <Stack spacing={3}>
                   {/* Welcome Text */}
-                  <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{ textAlign: "center" }}>
                     <Typography
                       variant="h5"
                       sx={{
                         mb: 1,
-                        color: 'text.primary',
+                        color: "text.primary",
                       }}
                     >
                       Welcome
@@ -137,7 +137,7 @@ export default function LandingPage() {
                     <Typography
                       variant="body1"
                       sx={{
-                        color: 'text.secondary',
+                        color: "text.secondary",
                       }}
                     >
                       Sign in with your Google account to get started
@@ -148,8 +148,8 @@ export default function LandingPage() {
                   {googleLoaded && (
                     <Box
                       sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
+                        display: "flex",
+                        justifyContent: "center",
                         py: 1,
                       }}
                     >
@@ -185,15 +185,17 @@ export default function LandingPage() {
                     sx={{
                       py: 1.5,
                       fontWeight: 600,
-                      fontSize: '1rem',
-                      textTransform: 'none',
+                      fontSize: "1rem",
+                      textTransform: "none",
                       borderRadius: 1.5,
-                      background: 'linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #C93F1A 0%, #D94E23 100%)',
+                      background:
+                        "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, #C93F1A 0%, #D94E23 100%)",
                       },
-                      '&:disabled': {
-                        background: 'rgba(217, 78, 35, 0.5)',
+                      "&:disabled": {
+                        background: "rgba(217, 78, 35, 0.5)",
                       },
                     }}
                     startIcon={
@@ -202,7 +204,7 @@ export default function LandingPage() {
                       ) : undefined
                     }
                   >
-                    {isLoading ? 'Signing in...' : 'Continue as Guest'}
+                    {isLoading ? "Signing in..." : "Continue as Guest"}
                   </Button>
                 </Stack>
               </CardContent>
@@ -212,8 +214,8 @@ export default function LandingPage() {
             <Typography
               variant="caption"
               sx={{
-                textAlign: 'center',
-                color: 'white',
+                textAlign: "center",
+                color: "white",
                 opacity: 0.8,
                 maxWidth: 400,
               }}

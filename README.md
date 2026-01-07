@@ -14,17 +14,19 @@ A Next.js React application for managing and competing in a Survivor Fantasy Lea
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm, yarn, pnpm, or bun
 
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Set up Google OAuth:
+
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project
    - Enable the Google+ API
