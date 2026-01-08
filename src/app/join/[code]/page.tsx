@@ -142,7 +142,7 @@ export default function JoinLeaguePage() {
         avatar: user.photoURL || "",
         tribeColor: "#20B2AA",
         points: 0,
-        joinedAt: serverTimestamp(),
+        joinedAt: new Date(),
         roster: [], // Will be populated during draft phase
       };
 
