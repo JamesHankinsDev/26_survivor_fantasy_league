@@ -14,6 +14,8 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
     <Box
       sx={{
         perspective: 1000,
+        cursor: "pointer",
+        height: "100%",
         "&:hover .flip-inner": { transform: "rotateY(180deg)" },
       }}
     >
@@ -22,7 +24,8 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
         sx={{
           position: "relative",
           width: "100%",
-          minHeight: 260,
+          height: "100%",
+          minHeight: 360,
           transformStyle: "preserve-3d",
           transition: "transform 0.6s",
         }}
@@ -41,13 +44,14 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
           {castaway.image && (
             <CardMedia
               component="img"
-              height="160"
+              height="280"
               image={castaway.image}
               alt={castaway.name}
+              sx={{ objectFit: "cover" }}
             />
           )}
-          <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          <CardContent sx={{ textAlign: "center" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
               {castaway.name}
             </Typography>
           </CardContent>
@@ -64,14 +68,15 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
             flexDirection: "column",
             justifyContent: "flex-start",
             p: 2,
+            backgroundColor: "#fafafa",
           }}
         >
-          <CardContent>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-              Stats
+          <CardContent sx={{ overflow: "auto", height: "100%" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "#1976d2" }}>
+              Previous Seasons
             </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {castaway.bio || "No stats yet — coming soon."}
+            <Typography variant="body2" sx={{ color: "text.secondary", lineHeight: 1.6 }}>
+              {castaway.bio || "No previous season history available."}
             </Typography>
           </CardContent>
         </Card>
