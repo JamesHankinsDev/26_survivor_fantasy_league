@@ -29,6 +29,8 @@ export default function AdminCastawaysPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+  const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const loadEliminations = async () => {
@@ -47,16 +49,29 @@ export default function AdminCastawaysPage() {
 
   const handleToggleEliminated = (castawayId: string) => {
     const newEliminated = new Set(eliminatedIds);
+    const newChanged = new Set(changedIds);
+    
     if (newEliminated.has(castawayId)) {
       newEliminated.delete(castawayId);
     } else {
       newEliminated.add(castawayId);
     }
+    
+    // Track which IDs have been changed for UI feedback
+    newChanged.add(castawayId);
+    
     setEliminatedIds(newEliminated);
+    setChangedIds(newChanged);
   };
 
   const handleSaveEliminations = async () => {
+    if (changedIds.size === 0) {
+      setError("No changes to save");
+      return;
+    }
+
     setSaving(true);
+    setError("");
     setSuccess("");
 
     try {
@@ -72,6 +87,12 @@ export default function AdminCastawaysPage() {
         (id) => !eliminatedIds.has(id)
       );
 
+      if (toAdd.length === 0 && toRemove.length === 0) {
+        setError("No changes detected");
+        setSaving(false);
+        return;
+      }
+
       // Save changes
       await Promise.all([
         ...toAdd.map((id) => saveEliminatedCastaway(CURRENT_SEASON.number, id)),
@@ -80,14 +101,24 @@ export default function AdminCastawaysPage() {
         ),
       ]);
 
+      // Reload the state to confirm changes
+      const updated = await loadEliminatedCastaways(CURRENT_SEASON.number);
+      setEliminatedIds(new Set(updated));
+      setChangedIds(new Set());
+
+      const message = [];
+      if (toAdd.length > 0) message.push(`Marked ${toAdd.length} as eliminated`);
+      if (toRemove.length > 0) message.push(`Un-eliminated ${toRemove.length}`);
+      
       setSuccess(
-        `Marked ${toAdd.length} castaway(ies) as eliminated and removed ${toRemove.length}. This will update all active leagues.`
+        `${message.join(" and ")}. All active leagues updated.`
       );
 
-      // Reset after 3 seconds
-      setTimeout(() => setSuccess(""), 3000);
+      // Keep success visible longer for confirmation
+      setTimeout(() => setSuccess(""), 4000);
     } catch (err) {
       console.error("Error saving eliminations:", err);
+      setError(err instanceof Error ? err.message : "Failed to save eliminations. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -115,6 +146,12 @@ export default function AdminCastawaysPage() {
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
           {success}
+        </Alert>
+      )}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
         </Alert>
       )}
 
@@ -226,21 +263,28 @@ export default function AdminCastawaysPage() {
         })}
       </Box>
 
-      <Box sx={{ display: "flex", gap: 2 }}>
+      <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
         <Button
           variant="contained"
           onClick={handleSaveEliminations}
-          disabled={saving || eliminatedIds.size === 0}
+          disabled={saving || changedIds.size === 0}
         >
           {saving ? (
             <CircularProgress size={24} />
+          ) : changedIds.size > 0 ? (
+            `Save Changes (${changedIds.size})`
           ) : (
-            `Save Eliminations (${eliminatedIds.size})`
+            `No Changes`
           )}
         </Button>
         <Button variant="outlined" onClick={() => router.back()}>
           Cancel
         </Button>
+        {changedIds.size > 0 && (
+          <Typography variant="body2" sx={{ color: "#E85D2A", fontWeight: "bold" }}>
+            {changedIds.size} change{changedIds.size !== 1 ? "s" : ""} pending
+          </Typography>
+        )}
       </Box>
     </Container>
   );
