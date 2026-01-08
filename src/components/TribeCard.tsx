@@ -12,13 +12,16 @@ import {
 } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { TribeMember, getMemberRank } from "@/types/league";
+import { Castaway } from "@/types/castaway";
 
 interface TribeCardProps {
   member: TribeMember;
   rank: number;
   isCurrentUser?: boolean;
   onEdit?: () => void;
+  onAddDrop?: () => void;
   allMembers: TribeMember[];
+  allCastaways?: Castaway[];
 }
 
 export default function TribeCard({
@@ -26,7 +29,9 @@ export default function TribeCard({
   rank,
   isCurrentUser,
   onEdit,
+  onAddDrop,
   allMembers,
+  allCastaways = [],
 }: TribeCardProps) {
   const getRankColor = (rankNum: number) => {
     if (rankNum === 1) return "#FFD700"; // Gold
@@ -141,24 +146,125 @@ export default function TribeCard({
             </Box>
           </Stack>
 
-          {/* Actions */}
-          {isCurrentUser && onEdit && (
-            <Button
-              onClick={onEdit}
-              variant="outlined"
-              size="small"
-              fullWidth
-              sx={{
-                color: "#E85D2A",
-                borderColor: "#E85D2A",
-                "&:hover": {
-                  bgcolor: "rgba(232, 93, 42, 0.05)",
-                  borderColor: "#D94E23",
-                },
-              }}
-            >
-              Edit Tribe Info
-            </Button>
+          {/* Roster */}
+          {member.roster && member.roster.length > 0 && (
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{ fontWeight: 600, color: "text.secondary", mb: 1, display: "block" }}
+              >
+                Roster ({member.roster.length})
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+                  gap: 1,
+                }}
+              >
+                {member.roster.map((entry) => {
+                  const castaway = allCastaways.find(
+                    (c) => c.id === entry.castawayId
+                  );
+                  const statusColor =
+                    entry.status === "eliminated"
+                      ? "#999"
+                      : entry.status === "dropped"
+                      ? "#E85D2A"
+                      : "#20B2AA";
+                  return (
+                    <Box
+                      key={entry.castawayId}
+                      sx={{
+                        p: 1,
+                        borderRadius: 1,
+                        border: `1px solid ${statusColor}`,
+                        bgcolor: `${statusColor}11`,
+                        textAlign: "center",
+                        opacity: entry.status === "eliminated" ? 0.6 : 1,
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontWeight: 500,
+                          fontSize: "0.75rem",
+                          display: "block",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {castaway?.name?.split(" ")[0] || "Unknown"}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: "0.65rem",
+                          color: statusColor,
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        {entry.accumulatedPoints} pts
+                      </Typography>
+                      {entry.status !== "active" && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontSize: "0.6rem",
+                            color: statusColor,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {entry.status}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
+
+          {isCurrentUser && (onEdit || onAddDrop) && (
+            <Stack direction="row" spacing={1}>
+              {onEdit && (
+                <Button
+                  onClick={onEdit}
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  sx={{
+                    color: "#E85D2A",
+                    borderColor: "#E85D2A",
+                    "&:hover": {
+                      bgcolor: "rgba(232, 93, 42, 0.05)",
+                      borderColor: "#D94E23",
+                    },
+                  }}
+                >
+                  Edit Tribe
+                </Button>
+              )}
+              {onAddDrop && member.roster && member.roster.length > 0 && (
+                <Button
+                  onClick={onAddDrop}
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  sx={{
+                    color: "#20B2AA",
+                    borderColor: "#20B2AA",
+                    "&:hover": {
+                      bgcolor: "rgba(32, 178, 170, 0.05)",
+                      borderColor: "#1A8A7F",
+                    },
+                  }}
+                >
+                  Add/Drop
+                </Button>
+              )}
+            </Stack>
           )}
         </Stack>
       </CardContent>

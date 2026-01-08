@@ -21,6 +21,7 @@ import { League, TribeMember, getMemberRank, RosterEntry } from "@/types/league"
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
 import { DraftTeamModal } from "@/components/DraftTeamModal";
+import { AddDropModal } from "@/components/AddDropModal";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CASTAWAYS from "@/data/castaways";
 
@@ -35,6 +36,7 @@ export default function LeagueDetailPage() {
   const [error, setError] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
+  const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Get current user's tribe member info
@@ -191,6 +193,66 @@ export default function LeagueDetailPage() {
     }
   };
 
+  const handleSubmitAddDrop = async (
+    dropId: string | null,
+    addId: string | null
+  ) => {
+    if (!league || !user || !currentUserTribe)
+      throw new Error("Missing league or user info");
+
+    setIsSaving(true);
+
+    try {
+      // Update roster with add/drop
+      const updatedRoster = currentUserTribe.roster?.map((entry) => {
+        // Mark dropped castaway
+        if (entry.castawayId === dropId) {
+          return {
+            ...entry,
+            status: "dropped" as const,
+            droppedWeek: 1, // TODO: Calculate actual week
+          };
+        }
+        return entry;
+      }) || [];
+
+      // Add new castaway if provided
+      if (addId) {
+        updatedRoster.push({
+          castawayId: addId,
+          status: "active",
+          addedWeek: 1, // TODO: Calculate actual week
+          accumulatedPoints: 0,
+        });
+      }
+
+      // Update member details with new roster
+      const updatedMembers = league.memberDetails.map((member) =>
+        member.userId === user.uid
+          ? {
+              ...member,
+              roster: updatedRoster,
+              updatedAt: new Date(),
+            }
+          : member
+      );
+
+      const leagueRef = doc(db, "leagues", league.id);
+      await updateDoc(leagueRef, {
+        memberDetails: updatedMembers,
+        updatedAt: new Date(),
+      });
+
+      setAddDropDialogOpen(false);
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : "Failed to process add/drop"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -288,7 +350,9 @@ export default function LeagueDetailPage() {
               rank={getMemberRank(sortedMembers, user!.uid)}
               isCurrentUser
               onEdit={() => setEditDialogOpen(true)}
+              onAddDrop={() => setAddDropDialogOpen(true)}
               allMembers={sortedMembers}
+              allCastaways={CASTAWAYS}
             />
           )}
         </Box>
@@ -344,6 +408,20 @@ export default function LeagueDetailPage() {
         allCastaways={CASTAWAYS}
         eliminatedCastawayIds={[]} // TODO: Get eliminated castaways from league state
       />
+
+      {/* Add/Drop Modal */}
+      {currentUserTribe && (
+        <AddDropModal
+          open={addDropDialogOpen}
+          onClose={() => setAddDropDialogOpen(false)}
+          onSubmit={handleSubmitAddDrop}
+          tribeMember={currentUserTribe}
+          allCastaways={CASTAWAYS}
+          eliminatedCastawayIds={[]} // TODO: Get eliminated castaways from league state
+          seasonStartDate={new Date("2025-01-01")} // TODO: Get from league/season
+          seasonPremierDate={new Date("2026-02-25")} // CURRENT_SEASON.premiereDate
+        />
+      )}
     </Container>
   );
 }
