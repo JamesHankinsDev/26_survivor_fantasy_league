@@ -24,6 +24,8 @@ import { DraftTeamModal } from "@/components/DraftTeamModal";
 import { AddDropModal } from "@/components/AddDropModal";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CASTAWAYS from "@/data/castaways";
+import { CURRENT_SEASON } from "@/data/seasons";
+import { loadEliminatedCastaways } from "@/utils/scoring";
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
@@ -38,6 +40,7 @@ export default function LeagueDetailPage() {
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>([]);
 
   // Get current user's tribe member info
   const currentUserTribe = league?.memberDetails?.find(
@@ -49,6 +52,18 @@ export default function LeagueDetailPage() {
       router.push("/");
       return;
     }
+
+    // Load eliminated castaways
+    const loadEliminated = async () => {
+      try {
+        const eliminated = await loadEliminatedCastaways(CURRENT_SEASON.number);
+        setEliminatedCastawayIds(eliminated);
+      } catch (err) {
+        console.error("Failed to load eliminated castaways:", err);
+      }
+    };
+
+    loadEliminated();
 
     if (!user || !leagueId) return;
 
@@ -406,7 +421,7 @@ export default function LeagueDetailPage() {
         onClose={() => setDraftDialogOpen(false)}
         onSubmit={handleSubmitDraft}
         allCastaways={CASTAWAYS}
-        eliminatedCastawayIds={[]} // TODO: Get eliminated castaways from league state
+        eliminatedCastawayIds={eliminatedCastawayIds}
       />
 
       {/* Add/Drop Modal */}
@@ -417,9 +432,9 @@ export default function LeagueDetailPage() {
           onSubmit={handleSubmitAddDrop}
           tribeMember={currentUserTribe}
           allCastaways={CASTAWAYS}
-          eliminatedCastawayIds={[]} // TODO: Get eliminated castaways from league state
-          seasonStartDate={new Date("2025-01-01")} // TODO: Get from league/season
-          seasonPremierDate={new Date("2026-02-25")} // CURRENT_SEASON.premiereDate
+          eliminatedCastawayIds={eliminatedCastawayIds}
+          seasonStartDate={new Date("2025-01-01")}
+          seasonPremierDate={new Date(CURRENT_SEASON.premiereDate)}
         />
       )}
     </Container>
