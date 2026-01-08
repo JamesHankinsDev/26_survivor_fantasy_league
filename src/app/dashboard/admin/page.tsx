@@ -8,11 +8,16 @@ import {
   Button,
   Alert,
   Stack,
+  Card,
+  CardContent,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import ScoreboardIcon from "@mui/icons-material/Scoreboard";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CreateLeagueDialog from "@/components/CreateLeagueDialog";
 import LeagueList from "@/components/LeagueList";
 import { League } from "@/types/league";
+import Link from "next/link";
 
 export default function AdminPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -82,7 +87,70 @@ export default function AdminPage() {
           </Alert>
         </Box>
 
-        {/* League List */}
+        {/* Admin Tools */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              md: "repeat(3, 1fr)",
+            },
+            gap: 2,
+            mb: 4,
+          }}
+        >
+          <Card sx={{ height: "100%", "&:hover": { boxShadow: 3 } }}>
+            <CardContent sx={{ textAlign: "center", py: 3 }}>
+              <ScoreboardIcon
+                sx={{ fontSize: 40, color: "#E85D2A", mb: 1 }}
+              />
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                Episode Scoring
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", mb: 2 }}
+              >
+                Enter castaway points for each episode
+              </Typography>
+              <Button
+                component={Link}
+                href="/dashboard/admin/scores"
+                variant="outlined"
+                fullWidth
+              >
+                Manage Scores
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ height: "100%", "&:hover": { boxShadow: 3 } }}>
+            <CardContent sx={{ textAlign: "center", py: 3 }}>
+              <EmojiEventsIcon
+                sx={{ fontSize: 40, color: "#20B2AA", mb: 1 }}
+              />
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                Eliminations
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", mb: 2 }}
+              >
+                Mark castaways as eliminated from the game
+              </Typography>
+              <Button
+                component={Link}
+                href="/dashboard/admin/eliminations"
+                variant="outlined"
+                fullWidth
+              >
+                Manage Eliminations
+              </Button>
+            </CardContent>
+          </Card>
+        </Box>
+
         <LeagueList refreshTrigger={refreshTrigger} />
       </Container>
 
