@@ -14,7 +14,7 @@ export interface Season {
 }
 
 // Current/upcoming season for new leagues
-const CURRENT_SEASON: Season = {
+export const CURRENT_SEASON: Season = {
   number: 50,
   name: 'Survivor 50',
   theme: 'In the Hands of the Fans',

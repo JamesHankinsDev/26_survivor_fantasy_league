@@ -1,13 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardMedia, Typography, Box } from "@mui/material";
-
-export interface Castaway {
-  id: string;
-  name: string;
-  image?: string;
-  bio?: string;
-  stats?: Record<string, any>;
-}
+import { Castaway } from "@/types/castaway";
 
 export default function CastawayCard({ castaway }: { castaway: Castaway }) {
   return (

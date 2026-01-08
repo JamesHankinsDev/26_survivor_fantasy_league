@@ -142,6 +142,8 @@ export default function JoinLeaguePage() {
         tribeColor: "#20B2AA",
         points: 0,
         joinedAt: new Date(),
+        roster: [], // Will be populated during draft phase
+        draftedAt: undefined,
       };
 
       await updateDoc(leagueRef, {

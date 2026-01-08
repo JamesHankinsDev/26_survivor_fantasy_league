@@ -1,3 +1,12 @@
+// Roster entry for a castaway on a tribe
+export interface RosterEntry {
+  castawayId: string;
+  status: "active" | "dropped" | "eliminated"; // active: on team, dropped: manually removed, eliminated: voted out
+  addedWeek: number; // Week castaway was added (0 = draft, 1+ = add/drop week)
+  droppedWeek?: number; // Week castaway was dropped (undefined if still active or eliminated)
+  accumulatedPoints: number; // Total points earned while on this team
+}
+
 // Member/Tribe data
 export interface TribeMember {
   userId: string;
@@ -6,6 +15,8 @@ export interface TribeMember {
   tribeColor: string; // Hex color for tribe
   points: number;
   joinedAt: Date | any;
+  roster: RosterEntry[]; // Roster of 5 (or 4 if dropped) castaways
+  draftedAt?: Date | any; // When the tribe drafted their initial roster
 }
 
 // League data model and types
@@ -31,6 +42,32 @@ export interface LeagueInvite {
   ownerName: string;
   joinCode: string;
   maxPlayers: number;
+}
+
+// Scoring: Weekly episode scores for castaways
+export interface EpisodeScores {
+  id: string; // e.g., "episode-1"
+  seasonNumber: number;
+  episodeNumber: number;
+  airDate: Date | any;
+  scores: Record<string, number>; // { castawayId: points }
+  createdAt: Date | any;
+  updatedAt: Date | any;
+}
+
+// Scoring: Accumulated seasonal stats per castaway
+export interface CastawaySeasonStats {
+  castawayId: string;
+  seasonNumber: number;
+  totalPoints: number;
+  pointBreakdown: {
+    aliveBonus: number;
+    immunityWins: number;
+    juryVotes: number;
+    placementBonus: number;
+    other: number;
+  };
+  lastUpdated: Date | any;
 }
 
 // Helper to get member rank in league (1st place, 2nd place, etc)

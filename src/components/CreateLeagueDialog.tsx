@@ -77,6 +77,8 @@ export default function CreateLeagueDialog({
             tribeColor: "#20B2AA",
             points: 0,
             joinedAt: new Date(),
+            roster: [], // Will be populated during draft phase
+            draftedAt: undefined,
           },
         ],
         createdAt: new Date(),
@@ -100,6 +102,8 @@ export default function CreateLeagueDialog({
           tribeColor: "#20B2AA",
           points: 0,
           joinedAt: serverTimestamp(),
+          roster: [],
+          draftedAt: undefined,
         });
       }
 

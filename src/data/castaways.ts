@@ -1,4 +1,4 @@
-import type { Castaway } from "@/components/CastawayCard";
+import type { Castaway } from "@/types/castaway";
 
 // Official Season 50 roster: "In the Hands of the Fans"
 // 24 returning players voted in by fans across all previous seasons.
@@ -9,6 +9,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-jenna-1010x1014.jpg',
     bio: 'Previously competed on: Season 1 (Survivor: Borneo), Season 8 (Survivor: All-Stars).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'colby-donaldson',
@@ -16,6 +17,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-colby-donaldson-995x1014.jpg',
     bio: 'Previously competed on: Season 2 (Survivor: The Australian Outback), Season 8 (Survivor: All-Stars), Season 20 (Survivor: Heroes vs. Villains).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'stephenie-lagrossa',
@@ -23,6 +25,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-stephanie-676x1014.jpg',
     bio: 'Previously competed on: Season 10 (Survivor: Palau), Season 11 (Survivor: Guatemala), Season 20 (Survivor: Heroes vs. Villains).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'cirie-fields',
@@ -30,6 +33,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-cirie-fields-676x1014.jpg',
     bio: 'Previously competed on: Season 12 (Survivor: Panama), Season 16 (Survivor: Micronesia), Season 20 (Survivor: Heroes vs. Villains), Season 34 (Survivor: Game Changers).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'ozzy-lusth',
@@ -37,6 +41,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-ozzy-724x1014.jpg',
     bio: 'Previously competed on: Season 13 (Survivor: Cook Islands), Season 16 (Survivor: Micronesia), Season 23 (Survivor: South Pacific), Season 34 (Survivor: Game Changers).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'coach-benjamin-wade',
@@ -44,6 +49,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-coach-benjamin-wade-676x1014.jpg',
     bio: 'Previously competed on: Season 18 (Survivor: Tocantins), Season 20 (Survivor: Heroes vs. Villains), Season 23 (Survivor: South Pacific).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'aubry-bracco',
@@ -51,6 +57,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-aubry-bracco-665x1014.jpg',
     bio: 'Previously competed on: Season 32 (Survivor: Kaôh Rōng), Season 34 (Survivor: Game Changers), Season 38 (Survivor: Edge of Extinction).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'chrissy-hofbeck',
@@ -58,6 +65,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-chrissy-hofbeck-724x1014.jpg',
     bio: 'Previously competed on: Season 35 (Survivor: Heroes vs. Healers vs. Hustlers).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'christian-hubicki',
@@ -65,6 +73,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-christian-724x1014.jpg',
     bio: 'Previously competed on: Season 37 (Survivor: David vs. Goliath).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'angelina-keeley',
@@ -72,6 +81,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-angelina-keeley-724x1014.jpg',
     bio: 'Previously competed on: Season 37 (Survivor: David vs. Goliath).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'mike-white',
@@ -79,6 +89,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-mike-white-676x1014.jpg',
     bio: 'Previously competed on: Season 37 (Survivor: David vs. Goliath).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'rick-devens',
@@ -86,6 +97,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-rick-devens-823x1014.jpg',
     bio: 'Previously competed on: Season 38 (Survivor: Edge of Extinction).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'jonathan-young',
@@ -93,6 +105,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-jonathan-young-724x1014.jpg',
     bio: 'Previously competed on: Season 42 (Survivor 42).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'dee-valladares',
@@ -100,6 +113,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-dee-valladares-811x1014.jpg',
     bio: 'Previously competed on: Season 45 (Survivor 45) — Winner.',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'emily-flippen',
@@ -107,6 +121,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-emily-flippen-812x1014.jpg',
     bio: 'Previously competed on: Season 45 (Survivor 45).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'q-burdette',
@@ -114,6 +129,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-q-burdette-811x1014.jpg',
     bio: 'Previously competed on: Season 46 (Survivor 46).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'tiffany-ervin',
@@ -121,6 +137,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-tiffany-ervin-811x1014.jpg',
     bio: 'Previously competed on: Season 46 (Survivor 46).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'charlie-davis',
@@ -128,6 +145,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-charlie-davis-811x1014.jpg',
     bio: 'Previously competed on: Season 46 (Survivor 46).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'genevieve-mushaluk',
@@ -135,6 +153,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-genevieve-724x1014.jpg',
     bio: 'Previously competed on: Season 47 (Survivor 47).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'kamilla-karthigesu',
@@ -142,6 +161,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-kamilla-676x1014.jpg',
     bio: 'Previously competed on: Season 48 (Survivor 48).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'kyle-fraser',
@@ -149,6 +169,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-kyle-fraser-676x1014.jpg',
     bio: 'Previously competed on: Season 48 (Survivor 48) — Winner.',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'joseph-hunter',
@@ -156,6 +177,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/05/survivor-50-cast-joe-hunter-724x1014.jpg',
     bio: 'Previously competed on: Season 48 (Survivor 48).',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'savannah-louie',
@@ -163,6 +185,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/12/savannah-louie-survivor-49-724x1014.jpg',
     bio: 'Previously competed on: Season 49 (Survivor 49) — Winner.',
     stats: {},
+    seasonNumber: 50,
   },
   {
     id: 'rizo-velovic',
@@ -170,6 +193,7 @@ const CASTAWAYS: Castaway[] = [
     image: 'https://www.tvinsider.com/wp-content/uploads/2025/12/survivor-49-rizo-velovic-724x1014.jpg',
     bio: 'Previously competed on: Season 49 (Survivor 49).',
     stats: {},
+    seasonNumber: 50,
   },
 ];
 
