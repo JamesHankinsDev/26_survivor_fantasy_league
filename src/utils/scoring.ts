@@ -4,6 +4,8 @@
  */
 
 import { RosterEntry, TribeMember } from "@/types/league";
+import { db } from "@/lib/firebase";
+import { collection, query, getDocs, setDoc, deleteDoc, doc } from "firebase/firestore";
 
 /**
  * Calculate total points for a tribe member based on current roster and episode scores
@@ -164,4 +166,59 @@ export const formatPointsBreakdown = (
     .filter(([_, value]) => value > 0)
     .map(([key, value]) => `${key}: ${value}`)
     .join(" + ");
+};
+
+/**
+ * Load eliminated castaways for a season from Firestore
+ */
+export const loadEliminatedCastaways = async (
+  seasonNumber: number
+): Promise<string[]> => {
+  try {
+    const collectionRef = collection(
+      db,
+      `seasons/${seasonNumber}/eliminated`
+    );
+    const q = query(collectionRef);
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => doc.id);
+  } catch (err) {
+    console.error("Error loading eliminated castaways:", err);
+    return [];
+  }
+};
+
+/**
+ * Save a castaway as eliminated for a season
+ */
+export const saveEliminatedCastaway = async (
+  seasonNumber: number,
+  castawayId: string
+): Promise<void> => {
+  try {
+    const docRef = doc(db, `seasons/${seasonNumber}/eliminated/${castawayId}`);
+    await setDoc(docRef, {
+      castawayId,
+      eliminatedAt: new Date(),
+    });
+  } catch (err) {
+    console.error("Error saving eliminated castaway:", err);
+    throw err;
+  }
+};
+
+/**
+ * Remove a castaway from eliminated list
+ */
+export const removeEliminatedCastaway = async (
+  seasonNumber: number,
+  castawayId: string
+): Promise<void> => {
+  try {
+    const docRef = doc(db, `seasons/${seasonNumber}/eliminated/${castawayId}`);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.error("Error removing eliminated castaway:", err);
+    throw err;
+  }
 };

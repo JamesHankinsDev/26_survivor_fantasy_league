@@ -16,6 +16,11 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import CASTAWAYS from "@/data/castaways";
 import { CURRENT_SEASON } from "@/data/seasons";
+import {
+  loadEliminatedCastaways,
+  saveEliminatedCastaway,
+  removeEliminatedCastaway,
+} from "@/utils/scoring";
 
 export default function AdminCastawaysPage() {
   const { user } = useAuth();
@@ -26,9 +31,18 @@ export default function AdminCastawaysPage() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    // TODO: Load eliminated castaways from Firestore
-    // For now, initialize as empty
-    setLoading(false);
+    const loadEliminations = async () => {
+      try {
+        const eliminated = await loadEliminatedCastaways(CURRENT_SEASON.number);
+        setEliminatedIds(new Set(eliminated));
+      } catch (err) {
+        console.error("Failed to load eliminations:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEliminations();
   }, []);
 
   const handleToggleEliminated = (castawayId: string) => {
@@ -46,12 +60,28 @@ export default function AdminCastawaysPage() {
     setSuccess("");
 
     try {
-      // TODO: Save eliminated castaways to Firestore at:
-      // seasons/{seasonNumber}/eliminated/{castawayId}
-      // This will cascade to all leagues
+      // Get previously loaded eliminatedIds
+      const previouslyLoaded = await loadEliminatedCastaways(CURRENT_SEASON.number);
+      const previousSet = new Set(previouslyLoaded);
+
+      // Find new eliminations and removals
+      const toAdd = Array.from(eliminatedIds).filter(
+        (id) => !previousSet.has(id)
+      );
+      const toRemove = Array.from(previousSet).filter(
+        (id) => !eliminatedIds.has(id)
+      );
+
+      // Save changes
+      await Promise.all([
+        ...toAdd.map((id) => saveEliminatedCastaway(CURRENT_SEASON.number, id)),
+        ...toRemove.map((id) =>
+          removeEliminatedCastaway(CURRENT_SEASON.number, id)
+        ),
+      ]);
 
       setSuccess(
-        `Marked ${eliminatedIds.size} castaway(ies) as eliminated. This will update all active leagues.`
+        `Marked ${toAdd.length} castaway(ies) as eliminated and removed ${toRemove.length}. This will update all active leagues.`
       );
 
       // Reset after 3 seconds
