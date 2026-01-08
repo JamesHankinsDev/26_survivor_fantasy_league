@@ -1,0 +1,276 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Container,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  CircularProgress,
+  Alert,
+  Card,
+  CardContent,
+  Divider,
+} from "@mui/material";
+import { useRouter, useParams } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { League, TribeMember, getMemberRank } from "@/types/league";
+import TribeCard from "@/components/TribeCard";
+import EditTribeDialog from "@/components/EditTribeDialog";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+
+export default function LeagueDetailPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const params = useParams();
+  const leagueId = params.id as string;
+
+  const [league, setLeague] = useState<League | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Get current user's tribe member info
+  const currentUserTribe = league?.memberDetails?.find(
+    (m) => m.userId === user?.uid
+  );
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/");
+      return;
+    }
+
+    if (!user || !leagueId) return;
+
+    try {
+      // Listen for league details
+      const leagueRef = doc(db, "leagues", leagueId);
+      const unsubscribe = onSnapshot(
+        leagueRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const raw = docSnap.data() as any;
+
+            // Normalize missing fields for older documents
+            const normalized: League = {
+              id: docSnap.id,
+              name: raw.name,
+              ownerId: raw.ownerId,
+              ownerName: raw.ownerName,
+              ownerEmail: raw.ownerEmail,
+              maxPlayers: raw.maxPlayers,
+              currentPlayers:
+                raw.currentPlayers ?? raw.memberDetails?.length ?? raw.members?.length ?? 0,
+              joinCode: raw.joinCode,
+              members: raw.members || [],
+              memberDetails: raw.memberDetails || [],
+              createdAt: raw.createdAt?.toDate ? raw.createdAt.toDate() : raw.createdAt || new Date(),
+              updatedAt: raw.updatedAt?.toDate ? raw.updatedAt.toDate() : raw.updatedAt || new Date(),
+              status: raw.status || 'active',
+            } as League;
+
+            // Robust membership check: either members array or memberDetails contains user
+            const isMember =
+              normalized.members?.includes(user.uid) ||
+              normalized.memberDetails?.some((m) => m.userId === user.uid);
+
+            if (!isMember) {
+              setError('You are not a member of this league');
+              setTimeout(() => router.push('/dashboard/my-leagues'), 2000);
+              return;
+            }
+
+            setLeague(normalized);
+            setLoading(false);
+          } else {
+            setError('League not found');
+            setLoading(false);
+          }
+        },
+        (err) => {
+          console.error('Error fetching league:', err);
+          setError('Failed to load league details');
+          setLoading(false);
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.error("Error setting up league listener:", err);
+      setError("Failed to load league details");
+      setLoading(false);
+    }
+  }, [user, authLoading, leagueId, router]);
+
+  const handleSaveTribeInfo = async (
+    displayName: string,
+    avatar: string,
+    tribeColor: string
+  ) => {
+    if (!league || !user) throw new Error("Missing league or user info");
+
+    setIsSaving(true);
+
+    try {
+      // Update member details in the league
+      const updatedMembers = league.memberDetails.map((member) =>
+        member.userId === user.uid
+          ? {
+              ...member,
+              displayName,
+              avatar,
+              tribeColor,
+              updatedAt: new Date(),
+            }
+          : member
+      );
+
+      const leagueRef = doc(db, "leagues", league.id);
+      await updateDoc(leagueRef, {
+        memberDetails: updatedMembers,
+        updatedAt: new Date(),
+      });
+
+      setEditDialogOpen(false);
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : "Failed to save tribe info"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (authLoading || loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "400px",
+          }}
+        >
+          <CircularProgress sx={{ color: "#E85D2A" }} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error || !league) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error || "League not found"}
+        </Alert>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => router.push("/dashboard/my-leagues")}
+          sx={{ color: "#E85D2A" }}
+        >
+          Back to My Leagues
+        </Button>
+      </Container>
+    );
+  }
+
+  // Sort members by points (descending) to determine rank
+  const sortedMembers = [...(league.memberDetails || [])].sort(
+    (a, b) => b.points - a.points
+  );
+
+  // Safe member counts (support older docs without memberDetails)
+  const totalMembers = league.memberDetails?.length ?? league.members?.length ?? league.currentPlayers ?? 0;
+  const otherCount = Math.max(0, totalMembers - (currentUserTribe ? 1 : 0));
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => router.push("/dashboard/my-leagues")}
+          sx={{ mb: 2, color: "#E85D2A" }}
+        >
+          Back to My Leagues
+        </Button>
+        <Typography
+          variant="h4"
+          sx={{ fontWeight: 700, color: "#1A1A1A", mb: 1 }}
+        >
+          {league.name}
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          Owner: {league.ownerName} - {league.currentPlayers}/{league.maxPlayers} Players
+        </Typography>
+      </Box>
+
+      {/* Current User's Tribe Card (Highlighted) */}
+      {currentUserTribe && (
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="subtitle1"
+            sx={{ fontWeight: 600, mb: 2, color: "#1A1A1A" }}
+          >
+            Your Tribe
+          </Typography>
+          <TribeCard
+            member={currentUserTribe}
+            rank={getMemberRank(sortedMembers, user!.uid)}
+            isCurrentUser
+            onEdit={() => setEditDialogOpen(true)}
+            allMembers={sortedMembers}
+          />
+        </Box>
+      )}
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Other Tribes */}
+      <Box>
+        <Typography
+          variant="subtitle1"
+          sx={{ fontWeight: 600, mb: 2, color: "#1A1A1A" }}
+        >
+          Other Tribes ({otherCount})
+        </Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              md: "repeat(3, 1fr)",
+            },
+            gap: 2,
+          }}
+        >
+          {sortedMembers
+            .filter((m) => m.userId !== user?.uid)
+            .map((member) => (
+              <TribeCard
+                key={member.userId}
+                member={member}
+                rank={getMemberRank(sortedMembers, member.userId)}
+                allMembers={sortedMembers}
+              />
+            ))}
+        </Box>
+      </Box>
+
+      {/* Edit Tribe Dialog */}
+      <EditTribeDialog
+        open={editDialogOpen}
+        tribeMember={currentUserTribe || null}
+        onSave={handleSaveTribeInfo}
+        onClose={() => setEditDialogOpen(false)}
+      />
+    </Container>
+  );
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Container,
@@ -47,9 +48,16 @@ export default function LandingPage() {
     loading: authLoading,
     error: authError,
     signInWithGoogle,
-    logout,
   } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect to dashboard if user is logged in
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
 
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -91,8 +99,8 @@ export default function LandingPage() {
     );
   }
 
-  // Show dashboard if user is logged in
-  if (user) {
+  // Render landing page (user is redirected via useEffect if logged in)
+  if (!user) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -107,50 +115,157 @@ export default function LandingPage() {
           }}
         >
           <Container maxWidth="sm">
-            <Card
-              sx={{
-                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
-                borderRadius: 3,
-              }}
-            >
-              <CardContent sx={{ p: 4 }}>
-                <Stack spacing={3} alignItems="center">
-                  <Typography variant="h5" sx={{ mb: 2 }}>
-                    Welcome, {user.displayName || user.email}!
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                    You are successfully logged in with Firebase.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    onClick={logout}
-                    sx={{
-                      py: 1.5,
-                      fontWeight: 600,
-                      fontSize: "1rem",
-                      textTransform: "none",
-                      borderRadius: 1.5,
-                      background:
-                        "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
-                      "&:hover": {
+            <Stack spacing={4} alignItems="center">
+              {/* Header Section */}
+              <Box sx={{ textAlign: "center", color: "white" }}>
+                <Typography
+                  variant="h3"
+                  component="h1"
+                  sx={{
+                    mb: 2,
+                    fontSize: { xs: "2.5rem", sm: "3rem" },
+                    fontWeight: 800,
+                    letterSpacing: "-0.5px",
+                  }}
+                >
+                  Survivor Fantasy League
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    opacity: 0.9,
+                    fontWeight: 300,
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  Compete with friends in the ultimate Survivor experience
+                </Typography>
+              </Box>
+
+              {/* Main Card */}
+              <Card
+                sx={{
+                  width: "100%",
+                  boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                  borderRadius: 3,
+                }}
+              >
+                <CardContent sx={{ p: 4 }}>
+                  <Stack spacing={3}>
+                    {/* Error Alert */}
+                    {authError && <Alert severity="error">{authError}</Alert>}
+
+                    {/* Welcome Text */}
+                    <Box sx={{ textAlign: "center" }}>
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          mb: 1,
+                          color: "text.primary",
+                        }}
+                      >
+                        Welcome
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          color: "text.secondary",
+                        }}
+                      >
+                        Sign in with your Google account to get started
+                      </Typography>
+                    </Box>
+
+                    {/* Google Sign-In Button */}
+                    <Button
+                      variant="contained"
+                      size="large"
+                      fullWidth
+                      onClick={handleGoogleSignIn}
+                      disabled={isLoading}
+                      startIcon={
+                        isLoading ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          <GoogleIcon />
+                        )
+                      }
+                      sx={{
+                        py: 1.5,
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        textTransform: "none",
+                        borderRadius: 1.5,
                         background:
-                          "linear-gradient(135deg, #C93F1A 0%, #D94E23 100%)",
-                      },
-                    }}
-                  >
-                    Sign Out
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
+                          "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
+                        "&:hover": {
+                          background:
+                            "linear-gradient(135deg, #C93F1A 0%, #D94E23 100%)",
+                        },
+                        "&:disabled": {
+                          background: "rgba(217, 78, 35, 0.5)",
+                        },
+                      }}
+                    >
+                      {isLoading ? "Signing in..." : "Sign in with Google"}
+                    </Button>
+
+                    {/* Divider */}
+                    <Divider sx={{ my: 1 }}>OR</Divider>
+
+                    {/* Guest Access Button */}
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      fullWidth
+                      onClick={handleGuestAccess}
+                      disabled={isLoading}
+                      sx={{
+                        py: 1.5,
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        textTransform: "none",
+                        borderRadius: 1.5,
+                        borderColor: "#E85D2A",
+                        color: "#E85D2A",
+                        "&:hover": {
+                          borderColor: "#D94E23",
+                          color: "#D94E23",
+                          backgroundColor: "rgba(217, 78, 35, 0.08)",
+                        },
+                        "&:disabled": {
+                          borderColor: "rgba(217, 78, 35, 0.5)",
+                          color: "rgba(217, 78, 35, 0.5)",
+                        },
+                      }}
+                    >
+                      Continue as Guest
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+
+              {/* Footer Text */}
+              <Typography
+                variant="caption"
+                sx={{
+                  textAlign: "center",
+                  color: "white",
+                  opacity: 0.8,
+                  maxWidth: 400,
+                }}
+              >
+                By signing in, you agree to our Terms of Service and Privacy
+                Policy
+              </Typography>
+            </Stack>
           </Container>
         </Box>
       </ThemeProvider>
     );
   }
 
+  // Loading state while redirecting
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -161,155 +276,9 @@ export default function LandingPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          py: 4,
         }}
       >
-        <Container maxWidth="sm">
-          <Stack spacing={4} alignItems="center">
-            {/* Header Section */}
-            <Box sx={{ textAlign: "center", color: "white" }}>
-              <Typography
-                variant="h3"
-                component="h1"
-                sx={{
-                  mb: 2,
-                  fontSize: { xs: "2.5rem", sm: "3rem" },
-                  fontWeight: 800,
-                  letterSpacing: "-0.5px",
-                }}
-              >
-                Survivor Fantasy League
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  opacity: 0.9,
-                  fontWeight: 300,
-                  letterSpacing: "0.3px",
-                }}
-              >
-                Compete with friends in the ultimate Survivor experience
-              </Typography>
-            </Box>
-
-            {/* Main Card */}
-            <Card
-              sx={{
-                width: "100%",
-                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
-                borderRadius: 3,
-              }}
-            >
-              <CardContent sx={{ p: 4 }}>
-                <Stack spacing={3}>
-                  {/* Error Alert */}
-                  {authError && <Alert severity="error">{authError}</Alert>}
-
-                  {/* Welcome Text */}
-                  <Box sx={{ textAlign: "center" }}>
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        mb: 1,
-                        color: "text.primary",
-                      }}
-                    >
-                      Welcome
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        color: "text.secondary",
-                      }}
-                    >
-                      Sign in with your Google account to get started
-                    </Typography>
-                  </Box>
-
-                  {/* Google Sign-In Button */}
-                  <Button
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    onClick={handleGoogleSignIn}
-                    disabled={isLoading}
-                    startIcon={
-                      isLoading ? (
-                        <CircularProgress size={20} color="inherit" />
-                      ) : (
-                        <GoogleIcon />
-                      )
-                    }
-                    sx={{
-                      py: 1.5,
-                      fontWeight: 600,
-                      fontSize: "1rem",
-                      textTransform: "none",
-                      borderRadius: 1.5,
-                      background:
-                        "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
-                      "&:hover": {
-                        background:
-                          "linear-gradient(135deg, #C93F1A 0%, #D94E23 100%)",
-                      },
-                      "&:disabled": {
-                        background: "rgba(217, 78, 35, 0.5)",
-                      },
-                    }}
-                  >
-                    {isLoading ? "Signing in..." : "Sign in with Google"}
-                  </Button>
-
-                  {/* Divider */}
-                  <Divider sx={{ my: 1 }}>OR</Divider>
-
-                  {/* Guest Access Button */}
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    fullWidth
-                    onClick={handleGuestAccess}
-                    disabled={isLoading}
-                    sx={{
-                      py: 1.5,
-                      fontWeight: 600,
-                      fontSize: "1rem",
-                      textTransform: "none",
-                      borderRadius: 1.5,
-                      borderColor: "#E85D2A",
-                      color: "#E85D2A",
-                      "&:hover": {
-                        borderColor: "#D94E23",
-                        color: "#D94E23",
-                        backgroundColor: "rgba(217, 78, 35, 0.08)",
-                      },
-                      "&:disabled": {
-                        borderColor: "rgba(217, 78, 35, 0.5)",
-                        color: "rgba(217, 78, 35, 0.5)",
-                      },
-                    }}
-                  >
-                    Continue as Guest
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            {/* Footer Text */}
-            <Typography
-              variant="caption"
-              sx={{
-                textAlign: "center",
-                color: "white",
-                opacity: 0.8,
-                maxWidth: 400,
-              }}
-            >
-              By signing in, you agree to our Terms of Service and Privacy
-              Policy
-            </Typography>
-          </Stack>
-        </Container>
+        <CircularProgress sx={{ color: "#E85D2A" }} />
       </Box>
     </ThemeProvider>
   );
