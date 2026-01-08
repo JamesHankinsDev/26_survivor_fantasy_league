@@ -26,6 +26,7 @@ import {
   doc,
   increment,
   arrayUnion,
+  serverTimestamp,
 } from "firebase/firestore";
 import { League } from "@/types/league";
 
@@ -141,9 +142,8 @@ export default function JoinLeaguePage() {
         avatar: user.photoURL || "",
         tribeColor: "#20B2AA",
         points: 0,
-        joinedAt: new Date(),
+        joinedAt: serverTimestamp(),
         roster: [], // Will be populated during draft phase
-        draftedAt: undefined,
       };
 
       await updateDoc(leagueRef, {

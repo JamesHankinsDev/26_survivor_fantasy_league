@@ -76,13 +76,12 @@ export default function CreateLeagueDialog({
             avatar: user.photoURL || "",
             tribeColor: "#20B2AA",
             points: 0,
-            joinedAt: new Date(),
+            joinedAt: serverTimestamp(),
             roster: [], // Will be populated during draft phase
-            draftedAt: undefined,
           },
         ],
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         status: "active",
       };
 
@@ -103,17 +102,12 @@ export default function CreateLeagueDialog({
           points: 0,
           joinedAt: serverTimestamp(),
           roster: [],
-          draftedAt: undefined,
         });
       }
 
       // Add to Firestore
       const leaguesRef = collection(db, "leagues");
-      const docRef = await addDoc(leaguesRef, {
-        ...newLeague,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      const docRef = await addDoc(leaguesRef, newLeague);
 
       const createdLeague: League = {
         id: docRef.id,
