@@ -32,10 +32,12 @@ import {
   doc,
   setDoc,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { Castaway } from "@/types/castaway";
-import { EpisodeScores } from "@/types/league";
+import { EpisodeScores, League } from "@/types/league";
 import { CURRENT_SEASON } from "@/data/seasons";
+import { calculateTribeTotalPoints } from "@/utils/scoring";
 
 export default function AdminScoresPage() {
   const { user } = useAuth();
@@ -132,8 +134,8 @@ export default function AdminScoresPage() {
 
       await setDoc(scoresRef, episodeScoresData);
 
-      // TODO: Cascade scores to all managed leagues
-      // This will recalculate tribe points for all active leagues
+      // Cascade scores to all managed leagues
+      await cascadeScoresToLeagues(scores);
 
       setSuccess(
         `Episode ${episodeNumber} scores saved successfully! Cascading to all managed leagues...`
@@ -150,6 +152,58 @@ export default function AdminScoresPage() {
       setError("Failed to save scores. Please try again.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const cascadeScoresToLeagues = async (
+    episodeScores: Record<string, number>
+  ) => {
+    try {
+      // Load all leagues
+      const leaguesRef = collection(db, "leagues");
+      const allLeaguesSnapshot = await getDocs(leaguesRef);
+
+      const batch = writeBatch(db);
+      let updatedCount = 0;
+
+      // For each league, update all tribe members' points
+      allLeaguesSnapshot.docs.forEach((leagueDoc) => {
+        const league = leagueDoc.data() as League;
+
+        if (!league.memberDetails || league.memberDetails.length === 0) {
+          return;
+        }
+
+        // Recalculate points for each member
+        const updatedMembers = league.memberDetails.map((member) => {
+          // Get all episodes scored so far for this league
+          const allEpisodeScores: Record<number, Record<string, number>> = {};
+
+          // Add the current episode
+          allEpisodeScores[episodeNumber] = episodeScores;
+
+          // Calculate new total points based on complete roster history
+          const newTotalPoints = calculateTribeTotalPoints(member, allEpisodeScores);
+
+          updatedCount++;
+          return {
+            ...member,
+            points: newTotalPoints,
+          };
+        });
+
+        // Update the league with new member details
+        batch.update(doc(db, "leagues", leagueDoc.id), {
+          memberDetails: updatedMembers,
+          updatedAt: Timestamp.now(),
+        });
+      });
+
+      await batch.commit();
+      console.log(`Updated ${updatedCount} tribe members across all leagues`);
+    } catch (err) {
+      console.error("Error cascading scores:", err);
+      // Don't throw - scores were saved, just failed to cascade
     }
   };
 
