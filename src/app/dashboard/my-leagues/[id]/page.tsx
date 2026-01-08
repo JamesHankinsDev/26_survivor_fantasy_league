@@ -17,10 +17,12 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { League, TribeMember, getMemberRank } from "@/types/league";
+import { League, TribeMember, getMemberRank, RosterEntry } from "@/types/league";
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
+import { DraftTeamModal } from "@/components/DraftTeamModal";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CASTAWAYS from "@/data/castaways";
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
@@ -32,6 +34,7 @@ export default function LeagueDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Get current user's tribe member info
@@ -146,6 +149,48 @@ export default function LeagueDetailPage() {
     }
   };
 
+  const handleSubmitDraft = async (selectedCastawayIds: string[]) => {
+    if (!league || !user) throw new Error("Missing league or user info");
+
+    setIsSaving(true);
+
+    try {
+      // Create roster entries from selected castaways
+      const rosterEntries: RosterEntry[] = selectedCastawayIds.map((castawayId) => ({
+        castawayId,
+        status: "active",
+        addedWeek: 0, // Week 0 = draft
+        accumulatedPoints: 0,
+      }));
+
+      // Update member details with roster
+      const updatedMembers = league.memberDetails.map((member) =>
+        member.userId === user.uid
+          ? {
+              ...member,
+              roster: rosterEntries,
+              draftedAt: new Date(),
+              updatedAt: new Date(),
+            }
+          : member
+      );
+
+      const leagueRef = doc(db, "leagues", league.id);
+      await updateDoc(leagueRef, {
+        memberDetails: updatedMembers,
+        updatedAt: new Date(),
+      });
+
+      setDraftDialogOpen(false);
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : "Failed to submit draft"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -220,13 +265,32 @@ export default function LeagueDetailPage() {
           >
             Your Tribe
           </Typography>
-          <TribeCard
-            member={currentUserTribe}
-            rank={getMemberRank(sortedMembers, user!.uid)}
-            isCurrentUser
-            onEdit={() => setEditDialogOpen(true)}
-            allMembers={sortedMembers}
-          />
+
+          {!currentUserTribe.roster || currentUserTribe.roster.length === 0 ? (
+            <Alert
+              severity="info"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => setDraftDialogOpen(true)}
+                >
+                  Draft Now
+                </Button>
+              }
+              sx={{ mb: 2 }}
+            >
+              You haven't drafted your team yet. Select 5 castaways to get started!
+            </Alert>
+          ) : (
+            <TribeCard
+              member={currentUserTribe}
+              rank={getMemberRank(sortedMembers, user!.uid)}
+              isCurrentUser
+              onEdit={() => setEditDialogOpen(true)}
+              allMembers={sortedMembers}
+            />
+          )}
         </Box>
       )}
 
@@ -270,6 +334,15 @@ export default function LeagueDetailPage() {
         tribeMember={currentUserTribe || null}
         onSave={handleSaveTribeInfo}
         onClose={() => setEditDialogOpen(false)}
+      />
+
+      {/* Draft Team Modal */}
+      <DraftTeamModal
+        open={draftDialogOpen}
+        onClose={() => setDraftDialogOpen(false)}
+        onSubmit={handleSubmitDraft}
+        allCastaways={CASTAWAYS}
+        eliminatedCastawayIds={[]} // TODO: Get eliminated castaways from league state
       />
     </Container>
   );
