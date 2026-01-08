@@ -5,9 +5,11 @@
 ### Collections
 
 #### `leagues`
+
 Stores all league information.
 
 **Document Structure:**
+
 ```
 leagues/
 ├── {leagueId}
@@ -35,18 +37,18 @@ service cloud.firestore {
     // Leagues collection
     match /leagues/{leagueId} {
       // Read: Users can read leagues they are a member of
-      allow read: if request.auth != null && 
+      allow read: if request.auth != null &&
                      request.auth.uid in resource.data.members;
-      
+
       // Create: Authenticated users can create leagues
       allow create: if request.auth != null &&
                        request.auth.uid == request.resource.data.ownerId &&
                        request.resource.data.members.size() >= 1;
-      
+
       // Update: Only the league owner can update
       allow update: if request.auth != null &&
                        request.auth.uid == resource.data.ownerId;
-      
+
       // Delete: Only the league owner can delete
       allow delete: if request.auth != null &&
                        request.auth.uid == resource.data.ownerId;
@@ -58,6 +60,7 @@ service cloud.firestore {
 ## Implementation Notes
 
 ### Creating a League
+
 1. User fills in league name and max player count
 2. Backend generates:
    - Unique `joinCode` (6 alphanumeric chars)
@@ -66,6 +69,7 @@ service cloud.firestore {
 4. Join URL is generated: `https://yoursite.com/join/{joinCode}`
 
 ### Joining a League
+
 1. User clicks join link or enters join code
 2. System fetches league by `joinCode`
 3. Checks if user is already a member

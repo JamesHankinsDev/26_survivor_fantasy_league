@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -12,13 +12,17 @@ import {
   Stack,
   Typography,
   Alert,
-} from '@mui/material';
-import { TribeMember } from '@/types/league';
+} from "@mui/material";
+import { TribeMember } from "@/types/league";
 
 interface EditTribeDialogProps {
   open: boolean;
   tribeMember: TribeMember | null;
-  onSave: (displayName: string, avatar: string, tribeColor: string) => Promise<void>;
+  onSave: (
+    displayName: string,
+    avatar: string,
+    tribeColor: string
+  ) => Promise<void>;
   onClose: () => void;
 }
 
@@ -28,36 +32,42 @@ export default function EditTribeDialog({
   onSave,
   onClose,
 }: EditTribeDialogProps) {
-  const [displayName, setDisplayName] = useState(tribeMember?.displayName || '');
-  const [avatar, setAvatar] = useState(tribeMember?.avatar || '');
-  const [tribeColor, setTribeColor] = useState(tribeMember?.tribeColor || '#20B2AA');
+  const [displayName, setDisplayName] = useState(
+    tribeMember?.displayName || ""
+  );
+  const [avatar, setAvatar] = useState(tribeMember?.avatar || "");
+  const [tribeColor, setTribeColor] = useState(
+    tribeMember?.tribeColor || "#20B2AA"
+  );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      setError('Display name is required');
+      setError("Display name is required");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       await onSave(displayName.trim(), avatar.trim(), tribeColor);
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save tribe info');
+      setError(
+        err instanceof Error ? err.message : "Failed to save tribe info"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setDisplayName(tribeMember?.displayName || '');
-    setAvatar(tribeMember?.avatar || '');
-    setTribeColor(tribeMember?.tribeColor || '#20B2AA');
-    setError('');
+    setDisplayName(tribeMember?.displayName || "");
+    setAvatar(tribeMember?.avatar || "");
+    setTribeColor(tribeMember?.tribeColor || "#20B2AA");
+    setError("");
     onClose();
   };
 
@@ -89,20 +99,20 @@ export default function EditTribeDialog({
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Tribe Color
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
               <input
                 type="color"
                 value={tribeColor}
                 onChange={(e) => setTribeColor(e.target.value)}
                 style={{
-                  width: '60px',
-                  height: '40px',
-                  border: '2px solid #ddd',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
+                  width: "60px",
+                  height: "40px",
+                  border: "2px solid #ddd",
+                  borderRadius: "4px",
+                  cursor: "pointer",
                 }}
               />
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 {tribeColor}
               </Typography>
             </Box>
@@ -118,11 +128,11 @@ export default function EditTribeDialog({
                 src={avatar}
                 alt="Avatar preview"
                 sx={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '8px',
+                  width: "100px",
+                  height: "100px",
+                  borderRadius: "8px",
                   border: `3px solid ${tribeColor}`,
-                  objectFit: 'cover',
+                  objectFit: "cover",
                 }}
                 onError={() => {
                   /* Invalid URL, will show broken image */
@@ -141,11 +151,11 @@ export default function EditTribeDialog({
           variant="contained"
           disabled={loading}
           sx={{
-            bgcolor: '#E85D2A',
-            '&:hover': { bgcolor: '#D94E23' },
+            bgcolor: "#E85D2A",
+            "&:hover": { bgcolor: "#D94E23" },
           }}
         >
-          {loading ? 'Saving...' : 'Save'}
+          {loading ? "Saving..." : "Save"}
         </Button>
       </DialogActions>
     </Dialog>

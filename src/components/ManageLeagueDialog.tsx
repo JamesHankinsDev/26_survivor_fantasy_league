@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -17,18 +17,18 @@ import {
   CircularProgress,
   Avatar,
   Divider,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import WarningIcon from '@mui/icons-material/Warning';
-import { League, TribeMember } from '@/types/league';
-import { db } from '@/lib/firebase';
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import WarningIcon from "@mui/icons-material/Warning";
+import { League, TribeMember } from "@/types/league";
+import { db } from "@/lib/firebase";
 import {
   doc,
   updateDoc,
   deleteDoc,
   arrayRemove,
   increment,
-} from 'firebase/firestore';
+} from "firebase/firestore";
 
 interface ManageLeagueDialogProps {
   open: boolean;
@@ -44,7 +44,7 @@ export default function ManageLeagueDialog({
   onLeagueDeleted,
 }: ManageLeagueDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
 
@@ -57,14 +57,16 @@ export default function ManageLeagueDialog({
 
   const handleRemoveMember = async (userId: string, memberName: string) => {
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const leagueRef = doc(db, 'leagues', league.id);
-      const memberToRemoveObj = league.memberDetails.find((m) => m.userId === userId);
+      const leagueRef = doc(db, "leagues", league.id);
+      const memberToRemoveObj = league.memberDetails.find(
+        (m) => m.userId === userId
+      );
 
       if (!memberToRemoveObj) {
-        throw new Error('Member not found');
+        throw new Error("Member not found");
       }
 
       await updateDoc(leagueRef, {
@@ -76,7 +78,7 @@ export default function ManageLeagueDialog({
 
       setMemberToRemove(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove member');
+      setError(err instanceof Error ? err.message : "Failed to remove member");
     } finally {
       setLoading(false);
     }
@@ -84,21 +86,21 @@ export default function ManageLeagueDialog({
 
   const handleDeleteLeague = async () => {
     if (!canDelete) {
-      setError('You must remove all other members before deleting the league');
+      setError("You must remove all other members before deleting the league");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const leagueRef = doc(db, 'leagues', league.id);
+      const leagueRef = doc(db, "leagues", league.id);
       await deleteDoc(leagueRef);
       setConfirmDeleteOpen(false);
       onLeagueDeleted?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete league');
+      setError(err instanceof Error ? err.message : "Failed to delete league");
     } finally {
       setLoading(false);
     }
@@ -107,13 +109,15 @@ export default function ManageLeagueDialog({
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>Manage League: {league.name}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Manage League: {league.name}
+        </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Stack spacing={3}>
             {error && <Alert severity="error">{error}</Alert>}
 
             {/* League Info Summary */}
-            <Card sx={{ bgcolor: 'rgba(32, 178, 170, 0.05)' }}>
+            <Card sx={{ bgcolor: "rgba(32, 178, 170, 0.05)" }}>
               <CardContent>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                   League Information
@@ -123,7 +127,8 @@ export default function ManageLeagueDialog({
                     <strong>Status:</strong> {league.status}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Players:</strong> {league.currentPlayers} / {league.maxPlayers}
+                    <strong>Players:</strong> {league.currentPlayers} /{" "}
+                    {league.maxPlayers}
                   </Typography>
                   <Typography variant="body2">
                     <strong>Join Code:</strong> {league.joinCode}
@@ -142,16 +147,23 @@ export default function ManageLeagueDialog({
               <Stack spacing={1}>
                 {membersSortedByPoints.map((member) => (
                   <Card key={member.userId}>
-                    <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
                       <Box
                         sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
                           gap: 2,
                         }}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 2,
+                            flex: 1,
+                          }}
+                        >
                           <Avatar
                             src={member.avatar}
                             alt={member.displayName}
@@ -166,14 +178,17 @@ export default function ManageLeagueDialog({
                               variant="body2"
                               sx={{
                                 fontWeight: 600,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               {member.displayName}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: "text.secondary" }}
+                            >
                               {member.points} points
                             </Typography>
                           </Box>
@@ -184,8 +199,8 @@ export default function ManageLeagueDialog({
                             onClick={() => setMemberToRemove(member.userId)}
                             disabled={loading}
                             sx={{
-                              color: '#E85D2A',
-                              '&:hover': { bgcolor: 'rgba(232, 93, 42, 0.1)' },
+                              color: "#E85D2A",
+                              "&:hover": { bgcolor: "rgba(232, 93, 42, 0.1)" },
                             }}
                             title={`Remove ${member.displayName}`}
                           >
@@ -204,27 +219,40 @@ export default function ManageLeagueDialog({
             {/* Delete League Section */}
             <Card
               sx={{
-                bgcolor: canDelete ? 'rgba(232, 93, 42, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-                borderLeft: `4px solid ${canDelete ? '#E85D2A' : '#ccc'}`,
+                bgcolor: canDelete
+                  ? "rgba(232, 93, 42, 0.05)"
+                  : "rgba(0, 0, 0, 0.02)",
+                borderLeft: `4px solid ${canDelete ? "#E85D2A" : "#ccc"}`,
               }}
             >
               <CardContent>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
                   <WarningIcon
                     sx={{
-                      color: canDelete ? '#E85D2A' : '#999',
+                      color: canDelete ? "#E85D2A" : "#999",
                       mt: 0.5,
                       flexShrink: 0,
                     }}
                   />
                   <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, mb: 0.5 }}
+                    >
                       Delete League
                     </Typography>
                     {canDelete ? (
                       <>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1.5 }}>
-                          You are the only member. The league can now be deleted.
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                            display: "block",
+                            mb: 1.5,
+                          }}
+                        >
+                          You are the only member. The league can now be
+                          deleted.
                         </Typography>
                         <Button
                           variant="contained"
@@ -238,9 +266,13 @@ export default function ManageLeagueDialog({
                         </Button>
                       </>
                     ) : (
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Remove all {league.currentPlayers - 1} other member{league.currentPlayers > 2 ? 's' : ''} to delete
-                        this league.
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        Remove all {league.currentPlayers - 1} other member
+                        {league.currentPlayers > 2 ? "s" : ""} to delete this
+                        league.
                       </Typography>
                     )}
                   </Box>
@@ -265,10 +297,13 @@ export default function ManageLeagueDialog({
           <DialogTitle>Remove Member?</DialogTitle>
           <DialogContent>
             <Typography variant="body2" sx={{ mt: 2 }}>
-              Are you sure you want to remove{' '}
+              Are you sure you want to remove{" "}
               <strong>
-                {league.memberDetails.find((m) => m.userId === memberToRemove)?.displayName}
-              </strong>{' '}
+                {
+                  league.memberDetails.find((m) => m.userId === memberToRemove)
+                    ?.displayName
+                }
+              </strong>{" "}
               from this league? They will not be able to access it anymore.
             </Typography>
           </DialogContent>
@@ -278,7 +313,9 @@ export default function ManageLeagueDialog({
             </Button>
             <Button
               onClick={() => {
-                const member = league.memberDetails.find((m) => m.userId === memberToRemove);
+                const member = league.memberDetails.find(
+                  (m) => m.userId === memberToRemove
+                );
                 if (member) {
                   handleRemoveMember(memberToRemove, member.displayName);
                 }
@@ -287,26 +324,35 @@ export default function ManageLeagueDialog({
               color="error"
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} /> : 'Remove Member'}
+              {loading ? <CircularProgress size={24} /> : "Remove Member"}
             </Button>
           </DialogActions>
         </Dialog>
       )}
 
       {/* Delete League Confirmation */}
-      <Dialog open={confirmDeleteOpen} onClose={() => !loading && setConfirmDeleteOpen(false)}>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon sx={{ color: '#E85D2A' }} />
+      <Dialog
+        open={confirmDeleteOpen}
+        onClose={() => !loading && setConfirmDeleteOpen(false)}
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningIcon sx={{ color: "#E85D2A" }} />
           Delete League?
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mt: 2, mb: 2 }}>
-            Are you sure you want to permanently delete <strong>{league.name}</strong>? This action cannot be undone.
+            Are you sure you want to permanently delete{" "}
+            <strong>{league.name}</strong>? This action cannot be undone.
           </Typography>
-          <Alert severity="warning">This will delete the league and all associated data.</Alert>
+          <Alert severity="warning">
+            This will delete the league and all associated data.
+          </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDeleteOpen(false)} disabled={loading}>
+          <Button
+            onClick={() => setConfirmDeleteOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button
@@ -315,7 +361,7 @@ export default function ManageLeagueDialog({
             color="error"
             disabled={loading}
           >
-            {loading ? <CircularProgress size={24} /> : 'Delete League'}
+            {loading ? <CircularProgress size={24} /> : "Delete League"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, CardContent, CardMedia, Typography, Box } from '@mui/material';
+import React from "react";
+import { Card, CardContent, CardMedia, Typography, Box } from "@mui/material";
 
 export interface Castaway {
   id: string;
@@ -14,32 +14,37 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
     <Box
       sx={{
         perspective: 1000,
-        '&:hover .flip-inner': { transform: 'rotateY(180deg)' },
+        "&:hover .flip-inner": { transform: "rotateY(180deg)" },
       }}
     >
       <Box
         className="flip-inner"
         sx={{
-          position: 'relative',
-          width: '100%',
+          position: "relative",
+          width: "100%",
           minHeight: 260,
-          transformStyle: 'preserve-3d',
-          transition: 'transform 0.6s',
+          transformStyle: "preserve-3d",
+          transition: "transform 0.6s",
         }}
       >
         {/* Front */}
         <Card
           sx={{
-            backfaceVisibility: 'hidden',
-            position: 'absolute',
+            backfaceVisibility: "hidden",
+            position: "absolute",
             inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
           }}
         >
           {castaway.image && (
-            <CardMedia component="img" height="160" image={castaway.image} alt={castaway.name} />
+            <CardMedia
+              component="img"
+              height="160"
+              image={castaway.image}
+              alt={castaway.name}
+            />
           )}
           <CardContent>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -51,13 +56,13 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
         {/* Back */}
         <Card
           sx={{
-            backfaceVisibility: 'hidden',
-            position: 'absolute',
+            backfaceVisibility: "hidden",
+            position: "absolute",
             inset: 0,
-            transform: 'rotateY(180deg)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
+            transform: "rotateY(180deg)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
             p: 2,
           }}
         >
@@ -65,8 +70,8 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
               Stats
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {castaway.bio || 'No stats yet — coming soon.'}
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              {castaway.bio || "No stats yet — coming soon."}
             </Typography>
           </CardContent>
         </Card>

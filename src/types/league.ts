@@ -22,7 +22,7 @@ export interface League {
   memberDetails: TribeMember[]; // New: detailed member info with tribe data
   createdAt: Date | any;
   updatedAt: Date | any;
-  status: 'active' | 'archived';
+  status: "active" | "archived";
 }
 
 export interface LeagueInvite {
@@ -34,15 +34,18 @@ export interface LeagueInvite {
 }
 
 // Helper to get member rank in league (1st place, 2nd place, etc)
-export const getMemberRank = (members: TribeMember[], userId: string): number => {
+export const getMemberRank = (
+  members: TribeMember[],
+  userId: string
+): number => {
   const sorted = [...members].sort((a, b) => b.points - a.points);
-  return sorted.findIndex(m => m.userId === userId) + 1;
+  return sorted.findIndex((m) => m.userId === userId) + 1;
 };
 
 // Generate a unique join code (6-character alphanumeric)
 export const generateJoinCode = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -56,6 +59,6 @@ export const generateLeagueId = (): string => {
 
 // Get the join URL for a league
 export const getLeagueJoinUrl = (joinCode: string): string => {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   return `${baseUrl}/join/${joinCode}`;
 };

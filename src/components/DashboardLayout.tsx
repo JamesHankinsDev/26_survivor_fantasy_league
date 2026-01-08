@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Box,
   Drawer,
@@ -14,26 +14,30 @@ import {
   AppBar,
   Toolbar,
   Typography,
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import CloseIcon from '@mui/icons-material/Close';
-import HomeIcon from '@mui/icons-material/Home';
-import GroupIcon from '@mui/icons-material/Group';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import InfoIcon from '@mui/icons-material/Info';
-import SportsBaseballIcon from '@mui/icons-material/SportsBaseball';
-import LogoutIcon from '@mui/icons-material/Logout';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import CloseIcon from "@mui/icons-material/Close";
+import HomeIcon from "@mui/icons-material/Home";
+import GroupIcon from "@mui/icons-material/Group";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import InfoIcon from "@mui/icons-material/Info";
+import SportsBaseballIcon from "@mui/icons-material/SportsBaseball";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 const DRAWER_WIDTH = 280;
 
 const navItems = [
-  { label: 'Home', icon: HomeIcon, path: '/dashboard' },
-  { label: 'My Leagues', icon: GroupIcon, path: '/dashboard/my-leagues' },
-  { label: 'Castaways', icon: SportsBaseballIcon, path: '/dashboard/castaways' },
-  { label: 'Admin', icon: AdminPanelSettingsIcon, path: '/dashboard/admin' },
-  { label: 'About', icon: InfoIcon, path: '/dashboard/about' },
+  { label: "Home", icon: HomeIcon, path: "/dashboard" },
+  { label: "My Leagues", icon: GroupIcon, path: "/dashboard/my-leagues" },
+  {
+    label: "Castaways",
+    icon: SportsBaseballIcon,
+    path: "/dashboard/castaways",
+  },
+  { label: "Admin", icon: AdminPanelSettingsIcon, path: "/dashboard/admin" },
+  { label: "About", icon: InfoIcon, path: "/dashboard/about" },
 ];
 
 export default function DashboardLayout({
@@ -58,17 +62,23 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     try {
       await logout();
-      router.push('/');
+      router.push("/");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
   const drawerContent = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <Box sx={{ p: 2, bgcolor: 'rgba(232, 93, 42, 0.1)', borderBottom: '1px solid #E85D2A' }}>
-        <Typography variant="h6" sx={{ color: '#E85D2A', fontWeight: 700 }}>
+      <Box
+        sx={{
+          p: 2,
+          bgcolor: "rgba(232, 93, 42, 0.1)",
+          borderBottom: "1px solid #E85D2A",
+        }}
+      >
+        <Typography variant="h6" sx={{ color: "#E85D2A", fontWeight: 700 }}>
           Survivor League
         </Typography>
       </Box>
@@ -81,22 +91,22 @@ export default function DashboardLayout({
               onClick={() => handleNavClick(item.path)}
               selected={pathname === item.path}
               sx={{
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(232, 93, 42, 0.12)',
-                  borderLeft: '4px solid #E85D2A',
+                "&.Mui-selected": {
+                  backgroundColor: "rgba(232, 93, 42, 0.12)",
+                  borderLeft: "4px solid #E85D2A",
                   pl: 1.75,
-                  '&:hover': {
-                    backgroundColor: 'rgba(232, 93, 42, 0.16)',
+                  "&:hover": {
+                    backgroundColor: "rgba(232, 93, 42, 0.16)",
                   },
                 },
-                '&:hover': {
-                  backgroundColor: 'rgba(232, 93, 42, 0.08)',
+                "&:hover": {
+                  backgroundColor: "rgba(232, 93, 42, 0.08)",
                 },
               }}
             >
               <ListItemIcon
                 sx={{
-                  color: pathname === item.path ? '#E85D2A' : 'inherit',
+                  color: pathname === item.path ? "#E85D2A" : "inherit",
                   minWidth: 40,
                 }}
               >
@@ -105,9 +115,9 @@ export default function DashboardLayout({
               <ListItemText
                 primary={item.label}
                 sx={{
-                  '& .MuiTypography-root': {
+                  "& .MuiTypography-root": {
                     fontWeight: pathname === item.path ? 600 : 400,
-                    color: pathname === item.path ? '#E85D2A' : 'inherit',
+                    color: pathname === item.path ? "#E85D2A" : "inherit",
                   },
                 }}
               />
@@ -120,10 +130,22 @@ export default function DashboardLayout({
 
       {/* User Info */}
       <Box sx={{ p: 2 }}>
-        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: "text.secondary", display: "block", mb: 1 }}
+        >
           Signed in as:
         </Typography>
-        <Typography variant="body2" sx={{ fontWeight: 500, mb: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 500,
+            mb: 2,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
           {user?.displayName || user?.email}
         </Typography>
 
@@ -132,13 +154,13 @@ export default function DashboardLayout({
           <ListItemButton
             onClick={handleLogout}
             sx={{
-              color: '#E85D2A',
-              '&:hover': {
-                backgroundColor: 'rgba(232, 93, 42, 0.08)',
+              color: "#E85D2A",
+              "&:hover": {
+                backgroundColor: "rgba(232, 93, 42, 0.08)",
               },
             }}
           >
-            <ListItemIcon sx={{ color: '#E85D2A', minWidth: 40 }}>
+            <ListItemIcon sx={{ color: "#E85D2A", minWidth: 40 }}>
               <LogoutIcon />
             </ListItemIcon>
             <ListItemText primary="Sign Out" />
@@ -149,13 +171,13 @@ export default function DashboardLayout({
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: "flex", minHeight: "100vh" }}>
       {/* Mobile AppBar */}
       <AppBar
         sx={{
-          display: { xs: 'flex', md: 'none' },
-          bgcolor: 'white',
-          color: '#1A1A1A',
+          display: { xs: "flex", md: "none" },
+          bgcolor: "white",
+          color: "#1A1A1A",
           boxShadow: 1,
           zIndex: 1300,
         }}
@@ -170,7 +192,10 @@ export default function DashboardLayout({
           >
             {drawerOpen ? <CloseIcon /> : <MenuIcon />}
           </IconButton>
-          <Typography variant="h6" sx={{ color: '#E85D2A', fontWeight: 700, flex: 1 }}>
+          <Typography
+            variant="h6"
+            sx={{ color: "#E85D2A", fontWeight: 700, flex: 1 }}
+          >
             Survivor League
           </Typography>
         </Toolbar>
@@ -182,10 +207,10 @@ export default function DashboardLayout({
         open={drawerOpen}
         onClose={handleToggleDrawer}
         sx={{
-          display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': {
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
             width: DRAWER_WIDTH,
-            boxSizing: 'border-box',
+            boxSizing: "border-box",
           },
         }}
       >
@@ -195,13 +220,13 @@ export default function DashboardLayout({
       {/* Desktop Sidebar */}
       <Box
         sx={{
-          display: { xs: 'none', md: 'block' },
+          display: { xs: "none", md: "block" },
           width: DRAWER_WIDTH,
           flexShrink: 0,
-          borderRight: '1px solid #E85D2A',
+          borderRight: "1px solid #E85D2A",
         }}
       >
-        <Box sx={{ width: DRAWER_WIDTH, overflow: 'auto' }}>
+        <Box sx={{ width: DRAWER_WIDTH, overflow: "auto" }}>
           {drawerContent}
         </Box>
       </Box>
@@ -211,8 +236,8 @@ export default function DashboardLayout({
         component="main"
         sx={{
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
           mt: { xs: 7, md: 0 },
         }}
       >

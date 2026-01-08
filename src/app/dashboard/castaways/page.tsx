@@ -1,8 +1,8 @@
 "use client";
 
-import { Container, Box, Typography } from '@mui/material';
-import CASTAWAYS from '@/data/castaways';
-import CastawayCard from '@/components/CastawayCard';
+import { Container, Box, Typography } from "@mui/material";
+import CASTAWAYS from "@/data/castaways";
+import CastawayCard from "@/components/CastawayCard";
 
 export default function CastawaysPage() {
   return (
@@ -13,18 +13,18 @@ export default function CastawaysPage() {
 
       <Box
         sx={{
-          display: 'grid',
+          display: "grid",
           gap: 2,
           gridTemplateColumns: {
-            xs: 'repeat(1, minmax(0, 1fr))',
-            sm: 'repeat(2, minmax(0, 1fr))',
-            md: 'repeat(3, minmax(0, 1fr))',
-            lg: 'repeat(4, minmax(0, 1fr))',
+            xs: "repeat(1, minmax(0, 1fr))",
+            sm: "repeat(2, minmax(0, 1fr))",
+            md: "repeat(3, minmax(0, 1fr))",
+            lg: "repeat(4, minmax(0, 1fr))",
           },
         }}
       >
         {CASTAWAYS.map((c) => (
-          <Box key={c.id} sx={{ width: '100%' }}>
+          <Box key={c.id} sx={{ width: "100%" }}>
             <CastawayCard castaway={c} />
           </Box>
         ))}
