@@ -31,6 +31,9 @@ import {
 import { League, TribeMember } from "@/types/league";
 import { CURRENT_SEASON } from "@/data/seasons";
 
+// Prevent static generation for this page
+export const dynamic = "force-dynamic";
+
 interface LeagueMember extends TribeMember {
   rank: number;
 }
@@ -51,16 +54,21 @@ export default function LeaderboardPage() {
     // Subscribe to leagues where user is a member
     const leaguesRef = collection(db, "leagues");
     const constraints: QueryConstraint[] = [
-      where("memberIds", "array-contains", user.uid),
+      where("members", "array-contains", user.uid),
     ];
 
     const unsubscribe = onSnapshot(
       query(leaguesRef, ...constraints),
       (snapshot) => {
-        const loadedLeagues = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as League[];
+        const loadedLeagues = snapshot.docs.map((doc) => {
+          const rawData = doc.data() as any;
+          return {
+            id: doc.id,
+            ...rawData,
+            createdAt: rawData.createdAt?.toDate?.() || rawData.createdAt,
+            updatedAt: rawData.updatedAt?.toDate?.() || rawData.updatedAt,
+          } as League;
+        });
 
         setLeagues(loadedLeagues);
 
