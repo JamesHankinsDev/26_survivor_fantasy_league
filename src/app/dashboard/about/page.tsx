@@ -201,12 +201,45 @@ export default function AboutPage() {
         </Typography>
         <Typography
           variant="body2"
-          sx={{ color: "text.secondary", lineHeight: 1.8 }}
+          sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
         >
           <strong>Eliminations:</strong> When a castaway is eliminated from
           Survivor, league managers mark them as eliminated. Eliminated
           castaways no longer earn points and cannot be added to new rosters.
         </Typography>
+
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: "rgba(232, 93, 42, 0.08)",
+            border: "1px solid #E85D2A",
+            borderRadius: 1,
+            mt: 2,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#D94E23",
+              fontWeight: 600,
+              mb: 1,
+            }}
+          >
+            ⚠️ Important: Eliminated Castaways Impact
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              lineHeight: 1.8,
+            }}
+          >
+            Once a castaway is eliminated, you <strong>cannot drop them</strong> to
+            free up a roster spot. If one of your drafted castaways is
+            eliminated early, you effectively lose that roster spot for the
+            remainder of the season. Choose your draft picks wisely!
+          </Typography>
+        </Box>
       </Paper>
     </Container>
   );
