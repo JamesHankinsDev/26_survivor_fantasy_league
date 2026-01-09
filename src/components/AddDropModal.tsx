@@ -87,8 +87,10 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
   );
 
   // Castaways that can be dropped (only active castaways)
-  const droppableCastaways = currentRoster.filter((r) =>
-    canAddDropCastaway(r, currentWeek) && r.status === "active"
+  const droppableCastaways = currentRoster.filter(
+    (r) =>
+      canAddDropCastaway(r, currentWeek) &&
+      !eliminatedCastawayIds.includes(r.castawayId)
   );
 
   const handleSubmit = async () => {
@@ -158,8 +160,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
                 const seasonScore = castawaySeasonScores[entry.castawayId] || 0;
                 return (
                   <MenuItem key={entry.castawayId} value={entry.castawayId}>
-                    {castaway?.name} ({entry.accumulatedPoints} pts on team
-                    {seasonScore > 0 && `, ⭐ ${seasonScore} season`})
+                    {castaway?.name} ({seasonScore} pts)
                   </MenuItem>
                 );
               })}

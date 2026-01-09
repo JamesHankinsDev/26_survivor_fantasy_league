@@ -175,13 +175,14 @@ export default function TribeCard({
                   const castaway = allCastaways.find(
                     (c) => c.id === entry.castawayId
                   );
-                  const isEliminated = eliminatedCastawayIds.includes(entry.castawayId);
-                  const statusColor =
-                    isEliminated
-                      ? "#999"
-                      : entry.status === "dropped"
-                      ? "#E85D2A"
-                      : "#20B2AA";
+                  const isEliminated = eliminatedCastawayIds.includes(
+                    entry.castawayId
+                  );
+                  const statusColor = isEliminated
+                    ? "#999"
+                    : entry.status === "dropped"
+                    ? "#E85D2A"
+                    : "#20B2AA";
                   return (
                     <Box
                       key={entry.castawayId}
@@ -192,10 +193,7 @@ export default function TribeCard({
                         bgcolor: `${statusColor}11`,
                         textAlign: "center",
                         opacity: isEliminated ? 0.5 : 1,
-                        filter:
-                          isEliminated
-                            ? "grayscale(100%)"
-                            : "none",
+                        filter: isEliminated ? "grayscale(100%)" : "none",
                       }}
                     >
                       <Typography
