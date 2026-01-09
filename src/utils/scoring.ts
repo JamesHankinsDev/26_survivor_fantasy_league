@@ -125,9 +125,7 @@ export const getAvailableCastaways = (
   // Only filter out ACTIVE roster members and eliminated castaways
   // Dropped castaways should be available to re-add
   const activeRosterIds = new Set(
-    currentRoster
-      .filter((r) => r.status === "active")
-      .map((r) => r.castawayId)
+    currentRoster.filter((r) => r.status === "active").map((r) => r.castawayId)
   );
   const eliminatedSet = new Set(eliminatedCastawayIds);
 

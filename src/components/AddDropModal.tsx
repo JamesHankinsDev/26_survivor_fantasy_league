@@ -86,9 +86,9 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     eliminatedCastawayIds
   );
 
-  // Castaways that can be dropped (not eliminated)
+  // Castaways that can be dropped (only active castaways)
   const droppableCastaways = currentRoster.filter((r) =>
-    canAddDropCastaway(r, currentWeek)
+    canAddDropCastaway(r, currentWeek) && r.status === "active"
   );
 
   const handleSubmit = async () => {
@@ -158,8 +158,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
                 const seasonScore = castawaySeasonScores[entry.castawayId] || 0;
                 return (
                   <MenuItem key={entry.castawayId} value={entry.castawayId}>
-                    {castaway?.name} ({entry.accumulatedPoints} pts on team
-                    {seasonScore > 0 && `, ⭐ ${seasonScore} season`})
+                    {castaway?.name} ({seasonScore} pts )
                   </MenuItem>
                 );
               })}
@@ -176,16 +175,14 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
-              {availableCastaways.map((castaway) => (
-                <MenuItem key={castaway.id} value={castaway.id}>
-                  {castaway.name}
-                  {castawaySeasonScores[castaway.id] > 0 && (
-                    <span style={{ marginLeft: "8px", color: "#E85D2A" }}>
-                      ⭐ {castawaySeasonScores[castaway.id]}
-                    </span>
-                  )}
-                </MenuItem>
-              ))}
+              {availableCastaways.map((castaway) => {
+                const seasonScore = castawaySeasonScores[castaway.id] || 0;
+                return (
+                  <MenuItem key={castaway.id} value={castaway.id}>
+                    {castaway.name} ({seasonScore} pts)
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
 

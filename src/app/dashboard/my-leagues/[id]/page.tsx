@@ -291,12 +291,25 @@ export default function LeagueDetailPage() {
 
       // Add new castaway if provided
       if (addId) {
-        updatedRoster.push({
-          castawayId: addId,
-          status: "active",
-          addedWeek: 1, // TODO: Calculate actual week
-          accumulatedPoints: 0,
-        });
+        // Check if castaway was previously dropped - if so, reactivate instead of creating new
+        const previouslyDropped = updatedRoster.find(
+          (entry) => entry.castawayId === addId && entry.status === "dropped"
+        );
+
+        if (previouslyDropped) {
+          // Reactivate the dropped entry
+          previouslyDropped.status = "active";
+          // Remove the droppedWeek so it's not considered dropped anymore
+          delete previouslyDropped.droppedWeek;
+        } else {
+          // Add new castaway if they weren't previously on the team
+          updatedRoster.push({
+            castawayId: addId,
+            status: "active",
+            addedWeek: 1, // TODO: Calculate actual week
+            accumulatedPoints: 0,
+          });
+        }
       }
 
       // Update member details with new roster

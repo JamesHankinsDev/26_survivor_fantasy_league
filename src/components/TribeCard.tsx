@@ -188,7 +188,8 @@ export default function TribeCard({
                         border: `1px solid ${statusColor}`,
                         bgcolor: `${statusColor}11`,
                         textAlign: "center",
-                        opacity: entry.status === "eliminated" ? 0.6 : 1,
+                        opacity: entry.status === "eliminated" ? 0.5 : 1,
+                        filter: entry.status === "eliminated" ? "grayscale(100%)" : "none",
                       }}
                     >
                       <Typography
