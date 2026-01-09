@@ -39,9 +39,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CASTAWAYS from "@/data/castaways";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { loadEliminatedCastaways } from "@/utils/scoring";
-import {
-  calculatePointsFromEvents,
-} from "@/utils/eventScoringConfig";
+import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
@@ -504,6 +502,7 @@ export default function LeagueDetailPage() {
           eliminatedCastawayIds={eliminatedCastawayIds}
           seasonStartDate={new Date("2025-01-01")}
           seasonPremierDate={new Date(CURRENT_SEASON.premiereDate)}
+          castawaySeasonScores={castawaySeasonScores}
         />
       )}
     </Container>

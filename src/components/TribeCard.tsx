@@ -212,21 +212,8 @@ export default function TribeCard({
                           display: "block",
                         }}
                       >
-                        {entry.accumulatedPoints} pts
+                        {castawaySeasonScores[entry.castawayId]} pts
                       </Typography>
-                      {castawaySeasonScores[entry.castawayId] > 0 && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: "0.6rem",
-                            color: "#E85D2A",
-                            display: "block",
-                            fontWeight: 500,
-                          }}
-                        >
-                          ⭐ {castawaySeasonScores[entry.castawayId]}
-                        </Typography>
-                      )}
                       {entry.status !== "active" && (
                         <Typography
                           variant="caption"

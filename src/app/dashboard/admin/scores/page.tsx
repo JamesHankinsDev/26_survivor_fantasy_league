@@ -84,10 +84,13 @@ export default function AdminScoresPage() {
         if (snapshot.empty) {
           loadedCastaways = CASTAWAYS;
         } else {
-          loadedCastaways = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          } as Castaway));
+          loadedCastaways = snapshot.docs.map(
+            (doc) =>
+              ({
+                id: doc.id,
+                ...doc.data(),
+              } as Castaway)
+          );
         }
         setCastaways(loadedCastaways);
 
@@ -268,7 +271,9 @@ export default function AdminScoresPage() {
     }
   };
 
-  const cascadeScoresToLeagues = async (episodeScores: Record<string, number>) => {
+  const cascadeScoresToLeagues = async (
+    episodeScores: Record<string, number>
+  ) => {
     try {
       const leaguesRef = collection(db, "leagues");
       const snapshot = await getDocs(leaguesRef);
@@ -366,7 +371,11 @@ export default function AdminScoresPage() {
               <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
                 <TableCell sx={{ fontWeight: 600 }}>Castaway</TableCell>
                 {ALL_EVENT_TYPES.map((eventType) => (
-                  <TableCell key={eventType} align="center" sx={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                  <TableCell
+                    key={eventType}
+                    align="center"
+                    sx={{ fontSize: "0.8rem", fontWeight: 600 }}
+                  >
                     {getEventLabel(eventType)}
                     <br />
                     <span style={{ fontSize: "0.75rem", color: "#666" }}>
@@ -383,7 +392,9 @@ export default function AdminScoresPage() {
             <TableBody>
               {castaways.map((castaway) => (
                 <TableRow key={castaway.id}>
-                  <TableCell sx={{ fontWeight: 500 }}>{castaway.name}</TableCell>
+                  <TableCell sx={{ fontWeight: 500 }}>
+                    {castaway.name}
+                  </TableCell>
                   {ALL_EVENT_TYPES.map((eventType) => {
                     const events = episodes[castaway.id]?.events || [];
                     const eventCount =
@@ -407,7 +418,9 @@ export default function AdminScoresPage() {
                           >
                             <RemoveIcon fontSize="small" />
                           </IconButton>
-                          <Typography sx={{ minWidth: 20, textAlign: "center" }}>
+                          <Typography
+                            sx={{ minWidth: 20, textAlign: "center" }}
+                          >
                             {eventCount}
                           </Typography>
                           <IconButton

@@ -1,5 +1,12 @@
 import React from "react";
-import { Card, CardContent, CardMedia, Typography, Box, Chip } from "@mui/material";
+import {
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+  Box,
+  Chip,
+} from "@mui/material";
 import { Castaway } from "@/types/castaway";
 
 export default function CastawayCard({
@@ -52,21 +59,10 @@ export default function CastawayCard({
           <CardContent sx={{ textAlign: "center", pb: 1 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 700, fontSize: "1.1rem", mb: 0.5 }}
+              sx={{ fontWeight: 700, fontSize: "1.1rem" }}
             >
               {castaway.name}
             </Typography>
-            {seasonScore > 0 && (
-              <Chip
-                label={`${seasonScore} pts`}
-                size="small"
-                sx={{
-                  bgcolor: "#E85D2A",
-                  color: "white",
-                  fontWeight: 600,
-                }}
-              />
-            )}
           </CardContent>
         </Card>
 
@@ -85,12 +81,35 @@ export default function CastawayCard({
           }}
         >
           <CardContent sx={{ overflow: "auto", height: "100%" }}>
-            <Typography
-              variant="subtitle2"
-              sx={{ fontWeight: 700, mb: 1.5, color: "#1976d2" }}
-            >
-              Previous Seasons
-            </Typography>
+            {seasonScore > 0 && (
+              <>
+                <Box sx={{ mb: 2, textAlign: "center" }}>
+                  <Chip
+                    label={`${seasonScore} pts this season`}
+                    sx={{
+                      bgcolor: "#E85D2A",
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: "0.9rem",
+                    }}
+                  />
+                </Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 700, mb: 1.5, color: "#1976d2" }}
+                >
+                  Previous Seasons
+                </Typography>
+              </>
+            )}
+            {seasonScore === 0 && (
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, mb: 1.5, color: "#1976d2" }}
+              >
+                Previous Seasons
+              </Typography>
+            )}
             <Typography
               variant="body2"
               sx={{ color: "text.secondary", lineHeight: 1.6 }}

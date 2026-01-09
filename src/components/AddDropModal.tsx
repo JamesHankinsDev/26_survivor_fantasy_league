@@ -34,6 +34,7 @@ interface AddDropModalProps {
   eliminatedCastawayIds: string[];
   seasonStartDate: Date;
   seasonPremierDate: Date;
+  castawaySeasonScores?: Record<string, number>;
 }
 
 export const AddDropModal: React.FC<AddDropModalProps> = ({
@@ -45,6 +46,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
   eliminatedCastawayIds,
   seasonStartDate,
   seasonPremierDate,
+  castawaySeasonScores = {},
 }) => {
   const [dropCastawayId, setDropCastawayId] = useState<string | null>(null);
   const [addCastawayId, setAddCastawayId] = useState<string | null>(null);
@@ -175,6 +177,11 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
               {availableCastaways.map((castaway) => (
                 <MenuItem key={castaway.id} value={castaway.id}>
                   {castaway.name}
+                  {castawaySeasonScores[castaway.id] > 0 && (
+                    <span style={{ marginLeft: "8px", color: "#E85D2A" }}>
+                      ⭐ {castawaySeasonScores[castaway.id]}
+                    </span>
+                  )}
                 </MenuItem>
               ))}
             </Select>

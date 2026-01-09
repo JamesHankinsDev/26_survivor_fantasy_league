@@ -98,8 +98,7 @@ export const getEventDescription = (
     },
     made_jury: {
       title: "Made the Jury",
-      description:
-        "Castaway was voted out but made the jury. Worth +3 points.",
+      description: "Castaway was voted out but made the jury. Worth +3 points.",
     },
     voted_out: {
       title: "Voted Out",
