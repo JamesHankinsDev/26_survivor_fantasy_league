@@ -43,8 +43,8 @@ export default function AboutPage() {
           join an existing one with your friends.
           <br />
           <br />
-          <strong>2. Draft Players:</strong> Participate in league drafts to
-          build your team of Survivor contestants.
+          <strong>2. Draft Players:</strong> After joining a league, select your
+          starting tribe roster of 5 castaways.
           <br />
           <br />
           <strong>3. Earn Points:</strong> Your players earn points based on
@@ -86,78 +86,78 @@ export default function AboutPage() {
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Immunity Win (+5):</strong> Castaway won an individual
+            🏆 <strong>Immunity Win (+5):</strong> Castaway won an individual
             immunity challenge and cannot be voted out.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Team Challenge Win (+3):</strong> Castaway's team won a
+            🎯 <strong>Team Challenge Win (+3):</strong> Castaway's team won a
             reward or immunity challenge.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Found Idol/Advantage (+5):</strong> Castaway discovered a
+            💎 <strong>Found Idol/Advantage (+5):</strong> Castaway discovered a
             hidden immunity idol or other game advantage.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Successfully Used Idol/Advantage (+3):</strong> Castaway
+            ⚡ <strong>Successfully Used Idol/Advantage (+3):</strong> Castaway
             played an idol or advantage that helped them in the game.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Voted at Tribal Council (+3):</strong> Castaway participated
-            in voting at tribal council. Points awarded per vote.
+            🗳️ <strong>Voted at Tribal Council (+3):</strong> Castaway
+            participated in voting at tribal council. Points awarded per vote.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Survived the Episode (+1):</strong> Castaway was not voted
-            out and survived to the next episode.
+            🌴 <strong>Survived the Episode (+1):</strong> Castaway was not
+            voted out and survived to the next episode.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Fire-Making Challenge Win (+5):</strong> Castaway won a
+            🔥 <strong>Fire-Making Challenge Win (+5):</strong> Castaway won a
             fire-making tiebreaker challenge.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Made Final 3 (+5):</strong> Castaway made it to the final
+            🥉 <strong>Made Final 3 (+5):</strong> Castaway made it to the final
             three of the season.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Season Winner (+10):</strong> Castaway was crowned Sole
+            👑 <strong>Season Winner (+10):</strong> Castaway was crowned Sole
             Survivor and won the game.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
           >
-            <strong>Made Jury (+3):</strong> Castaway was voted out but made the
-            jury.
+            📋 <strong>Made Jury (+3):</strong> Castaway was voted out but made
+            the jury.
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "text.secondary", lineHeight: 1.8 }}
           >
-            <strong>Voted Out (-10):</strong> Castaway was voted out of the game
-            and eliminated.
+            ❌ <strong>Voted Out (-10):</strong> Castaway was voted out of the
+            game and eliminated.
           </Typography>
         </Box>
 
@@ -234,8 +234,8 @@ export default function AboutPage() {
               lineHeight: 1.8,
             }}
           >
-            Once a castaway is eliminated, you <strong>cannot drop them</strong> to
-            free up a roster spot. If one of your drafted castaways is
+            Once a castaway is eliminated, you <strong>cannot drop them</strong>{" "}
+            to free up a roster spot. If one of your drafted castaways is
             eliminated early, you effectively lose that roster spot for the
             remainder of the season. Choose your draft picks wisely!
           </Typography>
