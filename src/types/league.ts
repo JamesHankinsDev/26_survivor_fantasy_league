@@ -70,6 +70,36 @@ export interface CastawaySeasonStats {
   lastUpdated: Date | any;
 }
 
+// Event-based scoring: individual events recorded per castaway per episode
+export type ScoringEventType =
+  | "immunity_win"
+  | "team_challenge_win"
+  | "found_idol"
+  | "used_idol_successfully"
+  | "voted_at_tribal"
+  | "survived_episode"
+  | "fire_making_win"
+  | "made_final_three"
+  | "season_winner"
+  | "made_jury"
+  | "voted_out";
+
+export interface ScoringEvent {
+  eventType: ScoringEventType;
+  count: number; // Number of times this event occurred (e.g., 2 jury votes)
+}
+
+// Episode events: records all events for all castaways in an episode
+export interface EpisodeEvents {
+  id: string; // e.g., "episode-1"
+  seasonNumber: number;
+  episodeNumber: number;
+  airDate: Date | any;
+  events: Record<string, ScoringEvent[]>; // { castawayId: [ScoringEvent[], ...] }
+  createdAt: Date | any;
+  updatedAt: Date | any;
+}
+
 // Helper to get member rank in league (1st place, 2nd place, etc)
 export const getMemberRank = (
   members: TribeMember[],

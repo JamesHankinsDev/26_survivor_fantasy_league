@@ -20,7 +20,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
@@ -35,28 +38,31 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { Castaway } from "@/types/castaway";
-import { EpisodeScores, League } from "@/types/league";
+import { EpisodeEvents, ScoringEvent, ScoringEventType } from "@/types/league";
 import { CURRENT_SEASON } from "@/data/seasons";
+import CASTAWAYS from "@/data/castaways";
 import { calculateTribeTotalPoints } from "@/utils/scoring";
+import {
+  SCORING_CONFIG,
+  calculatePointsFromEvents,
+  getEventLabel,
+  ALL_EVENT_TYPES,
+} from "@/utils/eventScoringConfig";
 
 export default function AdminScoresPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [castaways, setCastaways] = useState<Castaway[]>([]);
-  const [scores, setScores] = useState<
+  const [episodes, setEpisodes] = useState<
     Record<
       string,
       {
-        aliveBonus: number;
-        immunityWin: number;
-        juryVote: number;
-        other: number;
+        events: ScoringEvent[];
       }
     >
   >({});
   const [episodeNumber, setEpisodeNumber] = useState(1);
   const [airDate, setAirDate] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -64,86 +70,78 @@ export default function AdminScoresPage() {
 
   // Load castaways on mount
   useEffect(() => {
-    const loadCastaways = async () => {
+    const loadData = async () => {
       try {
-        const castawayCollection = collection(db, "castaways");
-        const snapshot = await getDocs(
-          query(
-            castawayCollection,
-            where("seasonNumber", "==", CURRENT_SEASON.number)
-          )
+        const castawaysRef = collection(
+          db,
+          "seasons",
+          CURRENT_SEASON.number.toString(),
+          "castaways"
         );
-
-        // If no castaways in database, use hardcoded data
+        const snapshot = await getDocs(castawaysRef);
         let loadedCastaways: Castaway[] = [];
         if (snapshot.empty) {
-          const { default: defaultCastaways } = await import(
-            "@/data/castaways"
-          );
-          loadedCastaways = defaultCastaways.map((c) => ({
-            ...c,
-            id: c.id,
-            seasonNumber: CURRENT_SEASON.number,
-          }));
+          loadedCastaways = CASTAWAYS;
         } else {
-          loadedCastaways = snapshot.docs.map((doc) => doc.data() as Castaway);
+          loadedCastaways = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          } as Castaway));
         }
-
         setCastaways(loadedCastaways);
 
-        // Initialize scores object with breakdown structure based on loaded castaways
-        const initialScores: Record<
-          string,
-          {
-            aliveBonus: number;
-            immunityWin: number;
-            juryVote: number;
-            other: number;
-          }
-        > = {};
-        loadedCastaways.forEach((castaway) => {
-          initialScores[castaway.id] = {
-            aliveBonus: 0,
-            immunityWin: 0,
-            juryVote: 0,
-            other: 0,
-          };
+        // Initialize empty events for all castaways
+        const initialEvents: Record<string, { events: ScoringEvent[] }> = {};
+        loadedCastaways.forEach((c) => {
+          initialEvents[c.id] = { events: [] };
         });
-        setScores(initialScores);
+        setEpisodes(initialEvents);
       } catch (err) {
         console.error("Error loading castaways:", err);
         setError("Failed to load castaways");
-      } finally {
-        setLoading(false);
       }
     };
-
-    loadCastaways();
+    loadData();
   }, []);
 
-  const handleScoreChange = (
+  const handleEventChange = (
     castawayId: string,
-    category: "aliveBonus" | "immunityWin" | "juryVote" | "other",
-    value: number
+    eventType: ScoringEventType,
+    delta: number
   ) => {
-    setScores((prev) => ({
-      ...prev,
-      [castawayId]: {
-        ...prev[castawayId],
-        [category]: value,
-      },
-    }));
+    setEpisodes((prev) => {
+      const castawayEvents = prev[castawayId]?.events || [];
+      const existingEvent = castawayEvents.find(
+        (e) => e.eventType === eventType
+      );
+
+      const newCount = existingEvent
+        ? Math.max(0, existingEvent.count + delta)
+        : Math.max(0, delta);
+
+      let newEvents: ScoringEvent[];
+      if (existingEvent) {
+        newEvents = castawayEvents.map((e) =>
+          e.eventType === eventType ? { ...e, count: newCount } : e
+        );
+      } else if (newCount > 0) {
+        newEvents = [...castawayEvents, { eventType, count: newCount }];
+      } else {
+        newEvents = castawayEvents;
+      }
+
+      return {
+        ...prev,
+        [castawayId]: {
+          events: newEvents.filter((e) => e.count > 0),
+        },
+      };
+    });
   };
 
-  const getTotalForCastaway = (castawayId: string) => {
-    const castawayScores = scores[castawayId];
-    if (!castawayScores) return 0;
-    return (
-      castawayScores.aliveBonus +
-      castawayScores.immunityWin +
-      castawayScores.juryVote +
-      castawayScores.other
-    );
+  const getTotalForCastaway = (castawayId: string): number => {
+    const castawayEvents = episodes[castawayId]?.events || [];
+    return calculatePointsFromEvents(castawayEvents);
   };
 
   const handleSaveScores = async () => {
@@ -157,25 +155,24 @@ export default function AdminScoresPage() {
     setSuccess("");
 
     try {
-      // Flatten breakdown to total scores for storage
-      const flattenedScores: Record<string, number> = {};
-      Object.entries(scores).forEach(([castawayId]) => {
-        flattenedScores[castawayId] = getTotalForCastaway(castawayId);
-      });
-
-      // Create episode scores document
-      const episodeScoresData: EpisodeScores = {
+      // Create episode events document
+      const episodeEventsData: EpisodeEvents = {
         id: `episode-${episodeNumber}`,
         seasonNumber: CURRENT_SEASON.number,
         episodeNumber,
         airDate: new Date(airDate),
-        scores: flattenedScores,
+        events: Object.fromEntries(
+          Object.entries(episodes).map(([castawayId, data]) => [
+            castawayId,
+            data.events,
+          ])
+        ),
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       };
 
-      // Save to Firestore in central location
-      const scoresRef = doc(
+      // Save to Firestore
+      const eventsRef = doc(
         db,
         "seasons",
         CURRENT_SEASON.number.toString(),
@@ -183,72 +180,52 @@ export default function AdminScoresPage() {
         `episode-${episodeNumber}`
       );
 
-      await setDoc(scoresRef, episodeScoresData);
+      await setDoc(eventsRef, episodeEventsData);
+
+      // Calculate flat scores from events for cascading
+      const flatScores: Record<string, number> = {};
+      Object.entries(episodes).forEach(([castawayId, data]) => {
+        flatScores[castawayId] = getTotalForCastaway(castawayId);
+      });
 
       // Cascade scores to all managed leagues
-      await cascadeScoresToLeagues(flattenedScores);
+      await cascadeScoresToLeagues(flatScores);
 
       setSuccess(
-        `Episode ${episodeNumber} scores saved successfully! Cascading to all managed leagues...`
+        `Episode ${episodeNumber} events saved successfully! Cascading to all managed leagues...`
       );
 
-      // Reset form with proper breakdown structure
-      const resetScores: Record<
-        string,
-        {
-          aliveBonus: number;
-          immunityWin: number;
-          juryVote: number;
-          other: number;
-        }
-      > = {};
+      // Reset form
+      const resetEvents: Record<string, { events: ScoringEvent[] }> = {};
       castaways.forEach((c) => {
-        resetScores[c.id] = {
-          aliveBonus: 0,
-          immunityWin: 0,
-          juryVote: 0,
-          other: 0,
-        };
+        resetEvents[c.id] = { events: [] };
       });
-      setScores(resetScores);
+      setEpisodes(resetEvents);
       setEpisodeNumber(episodeNumber + 1);
       setAirDate("");
     } catch (err) {
-      console.error("Error saving scores:", err);
-      setError("Failed to save scores. Please try again.");
+      console.error("Error saving events:", err);
+      setError("Failed to save events. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  const cascadeScoresToLeagues = async (
-    episodeScores: Record<string, number>
-  ) => {
+  const cascadeScoresToLeagues = async (episodeScores: Record<string, number>) => {
     try {
-      // Load all leagues
       const leaguesRef = collection(db, "leagues");
-      const allLeaguesSnapshot = await getDocs(leaguesRef);
-
+      const snapshot = await getDocs(leaguesRef);
       const batch = writeBatch(db);
       let updatedCount = 0;
 
-      // For each league, update all tribe members' points
-      allLeaguesSnapshot.docs.forEach((leagueDoc) => {
-        const league = leagueDoc.data() as League;
+      snapshot.forEach((leagueDoc) => {
+        const league = leagueDoc.data() as any;
+        const memberDetails = league.memberDetails || [];
 
-        if (!league.memberDetails || league.memberDetails.length === 0) {
-          return;
-        }
-
-        // Recalculate points for each member
-        const updatedMembers = league.memberDetails.map((member) => {
-          // Get all episodes scored so far for this league
+        const updatedMembers = memberDetails.map((member: any) => {
           const allEpisodeScores: Record<number, Record<string, number>> = {};
-
-          // Add the current episode
           allEpisodeScores[episodeNumber] = episodeScores;
 
-          // Calculate new total points based on complete roster history
           const newTotalPoints = calculateTribeTotalPoints(
             member,
             allEpisodeScores
@@ -261,7 +238,6 @@ export default function AdminScoresPage() {
           };
         });
 
-        // Update the league with new member details
         batch.update(doc(db, "leagues", leagueDoc.id), {
           memberDetails: updatedMembers,
           updatedAt: Timestamp.now(),
@@ -272,7 +248,6 @@ export default function AdminScoresPage() {
       console.log(`Updated ${updatedCount} tribe members across all leagues`);
     } catch (err) {
       console.error("Error cascading scores:", err);
-      // Don't throw - scores were saved, just failed to cascade
     }
   };
 
@@ -281,19 +256,17 @@ export default function AdminScoresPage() {
     return null;
   }
 
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
-        <CircularProgress />
-      </Container>
-    );
-  }
-
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: "bold" }}>
-        Admin: Episode Scoring
-      </Typography>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
+          Record Episode Events
+        </Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 3 }}>
+          Record events for each castaway this episode. Points are calculated
+          automatically based on the event types.
+        </Typography>
+      </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
@@ -327,89 +300,71 @@ export default function AdminScoresPage() {
         )}
 
         <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: "bold" }}>
-          Enter points for each castaway:
+          Record events for each castaway:
         </Typography>
 
-        <TableContainer>
+        <TableContainer sx={{ overflowX: "auto" }}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                <TableCell>Castaway</TableCell>
-                <TableCell align="center">Alive Bonus</TableCell>
-                <TableCell align="center">Immunity Win</TableCell>
-                <TableCell align="center">Jury Vote</TableCell>
-                <TableCell align="center">Other</TableCell>
-                <TableCell align="right">Total</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Castaway</TableCell>
+                {ALL_EVENT_TYPES.map((eventType) => (
+                  <TableCell key={eventType} align="center" sx={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                    {getEventLabel(eventType)}
+                    <br />
+                    <span style={{ fontSize: "0.75rem", color: "#666" }}>
+                      {SCORING_CONFIG[eventType] > 0 ? "+" : ""}
+                      {SCORING_CONFIG[eventType]}
+                    </span>
+                  </TableCell>
+                ))}
+                <TableCell align="right" sx={{ fontWeight: 600 }}>
+                  Total
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {castaways.map((castaway) => (
                 <TableRow key={castaway.id}>
-                  <TableCell>{castaway.name}</TableCell>
-                  <TableCell align="center">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={scores[castaway.id]?.aliveBonus || 0}
-                      onChange={(e) =>
-                        handleScoreChange(
-                          castaway.id,
-                          "aliveBonus",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      inputProps={{ min: 0, step: 1 }}
-                      sx={{ width: 80 }}
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={scores[castaway.id]?.immunityWin || 0}
-                      onChange={(e) =>
-                        handleScoreChange(
-                          castaway.id,
-                          "immunityWin",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      inputProps={{ min: 0, step: 1 }}
-                      sx={{ width: 80 }}
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={scores[castaway.id]?.juryVote || 0}
-                      onChange={(e) =>
-                        handleScoreChange(
-                          castaway.id,
-                          "juryVote",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      inputProps={{ min: 0, step: 1 }}
-                      sx={{ width: 80 }}
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={scores[castaway.id]?.other || 0}
-                      onChange={(e) =>
-                        handleScoreChange(
-                          castaway.id,
-                          "other",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      inputProps={{ min: 0, step: 1 }}
-                      sx={{ width: 80 }}
-                    />
-                  </TableCell>
+                  <TableCell sx={{ fontWeight: 500 }}>{castaway.name}</TableCell>
+                  {ALL_EVENT_TYPES.map((eventType) => {
+                    const events = episodes[castaway.id]?.events || [];
+                    const eventCount =
+                      events.find((e) => e.eventType === eventType)?.count || 0;
+
+                    return (
+                      <TableCell key={eventType} align="center">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleEventChange(castaway.id, eventType, -1)
+                            }
+                          >
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                          <Typography sx={{ minWidth: 20, textAlign: "center" }}>
+                            {eventCount}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleEventChange(castaway.id, eventType, 1)
+                            }
+                          >
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
                   <TableCell align="right" sx={{ fontWeight: "bold" }}>
                     {getTotalForCastaway(castaway.id)}
                   </TableCell>
@@ -425,7 +380,7 @@ export default function AdminScoresPage() {
             onClick={() => setOpenDialog(true)}
             disabled={saving}
           >
-            {saving ? <CircularProgress size={24} /> : "Save Episode Scores"}
+            {saving ? <CircularProgress size={24} /> : "Save Episode Events"}
           </Button>
           <Button variant="outlined" onClick={() => router.back()}>
             Cancel
@@ -435,14 +390,14 @@ export default function AdminScoresPage() {
 
       {/* Confirmation Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Confirm Episode Scores</DialogTitle>
+        <DialogTitle>Confirm Episode Events</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Typography>
               Episode {episodeNumber} - Air Date: {airDate}
             </Typography>
             <Typography sx={{ mt: 2, fontSize: "0.9em", color: "#666" }}>
-              These scores will cascade to ALL active leagues you manage. Points
+              These events will cascade to ALL active leagues you manage. Points
               will only count for teams that had each castaway at the time of
               scoring.
             </Typography>
