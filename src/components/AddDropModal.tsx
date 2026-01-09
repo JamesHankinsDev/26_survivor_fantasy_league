@@ -155,9 +155,11 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
                 const castaway = allCastaways.find(
                   (c) => c.id === entry.castawayId
                 );
+                const seasonScore = castawaySeasonScores[entry.castawayId] || 0;
                 return (
                   <MenuItem key={entry.castawayId} value={entry.castawayId}>
-                    {castaway?.name} ({entry.accumulatedPoints} pts)
+                    {castaway?.name} ({entry.accumulatedPoints} pts on team
+                    {seasonScore > 0 && `, ⭐ ${seasonScore} season`})
                   </MenuItem>
                 );
               })}
