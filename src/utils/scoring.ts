@@ -102,6 +102,7 @@ export const canAddDropCastaway = (
   currentWeek: number
 ): boolean => {
   // Cannot add/drop if eliminated
+  console.log({ castaway });
   if (castaway.status === "eliminated") {
     return false;
   }

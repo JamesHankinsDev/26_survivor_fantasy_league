@@ -12,9 +12,11 @@ import { Castaway } from "@/types/castaway";
 export default function CastawayCard({
   castaway,
   seasonScore = 0,
+  isEliminated = false,
 }: {
   castaway: Castaway;
   seasonScore?: number;
+  isEliminated?: boolean;
 }) {
   return (
     <Box
@@ -22,6 +24,8 @@ export default function CastawayCard({
         perspective: 1000,
         cursor: "pointer",
         height: "100%",
+        opacity: isEliminated ? 0.5 : 1,
+        filter: isEliminated ? "grayscale(100%)" : "none",
         "&:hover .flip-inner": { transform: "rotateY(180deg)" },
       }}
     >
@@ -63,6 +67,19 @@ export default function CastawayCard({
             >
               {castaway.name}
             </Typography>
+            {isEliminated && (
+              <Chip
+                label="Eliminated"
+                size="small"
+                sx={{
+                  mt: 1,
+                  bgcolor: "#999",
+                  color: "white",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                }}
+              />
+            )}
           </CardContent>
         </Card>
 

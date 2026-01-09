@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { EpisodeEvents } from "@/types/league";
 import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
+import { loadEliminatedCastaways } from "@/utils/scoring";
 
 export default function CastawaysPage() {
   const premiereDate = new Date(CURRENT_SEASON.premiereDate);
@@ -20,6 +21,9 @@ export default function CastawaysPage() {
 
   const [castawayScores, setCastawayScores] = useState<Record<string, number>>(
     {}
+  );
+  const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>(
+    []
   );
 
   // Load all episode events and calculate castaway scores
@@ -50,7 +54,17 @@ export default function CastawaysPage() {
       }
     };
 
+    const loadEliminated = async () => {
+      try {
+        const eliminated = await loadEliminatedCastaways(CURRENT_SEASON.number);
+        setEliminatedCastawayIds(eliminated);
+      } catch (err) {
+        console.error("Error loading eliminated castaways:", err);
+      }
+    };
+
     loadScores();
+    loadEliminated();
   }, []);
 
   return (
@@ -94,6 +108,7 @@ export default function CastawaysPage() {
             <CastawayCard
               castaway={c}
               seasonScore={castawayScores[c.id] || 0}
+              isEliminated={eliminatedCastawayIds.includes(c.id)}
             />
           </Box>
         ))}
