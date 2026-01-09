@@ -1,6 +1,6 @@
 /**
  * Season metadata and archive structure.
- * 
+ *
  * In the future, completed seasons will be archived and marked as inactive.
  * The current/upcoming season is always used for new leagues.
  */
@@ -16,9 +16,9 @@ export interface Season {
 // Current/upcoming season for new leagues
 export const CURRENT_SEASON: Season = {
   number: 50,
-  name: 'Survivor 50',
-  theme: 'In the Hands of the Fans',
-  premiereDate: '2026-02-25',
+  name: "Survivor 50",
+  theme: "In the Hands of the Fans",
+  premiereDate: "2026-02-25",
   isActive: true,
 };
 

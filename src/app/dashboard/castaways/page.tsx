@@ -26,9 +26,13 @@ export default function CastawaysPage() {
         <Typography variant="body1" sx={{ color: "text.secondary", mb: 3 }}>
           Premieres: <strong>{formattedDate}</strong>
         </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", maxWidth: 600 }}>
-          {CASTAWAYS.length} all-star returning players compete in the ultimate fan-voted season.
-          Click on any castaway to see their previous Survivor experience.
+        <Typography
+          variant="body2"
+          sx={{ color: "text.secondary", maxWidth: 600 }}
+        >
+          {CASTAWAYS.length} all-star returning players compete in the ultimate
+          fan-voted season. Click on any castaway to see their previous Survivor
+          experience.
         </Typography>
       </Box>
 

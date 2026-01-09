@@ -17,7 +17,12 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { League, TribeMember, getMemberRank, RosterEntry } from "@/types/league";
+import {
+  League,
+  TribeMember,
+  getMemberRank,
+  RosterEntry,
+} from "@/types/league";
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
 import { DraftTeamModal } from "@/components/DraftTeamModal";
@@ -40,7 +45,9 @@ export default function LeagueDetailPage() {
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>([]);
+  const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>(
+    []
+  );
 
   // Get current user's tribe member info
   const currentUserTribe = league?.memberDetails?.find(
@@ -85,13 +92,20 @@ export default function LeagueDetailPage() {
               ownerEmail: raw.ownerEmail,
               maxPlayers: raw.maxPlayers,
               currentPlayers:
-                raw.currentPlayers ?? raw.memberDetails?.length ?? raw.members?.length ?? 0,
+                raw.currentPlayers ??
+                raw.memberDetails?.length ??
+                raw.members?.length ??
+                0,
               joinCode: raw.joinCode,
               members: raw.members || [],
               memberDetails: raw.memberDetails || [],
-              createdAt: raw.createdAt?.toDate ? raw.createdAt.toDate() : raw.createdAt || new Date(),
-              updatedAt: raw.updatedAt?.toDate ? raw.updatedAt.toDate() : raw.updatedAt || new Date(),
-              status: raw.status || 'active',
+              createdAt: raw.createdAt?.toDate
+                ? raw.createdAt.toDate()
+                : raw.createdAt || new Date(),
+              updatedAt: raw.updatedAt?.toDate
+                ? raw.updatedAt.toDate()
+                : raw.updatedAt || new Date(),
+              status: raw.status || "active",
             } as League;
 
             // Robust membership check: either members array or memberDetails contains user
@@ -100,21 +114,21 @@ export default function LeagueDetailPage() {
               normalized.memberDetails?.some((m) => m.userId === user.uid);
 
             if (!isMember) {
-              setError('You are not a member of this league');
-              setTimeout(() => router.push('/dashboard/my-leagues'), 2000);
+              setError("You are not a member of this league");
+              setTimeout(() => router.push("/dashboard/my-leagues"), 2000);
               return;
             }
 
             setLeague(normalized);
             setLoading(false);
           } else {
-            setError('League not found');
+            setError("League not found");
             setLoading(false);
           }
         },
         (err) => {
-          console.error('Error fetching league:', err);
-          setError('Failed to load league details');
+          console.error("Error fetching league:", err);
+          setError("Failed to load league details");
           setLoading(false);
         }
       );
@@ -173,12 +187,14 @@ export default function LeagueDetailPage() {
 
     try {
       // Create roster entries from selected castaways
-      const rosterEntries: RosterEntry[] = selectedCastawayIds.map((castawayId) => ({
-        castawayId,
-        status: "active",
-        addedWeek: 0, // Week 0 = draft
-        accumulatedPoints: 0,
-      }));
+      const rosterEntries: RosterEntry[] = selectedCastawayIds.map(
+        (castawayId) => ({
+          castawayId,
+          status: "active",
+          addedWeek: 0, // Week 0 = draft
+          accumulatedPoints: 0,
+        })
+      );
 
       // Update member details with roster
       const updatedMembers = league.memberDetails.map((member) =>
@@ -219,17 +235,18 @@ export default function LeagueDetailPage() {
 
     try {
       // Update roster with add/drop
-      const updatedRoster = currentUserTribe.roster?.map((entry) => {
-        // Mark dropped castaway
-        if (entry.castawayId === dropId) {
-          return {
-            ...entry,
-            status: "dropped" as const,
-            droppedWeek: 1, // TODO: Calculate actual week
-          };
-        }
-        return entry;
-      }) || [];
+      const updatedRoster =
+        currentUserTribe.roster?.map((entry) => {
+          // Mark dropped castaway
+          if (entry.castawayId === dropId) {
+            return {
+              ...entry,
+              status: "dropped" as const,
+              droppedWeek: 1, // TODO: Calculate actual week
+            };
+          }
+          return entry;
+        }) || [];
 
       // Add new castaway if provided
       if (addId) {
@@ -308,7 +325,11 @@ export default function LeagueDetailPage() {
   );
 
   // Safe member counts (support older docs without memberDetails)
-  const totalMembers = league.memberDetails?.length ?? league.members?.length ?? league.currentPlayers ?? 0;
+  const totalMembers =
+    league.memberDetails?.length ??
+    league.members?.length ??
+    league.currentPlayers ??
+    0;
   const otherCount = Math.max(0, totalMembers - (currentUserTribe ? 1 : 0));
 
   return (
@@ -328,8 +349,9 @@ export default function LeagueDetailPage() {
         >
           {league.name}
         </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Owner: {league.ownerName} - {league.currentPlayers}/{league.maxPlayers} Players
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          Owner: {league.ownerName} - {league.currentPlayers}/
+          {league.maxPlayers} Players
         </Typography>
       </Box>
 
@@ -357,7 +379,8 @@ export default function LeagueDetailPage() {
               }
               sx={{ mb: 2 }}
             >
-              You haven't drafted your team yet. Select 5 castaways to get started!
+              You haven't drafted your team yet. Select 5 castaways to get
+              started!
             </Alert>
           ) : (
             <TribeCard

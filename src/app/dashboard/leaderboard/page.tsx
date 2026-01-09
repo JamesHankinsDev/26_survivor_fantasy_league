@@ -152,8 +152,7 @@ export default function LeaderboardPage() {
                 fontSize: "1rem",
                 py: 3,
                 px: 2,
-                fontWeight:
-                  selectedLeagueId === league.id ? "bold" : "normal",
+                fontWeight: selectedLeagueId === league.id ? "bold" : "normal",
               }}
             />
           ))}
@@ -205,9 +204,7 @@ export default function LeaderboardPage() {
                 label={selectedLeague.status || "active"}
                 size="small"
                 color={
-                  selectedLeague.status === "archived"
-                    ? "error"
-                    : "primary"
+                  selectedLeague.status === "archived" ? "error" : "primary"
                 }
               />
             </Box>
@@ -232,9 +229,9 @@ export default function LeaderboardPage() {
             </TableHead>
             <TableBody>
               {rankedMembers.map((member) => {
-                const activeCastaways = member.roster?.filter(
-                  (r) => r.status === "active"
-                ).length || 0;
+                const activeCastaways =
+                  member.roster?.filter((r) => r.status === "active").length ||
+                  0;
 
                 const isCurrentUser = member.userId === user.uid;
 
@@ -261,10 +258,10 @@ export default function LeaderboardPage() {
                           member.rank === 1
                             ? "#E85D2A"
                             : member.rank === 2
-                              ? "#C0C0C0"
-                              : member.rank === 3
-                                ? "#CD7F32"
-                                : "inherit",
+                            ? "#C0C0C0"
+                            : member.rank === 3
+                            ? "#CD7F32"
+                            : "inherit",
                       }}
                     >
                       {member.rank === 1 && "🏆"} {member.rank}
@@ -328,10 +325,17 @@ export default function LeaderboardPage() {
 
         {/* Top Performers Card */}
         {rankedMembers.length > 0 && (
-          <Box sx={{ mt: 4, display: "grid", gridTemplateColumns: {
-            xs: "1fr",
-            sm: "1fr 1fr 1fr"
-          }, gap: 2 }}>
+          <Box
+            sx={{
+              mt: 4,
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "1fr 1fr 1fr",
+              },
+              gap: 2,
+            }}
+          >
             {rankedMembers.slice(0, 3).map((member) => (
               <Card key={member.userId}>
                 <CardContent sx={{ textAlign: "center", py: 3 }}>
@@ -342,8 +346,8 @@ export default function LeaderboardPage() {
                         member.rank === 1
                           ? "#E85D2A"
                           : member.rank === 2
-                            ? "#C0C0C0"
-                            : "#CD7F32",
+                          ? "#C0C0C0"
+                          : "#CD7F32",
                       mb: 1,
                     }}
                   >

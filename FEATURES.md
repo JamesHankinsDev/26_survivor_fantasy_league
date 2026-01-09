@@ -1,11 +1,13 @@
 # Survivor Fantasy League MVP - Feature Summary
 
 ## Overview
+
 A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with real-time scoring, team management, and leaderboard tracking.
 
 ## ✅ Completed Features
 
 ### 1. **League Management**
+
 - ✅ Create leagues with customizable settings
 - ✅ Join leagues with shareable invite codes
 - ✅ Edit league details
@@ -13,6 +15,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
 - ✅ Real-time member tracking
 
 ### 2. **Season 50 Cast Data**
+
 - ✅ 24 official contestants with:
   - High-quality tvinsider.com images
   - Prior season bios and statistics
@@ -21,6 +24,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
 - ✅ Responsive grid layout (mobile-first)
 
 ### 3. **Team Management & Drafting**
+
 - ✅ **Initial Draft**: Select exactly 5 castaways when joining
 - ✅ **Draft Modal**: Card-based grid UI with visual feedback
 - ✅ **Roster Display**: Shows all 5 drafted castaways with:
@@ -29,6 +33,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
   - Easy add/drop button access
 
 ### 4. **Weekly Roster Management**
+
 - ✅ **Add/Drop Modal**: Trade 1 castaway per week
   - Wed 8pm lock times
   - Warning when < 1 hour to lock
@@ -38,6 +43,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
 - ✅ **Status Tracking**: Active, dropped, and eliminated statuses
 
 ### 5. **Scoring System**
+
 - ✅ **Admin Interface** (`/dashboard/admin/scores`):
   - Manual episode entry form
   - Table-based castaway points input
@@ -46,6 +52,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
 - ✅ **Type Support**: `EpisodeScores` with timestamps, scores object
 
 ### 6. **Points Calculation & Cascade**
+
 - ✅ **Automatic Updates**: When admin submits episode scores:
   - Recalculates all tribe points
   - Only counts points for castaways on team at time of scoring
@@ -57,6 +64,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
   - `applyAddDropTransaction()` - Roster state updates
 
 ### 7. **Elimination Management**
+
 - ✅ **Admin Interface** (`/dashboard/admin/eliminations`):
   - Click-to-select castaway cards
   - Visual feedback (grayscale, border highlight)
@@ -68,6 +76,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
   - Status marked as "eliminated" in rosters
 
 ### 8. **Live Leaderboard** (`/dashboard/leaderboard`)
+
 - ✅ **Multi-League Support**:
   - League selector with quick chips
   - Auto-select first league
@@ -79,12 +88,14 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
 - ✅ **Real-time Updates**: Firestore listeners
 
 ### 9. **Admin Dashboard** (`/dashboard/admin`)
+
 - ✅ Quick links to admin tools:
   - Episode Scoring
   - Elimination Management
 - ✅ League management overview
 
 ### 10. **Navigation & Layout**
+
 - ✅ **Sidebar Navigation**: 6 main routes
   - Home / My Leagues / **Leaderboard** / Castaways / Admin / About
 - ✅ **Responsive Design**: Mobile-first with breakpoints
@@ -94,6 +105,7 @@ A full-featured Next.js 16 fantasy league platform for Survivor Season 50 with r
 ## 📊 Data Structure
 
 ### Core Types
+
 ```typescript
 // League
 - id, name, ownerId, ownerName, maxPlayers, currentPlayers
@@ -164,17 +176,20 @@ src/
 ## ⏳ Future Enhancements
 
 ### High Priority
+
 - [ ] Accurate week calculation (currently hardcoded to week 1 in add/drop)
 - [ ] Cloud Functions for automated cascading (instead of manual batch)
 - [ ] Team stats page (individual castaway performance tracking)
 
 ### Medium Priority
+
 - [ ] Local image caching (reduce external tvinsider.com dependency)
 - [ ] Export/import league data
 - [ ] League settings customization (points per task, etc.)
 - [ ] Email notifications for add/drop deadlines
 
 ### Low Priority
+
 - [ ] Mobile app (React Native)
 - [ ] Survivor historical seasons (S1-S49 archives)
 - [ ] Community features (trade voting, public leagues)
@@ -193,12 +208,14 @@ src/
 ## 📝 Usage
 
 ### For League Owners
+
 1. Create league from dashboard
 2. Share invite code or join link
 3. Submit episode scores from admin panel
 4. Mark eliminations in admin panel
 
 ### For League Members
+
 1. Join league with code
 2. Draft your 5-castaway team
 3. View live leaderboard

@@ -130,9 +130,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
       <DialogTitle>Add/Drop Castaway</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-          {lockoutMessage && (
-            <Alert severity="warning">{lockoutMessage}</Alert>
-          )}
+          {lockoutMessage && <Alert severity="warning">{lockoutMessage}</Alert>}
 
           {error && <Alert severity="error">{error}</Alert>}
 
@@ -157,8 +155,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
                 );
                 return (
                   <MenuItem key={entry.castawayId} value={entry.castawayId}>
-                    {castaway?.name} (
-                    {entry.accumulatedPoints} pts)
+                    {castaway?.name} ({entry.accumulatedPoints} pts)
                   </MenuItem>
                 );
               })}
@@ -188,8 +185,9 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
               <>
                 Dropping <strong>{dropCastawayName}</strong> — you'll keep the{" "}
                 <strong>
-                  {droppableCastaways.find((r) => r.castawayId === dropCastawayId)
-                    ?.accumulatedPoints || 0}
+                  {droppableCastaways.find(
+                    (r) => r.castawayId === dropCastawayId
+                  )?.accumulatedPoints || 0}
                 </strong>{" "}
                 points they've already earned.
               </>
@@ -214,7 +212,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
           disabled={
             loading ||
             (!dropCastawayId && !addCastawayId) ||
-            (dropCastawayId === addCastawayId)
+            dropCastawayId === addCastawayId
           }
         >
           {loading ? <CircularProgress size={24} /> : "Submit"}

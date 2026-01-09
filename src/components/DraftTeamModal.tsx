@@ -41,7 +41,9 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
   const [error, setError] = useState("");
 
   const eliminatedSet = new Set(eliminatedCastawayIds);
-  const availableCastaways = allCastaways.filter((c) => !eliminatedSet.has(c.id));
+  const availableCastaways = allCastaways.filter(
+    (c) => !eliminatedSet.has(c.id)
+  );
 
   const toggleCastaway = (castawayId: string) => {
     const newSelected = new Set(selected);
@@ -69,9 +71,7 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
       setSelected(new Set());
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to submit draft"
-      );
+      setError(err instanceof Error ? err.message : "Failed to submit draft");
     } finally {
       setLoading(false);
     }
@@ -117,69 +117,72 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
               return (
                 <Card
                   key={castaway.id}
-                    onClick={() => toggleCastaway(castaway.id)}
-                    sx={{
-                      cursor: "pointer",
-                      height: "100%",
-                      border: isSelected
-                        ? "3px solid #1976d2"
-                        : "2px solid transparent",
-                      backgroundColor: isSelected ? "#e3f2fd" : "transparent",
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        boxShadow: 3,
-                        borderColor: "#1976d2",
-                      },
-                      position: "relative",
-                    }}
-                  >
-                    {castaway.image && (
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={castaway.image}
-                        alt={castaway.name}
-                        sx={{ objectFit: "cover" }}
-                      />
-                    )}
-                    <CardContent sx={{ p: 1.5 }}>
-                      <Box
+                  onClick={() => toggleCastaway(castaway.id)}
+                  sx={{
+                    cursor: "pointer",
+                    height: "100%",
+                    border: isSelected
+                      ? "3px solid #1976d2"
+                      : "2px solid transparent",
+                    backgroundColor: isSelected ? "#e3f2fd" : "transparent",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      boxShadow: 3,
+                      borderColor: "#1976d2",
+                    },
+                    position: "relative",
+                  }}
+                >
+                  {castaway.image && (
+                    <CardMedia
+                      component="img"
+                      height="200"
+                      image={castaway.image}
+                      alt={castaway.name}
+                      sx={{ objectFit: "cover" }}
+                    />
+                  )}
+                  <CardContent sx={{ p: 1.5 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
                         sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          gap: 1,
+                          fontWeight: 700,
+                          fontSize: "0.9rem",
+                          flex: 1,
                         }}
                       >
-                        <Typography
-                          variant="subtitle2"
+                        {castaway.name}
+                      </Typography>
+                      {isSelected && (
+                        <CheckCircleIcon
                           sx={{
-                            fontWeight: 700,
-                            fontSize: "0.9rem",
-                            flex: 1,
+                            color: "#1976d2",
+                            fontSize: "1.3rem",
+                            flexShrink: 0,
                           }}
-                        >
-                          {castaway.name}
-                        </Typography>
-                        {isSelected && (
-                          <CheckCircleIcon
-                            sx={{
-                              color: "#1976d2",
-                              fontSize: "1.3rem",
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        />
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </Box>
 
           {selected.size > 0 && (
             <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: "bold", mb: 1 }}
+              >
                 Selected Castaways ({selected.size}/{DRAFT_SIZE}):
               </Typography>
               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>

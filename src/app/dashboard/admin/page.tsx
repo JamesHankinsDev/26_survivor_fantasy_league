@@ -102,9 +102,7 @@ export default function AdminPage() {
         >
           <Card sx={{ height: "100%", "&:hover": { boxShadow: 3 } }}>
             <CardContent sx={{ textAlign: "center", py: 3 }}>
-              <ScoreboardIcon
-                sx={{ fontSize: 40, color: "#E85D2A", mb: 1 }}
-              />
+              <ScoreboardIcon sx={{ fontSize: 40, color: "#E85D2A", mb: 1 }} />
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                 Episode Scoring
               </Typography>
@@ -127,9 +125,7 @@ export default function AdminPage() {
 
           <Card sx={{ height: "100%", "&:hover": { boxShadow: 3 } }}>
             <CardContent sx={{ textAlign: "center", py: 3 }}>
-              <EmojiEventsIcon
-                sx={{ fontSize: 40, color: "#20B2AA", mb: 1 }}
-              />
+              <EmojiEventsIcon sx={{ fontSize: 40, color: "#20B2AA", mb: 1 }} />
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                 Eliminations
               </Typography>

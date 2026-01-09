@@ -32,7 +32,11 @@ const DRAWER_WIDTH = 280;
 const navItems = [
   { label: "Home", icon: HomeIcon, path: "/dashboard" },
   { label: "My Leagues", icon: GroupIcon, path: "/dashboard/my-leagues" },
-  { label: "Leaderboard", icon: LeaderboardIcon, path: "/dashboard/leaderboard" },
+  {
+    label: "Leaderboard",
+    icon: LeaderboardIcon,
+    path: "/dashboard/leaderboard",
+  },
   {
     label: "Castaways",
     icon: SportsBaseballIcon,

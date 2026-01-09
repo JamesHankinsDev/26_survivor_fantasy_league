@@ -44,7 +44,10 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
             />
           )}
           <CardContent sx={{ textAlign: "center" }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, fontSize: "1.1rem" }}
+            >
               {castaway.name}
             </Typography>
           </CardContent>
@@ -65,10 +68,16 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
           }}
         >
           <CardContent sx={{ overflow: "auto", height: "100%" }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "#1976d2" }}>
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 700, mb: 1.5, color: "#1976d2" }}
+            >
               Previous Seasons
             </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary", lineHeight: 1.6 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", lineHeight: 1.6 }}
+            >
               {castaway.bio || "No previous season history available."}
             </Typography>
           </CardContent>

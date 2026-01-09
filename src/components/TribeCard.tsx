@@ -151,7 +151,12 @@ export default function TribeCard({
             <Box>
               <Typography
                 variant="caption"
-                sx={{ fontWeight: 600, color: "text.secondary", mb: 1, display: "block" }}
+                sx={{
+                  fontWeight: 600,
+                  color: "text.secondary",
+                  mb: 1,
+                  display: "block",
+                }}
               >
                 Roster ({member.roster.length})
               </Typography>

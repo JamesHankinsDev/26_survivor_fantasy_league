@@ -50,16 +50,16 @@ export default function AdminCastawaysPage() {
   const handleToggleEliminated = (castawayId: string) => {
     const newEliminated = new Set(eliminatedIds);
     const newChanged = new Set(changedIds);
-    
+
     if (newEliminated.has(castawayId)) {
       newEliminated.delete(castawayId);
     } else {
       newEliminated.add(castawayId);
     }
-    
+
     // Track which IDs have been changed for UI feedback
     newChanged.add(castawayId);
-    
+
     setEliminatedIds(newEliminated);
     setChangedIds(newChanged);
   };
@@ -76,7 +76,9 @@ export default function AdminCastawaysPage() {
 
     try {
       // Get previously loaded eliminatedIds
-      const previouslyLoaded = await loadEliminatedCastaways(CURRENT_SEASON.number);
+      const previouslyLoaded = await loadEliminatedCastaways(
+        CURRENT_SEASON.number
+      );
       const previousSet = new Set(previouslyLoaded);
 
       // Find new eliminations and removals
@@ -107,18 +109,21 @@ export default function AdminCastawaysPage() {
       setChangedIds(new Set());
 
       const message = [];
-      if (toAdd.length > 0) message.push(`Marked ${toAdd.length} as eliminated`);
+      if (toAdd.length > 0)
+        message.push(`Marked ${toAdd.length} as eliminated`);
       if (toRemove.length > 0) message.push(`Un-eliminated ${toRemove.length}`);
-      
-      setSuccess(
-        `${message.join(" and ")}. All active leagues updated.`
-      );
+
+      setSuccess(`${message.join(" and ")}. All active leagues updated.`);
 
       // Keep success visible longer for confirmation
       setTimeout(() => setSuccess(""), 4000);
     } catch (err) {
       console.error("Error saving eliminations:", err);
-      setError(err instanceof Error ? err.message : "Failed to save eliminations. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save eliminations. Please try again."
+      );
     } finally {
       setSaving(false);
     }
@@ -281,7 +286,10 @@ export default function AdminCastawaysPage() {
           Cancel
         </Button>
         {changedIds.size > 0 && (
-          <Typography variant="body2" sx={{ color: "#E85D2A", fontWeight: "bold" }}>
+          <Typography
+            variant="body2"
+            sx={{ color: "#E85D2A", fontWeight: "bold" }}
+          >
             {changedIds.size} change{changedIds.size !== 1 ? "s" : ""} pending
           </Typography>
         )}

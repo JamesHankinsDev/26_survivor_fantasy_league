@@ -5,7 +5,14 @@
 
 import { RosterEntry, TribeMember } from "@/types/league";
 import { db } from "@/lib/firebase";
-import { collection, query, getDocs, setDoc, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 /**
  * Calculate total points for a tribe member based on current roster and episode scores
@@ -136,7 +143,9 @@ export const applyAddDropTransaction = (
 
   // Handle drop
   if (dropCastawayId) {
-    const dropIndex = newRoster.findIndex((r) => r.castawayId === dropCastawayId);
+    const dropIndex = newRoster.findIndex(
+      (r) => r.castawayId === dropCastawayId
+    );
     if (dropIndex !== -1) {
       newRoster[dropIndex].status = "dropped";
       newRoster[dropIndex].droppedWeek = currentWeek;
@@ -175,10 +184,7 @@ export const loadEliminatedCastaways = async (
   seasonNumber: number
 ): Promise<string[]> => {
   try {
-    const collectionRef = collection(
-      db,
-      `seasons/${seasonNumber}/eliminated`
-    );
+    const collectionRef = collection(db, `seasons/${seasonNumber}/eliminated`);
     const q = query(collectionRef);
     const snapshot = await getDocs(q);
     return snapshot.docs.map((doc) => doc.id);

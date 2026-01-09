@@ -76,13 +76,96 @@ export default function AboutPage() {
           </ul>
         </Paper>
 
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-            Contact & Support
+            How Scoring Works
           </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            Have questions or feedback? Reach out to us at
-            support@survivorfantasyleague.com
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
+          >
+            Points are awarded to your team members based on their performance
+            each episode. League managers award points in four categories:
+          </Typography>
+
+          <Box sx={{ ml: 2, mb: 3 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
+            >
+              <strong>Alive Bonus:</strong> Points awarded to castaways still in
+              the game at the end of an episode. Example: +1 point per episode.
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
+            >
+              <strong>Immunity Win:</strong> Points awarded when a castaway wins
+              individual immunity. Example: +5 points per win.
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
+            >
+              <strong>Jury Vote:</strong> Points awarded based on jury voting,
+              final tribal council performance, or other voting-related actions.
+              Example: +2 points per vote received.
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
+            >
+              <strong>Other:</strong> Bonus points for special moments, challenge
+              performances, or league-specific rules. Example: +3 points for
+              winning a challenge.
+            </Typography>
+          </Box>
+
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
+          >
+            <strong>Total Points:</strong> Your castaway's total points for the
+            episode is the sum of all four categories above.
+          </Typography>
+
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.8 }}
+          >
+            <strong>Roster Points:</strong> Your tribe's total points are
+            calculated by summing the episode points from all castaways on your
+            roster at the time the scores were recorded.
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Roster Management
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
+          >
+            <strong>Draft:</strong> Leagues begin with a draft where members
+            select 5 castaways to form their initial roster.
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
+          >
+            <strong>Add/Drop:</strong> Throughout the season, you can add
+            castaways who were not drafted and drop castaways from your roster.
+            Only castaways on your roster when scores are recorded will earn
+            points for your tribe.
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.8 }}
+          >
+            <strong>Eliminations:</strong> When a castaway is eliminated from
+            Survivor, league managers mark them as eliminated. Eliminated
+            castaways no longer earn points and cannot be added to new rosters.
           </Typography>
         </Paper>
       </Container>
