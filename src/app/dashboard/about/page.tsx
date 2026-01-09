@@ -4,16 +4,8 @@ import { Box, Container, Typography, Paper } from "@mui/material";
 
 export default function AboutPage() {
   return (
-    <Box
-      sx={{
-        flex: 1,
-        bgcolor: "#f5f5f5",
-        p: { xs: 2, md: 4 },
-        overflow: "auto",
-      }}
-    >
-      <Container maxWidth="lg">
-        <Box sx={{ mb: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ mb: 4 }}>
           <Typography
             variant="h4"
             sx={{
@@ -169,6 +161,5 @@ export default function AboutPage() {
           </Typography>
         </Paper>
       </Container>
-    </Box>
-  );
-}
+    );
+  }
