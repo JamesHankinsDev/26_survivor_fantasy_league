@@ -15,13 +15,21 @@ import {
 } from "@mui/material";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  onSnapshot,
+  updateDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   League,
   TribeMember,
   getMemberRank,
   RosterEntry,
+  EpisodeEvents,
 } from "@/types/league";
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
@@ -31,6 +39,9 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CASTAWAYS from "@/data/castaways";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { loadEliminatedCastaways } from "@/utils/scoring";
+import {
+  calculatePointsFromEvents,
+} from "@/utils/eventScoringConfig";
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
@@ -48,6 +59,9 @@ export default function LeagueDetailPage() {
   const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>(
     []
   );
+  const [castawaySeasonScores, setCastawaySeasonScores] = useState<
+    Record<string, number>
+  >({});
 
   // Get current user's tribe member info
   const currentUserTribe = league?.memberDetails?.find(
@@ -73,6 +87,35 @@ export default function LeagueDetailPage() {
     loadEliminated();
 
     if (!user || !leagueId) return;
+
+    // Load castaway season scores
+    const loadCastawayScores = async () => {
+      try {
+        const episodesRef = collection(
+          db,
+          "seasons",
+          CURRENT_SEASON.number.toString(),
+          "episodes"
+        );
+        const snapshot = await getDocs(episodesRef);
+
+        const scores: Record<string, number> = {};
+
+        snapshot.forEach((doc) => {
+          const episode = doc.data() as EpisodeEvents;
+          Object.entries(episode.events).forEach(([castawayId, events]) => {
+            const points = calculatePointsFromEvents(events);
+            scores[castawayId] = (scores[castawayId] || 0) + points;
+          });
+        });
+
+        setCastawaySeasonScores(scores);
+      } catch (err) {
+        console.error("Error loading castaway scores:", err);
+      }
+    };
+
+    loadCastawayScores();
 
     try {
       // Listen for league details
@@ -391,6 +434,7 @@ export default function LeagueDetailPage() {
               onAddDrop={() => setAddDropDialogOpen(true)}
               allMembers={sortedMembers}
               allCastaways={CASTAWAYS}
+              castawaySeasonScores={castawaySeasonScores}
             />
           )}
         </Box>
@@ -425,6 +469,8 @@ export default function LeagueDetailPage() {
                 member={member}
                 rank={getMemberRank(sortedMembers, member.userId)}
                 allMembers={sortedMembers}
+                allCastaways={CASTAWAYS}
+                castawaySeasonScores={castawaySeasonScores}
               />
             ))}
         </Box>

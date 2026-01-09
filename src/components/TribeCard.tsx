@@ -22,6 +22,7 @@ interface TribeCardProps {
   onAddDrop?: () => void;
   allMembers: TribeMember[];
   allCastaways?: Castaway[];
+  castawaySeasonScores?: Record<string, number>; // Total points for each castaway this season
 }
 
 export default function TribeCard({
@@ -32,6 +33,7 @@ export default function TribeCard({
   onAddDrop,
   allMembers,
   allCastaways = [],
+  castawaySeasonScores = {},
 }: TribeCardProps) {
   const getRankColor = (rankNum: number) => {
     if (rankNum === 1) return "#FFD700"; // Gold
@@ -212,6 +214,19 @@ export default function TribeCard({
                       >
                         {entry.accumulatedPoints} pts
                       </Typography>
+                      {castawaySeasonScores[entry.castawayId] > 0 && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontSize: "0.6rem",
+                            color: "#E85D2A",
+                            display: "block",
+                            fontWeight: 500,
+                          }}
+                        >
+                          ⭐ {castawaySeasonScores[entry.castawayId]}
+                        </Typography>
+                      )}
                       {entry.status !== "active" && (
                         <Typography
                           variant="caption"
