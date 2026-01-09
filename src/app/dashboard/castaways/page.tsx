@@ -1,9 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Container, Box, Typography } from "@mui/material";
 import CASTAWAYS from "@/data/castaways";
 import CURRENT_SEASON from "@/data/seasons";
 import CastawayCard from "@/components/CastawayCard";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { EpisodeEvents } from "@/types/league";
+import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
 
 export default function CastawaysPage() {
   const premiereDate = new Date(CURRENT_SEASON.premiereDate);
@@ -12,6 +17,41 @@ export default function CastawaysPage() {
     month: "long",
     day: "numeric",
   });
+
+  const [castawayScores, setCastawayScores] = useState<Record<string, number>>(
+    {}
+  );
+
+  // Load all episode events and calculate castaway scores
+  useEffect(() => {
+    const loadScores = async () => {
+      try {
+        const episodesRef = collection(
+          db,
+          "seasons",
+          CURRENT_SEASON.number.toString(),
+          "episodes"
+        );
+        const snapshot = await getDocs(episodesRef);
+
+        const scores: Record<string, number> = {};
+
+        snapshot.forEach((doc) => {
+          const episode = doc.data() as EpisodeEvents;
+          Object.entries(episode.events).forEach(([castawayId, events]) => {
+            const points = calculatePointsFromEvents(events);
+            scores[castawayId] = (scores[castawayId] || 0) + points;
+          });
+        });
+
+        setCastawayScores(scores);
+      } catch (err) {
+        console.error("Error loading castaway scores:", err);
+      }
+    };
+
+    loadScores();
+  }, []);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -51,7 +91,10 @@ export default function CastawaysPage() {
       >
         {CASTAWAYS.map((c) => (
           <Box key={c.id} sx={{ width: "100%" }}>
-            <CastawayCard castaway={c} />
+            <CastawayCard
+              castaway={c}
+              seasonScore={castawayScores[c.id] || 0}
+            />
           </Box>
         ))}
       </Box>

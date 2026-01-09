@@ -30,6 +30,7 @@ import { db } from "@/lib/firebase";
 import {
   collection,
   getDocs,
+  getDoc,
   query,
   where,
   doc,
@@ -103,6 +104,62 @@ export default function AdminScoresPage() {
     };
     loadData();
   }, []);
+
+  // Load previous episode events when episode number changes
+  useEffect(() => {
+    const loadEpisodeEvents = async () => {
+      try {
+        const episodeRef = doc(
+          db,
+          "seasons",
+          CURRENT_SEASON.number.toString(),
+          "episodes",
+          `episode-${episodeNumber}`
+        );
+
+        const snapshot = await getDoc(episodeRef);
+
+        if (snapshot.exists()) {
+          const episodeData = snapshot.data() as EpisodeEvents;
+          // Pre-populate the form with existing events
+          const loadedEvents: Record<string, { events: ScoringEvent[] }> = {};
+          Object.entries(episodeData.events).forEach(([castawayId, events]) => {
+            loadedEvents[castawayId] = { events };
+          });
+          setEpisodes(loadedEvents);
+          // Also pre-fill the air date if it exists
+          if (episodeData.airDate) {
+            const date = episodeData.airDate.toDate
+              ? episodeData.airDate.toDate()
+              : new Date(episodeData.airDate);
+            const isoDate = date.toISOString().split("T")[0];
+            setAirDate(isoDate);
+          }
+        } else {
+          // No previous episode found, reset to empty
+          const emptyEvents: Record<string, { events: ScoringEvent[] }> = {};
+          castaways.forEach((c) => {
+            emptyEvents[c.id] = { events: [] };
+          });
+          setEpisodes(emptyEvents);
+          setAirDate("");
+        }
+      } catch (err) {
+        console.error("Error loading episode events:", err);
+        // Reset on error
+        const emptyEvents: Record<string, { events: ScoringEvent[] }> = {};
+        castaways.forEach((c) => {
+          emptyEvents[c.id] = { events: [] };
+        });
+        setEpisodes(emptyEvents);
+        setAirDate("");
+      }
+    };
+
+    if (castaways.length > 0) {
+      loadEpisodeEvents();
+    }
+  }, [episodeNumber, castaways]);
 
   const handleEventChange = (
     castawayId: string,

@@ -1,8 +1,14 @@
 import React from "react";
-import { Card, CardContent, CardMedia, Typography, Box } from "@mui/material";
+import { Card, CardContent, CardMedia, Typography, Box, Chip } from "@mui/material";
 import { Castaway } from "@/types/castaway";
 
-export default function CastawayCard({ castaway }: { castaway: Castaway }) {
+export default function CastawayCard({
+  castaway,
+  seasonScore = 0,
+}: {
+  castaway: Castaway;
+  seasonScore?: number;
+}) {
   return (
     <Box
       sx={{
@@ -43,13 +49,24 @@ export default function CastawayCard({ castaway }: { castaway: Castaway }) {
               sx={{ objectFit: "cover" }}
             />
           )}
-          <CardContent sx={{ textAlign: "center" }}>
+          <CardContent sx={{ textAlign: "center", pb: 1 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 700, fontSize: "1.1rem" }}
+              sx={{ fontWeight: 700, fontSize: "1.1rem", mb: 0.5 }}
             >
               {castaway.name}
             </Typography>
+            {seasonScore > 0 && (
+              <Chip
+                label={`${seasonScore} pts`}
+                size="small"
+                sx={{
+                  bgcolor: "#E85D2A",
+                  color: "white",
+                  fontWeight: 600,
+                }}
+              />
+            )}
           </CardContent>
         </Card>
 
