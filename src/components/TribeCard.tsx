@@ -23,6 +23,7 @@ interface TribeCardProps {
   allMembers: TribeMember[];
   allCastaways?: Castaway[];
   castawaySeasonScores?: Record<string, number>; // Total points for each castaway this season
+  eliminatedCastawayIds?: string[]; // IDs of castaways eliminated this season
 }
 
 export default function TribeCard({
@@ -34,6 +35,7 @@ export default function TribeCard({
   allMembers,
   allCastaways = [],
   castawaySeasonScores = {},
+  eliminatedCastawayIds = [],
 }: TribeCardProps) {
   const getRankColor = (rankNum: number) => {
     if (rankNum === 1) return "#FFD700"; // Gold
@@ -173,8 +175,9 @@ export default function TribeCard({
                   const castaway = allCastaways.find(
                     (c) => c.id === entry.castawayId
                   );
+                  const isEliminated = eliminatedCastawayIds.includes(entry.castawayId);
                   const statusColor =
-                    entry.status === "eliminated"
+                    isEliminated
                       ? "#999"
                       : entry.status === "dropped"
                       ? "#E85D2A"
@@ -188,8 +191,11 @@ export default function TribeCard({
                         border: `1px solid ${statusColor}`,
                         bgcolor: `${statusColor}11`,
                         textAlign: "center",
-                        opacity: entry.status === "eliminated" ? 0.5 : 1,
-                        filter: entry.status === "eliminated" ? "grayscale(100%)" : "none",
+                        opacity: isEliminated ? 0.5 : 1,
+                        filter:
+                          isEliminated
+                            ? "grayscale(100%)"
+                            : "none",
                       }}
                     >
                       <Typography
@@ -224,7 +230,7 @@ export default function TribeCard({
                             textTransform: "uppercase",
                           }}
                         >
-                          {entry.status}
+                          {isEliminated ? "eliminated" : entry.status}
                         </Typography>
                       )}
                     </Box>

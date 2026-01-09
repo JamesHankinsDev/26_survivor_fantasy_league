@@ -446,6 +446,7 @@ export default function LeagueDetailPage() {
               allMembers={sortedMembers}
               allCastaways={CASTAWAYS}
               castawaySeasonScores={castawaySeasonScores}
+              eliminatedCastawayIds={eliminatedCastawayIds}
             />
           )}
         </Box>
@@ -482,6 +483,7 @@ export default function LeagueDetailPage() {
                 allMembers={sortedMembers}
                 allCastaways={CASTAWAYS}
                 castawaySeasonScores={castawaySeasonScores}
+                eliminatedCastawayIds={eliminatedCastawayIds}
               />
             ))}
         </Box>
