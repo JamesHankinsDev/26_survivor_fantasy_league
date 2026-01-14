@@ -15,9 +15,11 @@ import {
   Alert,
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
+import EmailIcon from "@mui/icons-material/Email";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { useAuth } from "@/lib/auth-context";
+import EmailAuthDialog from "@/components/EmailAuthDialog";
 
 const theme = createTheme({
   palette: {
@@ -51,11 +53,19 @@ export default function LandingPage() {
   } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   // Redirect to dashboard if user is logged in
   useEffect(() => {
     if (user) {
-      router.push("/dashboard");
+      // Check if there's a pending join code from before authentication
+      const pendingJoinCode = sessionStorage.getItem("pendingJoinCode");
+      if (pendingJoinCode) {
+        sessionStorage.removeItem("pendingJoinCode");
+        router.push(`/join/${pendingJoinCode}`);
+      } else {
+        router.push("/dashboard");
+      }
     }
   }, [user, router]);
 
@@ -69,14 +79,6 @@ export default function LandingPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Handle guest access
-  const handleGuestAccess = () => {
-    setIsLoading(true);
-    // Implement guest access logic here
-    // You can redirect to a guest dashboard or set a guest session
-    console.log("Guest access initiated");
   };
 
   // Show loading state while auth is initializing
@@ -172,9 +174,42 @@ export default function LandingPage() {
                           color: "text.secondary",
                         }}
                       >
-                        Sign in with your Google account to get started
+                        to get started
                       </Typography>
                     </Box>
+
+                    {/* Email Sign-In Button */}
+                    <Button
+                      variant="contained"
+                      size="large"
+                      fullWidth
+                      onClick={() => setEmailDialogOpen(true)}
+                      disabled={isLoading}
+                      startIcon={<EmailIcon />}
+                      sx={{
+                        py: 1.5,
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        textTransform: "none",
+                        borderRadius: 1.5,
+                        background:
+                          "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
+                        boxShadow: "0 4px 20px rgba(232, 93, 42, 0.4)",
+                        "&:hover": {
+                          background:
+                            "linear-gradient(135deg, #C4451F 0%, #D94E23 100%)",
+                          boxShadow: "0 6px 25px rgba(232, 93, 42, 0.5)",
+                        },
+                      }}
+                    >
+                      Sign in with Email
+                    </Button>
+
+                    <Divider>
+                      <Typography variant="body2" color="text.secondary">
+                        OR
+                      </Typography>
+                    </Divider>
 
                     {/* Google Sign-In Button */}
                     <Button
@@ -198,48 +233,16 @@ export default function LandingPage() {
                         borderRadius: 1.5,
                         background:
                           "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
+                        color: "#fff",
+                        boxShadow: "0 4px 20px rgba(232, 93, 42, 0.4)",
                         "&:hover": {
                           background:
-                            "linear-gradient(135deg, #C93F1A 0%, #D94E23 100%)",
-                        },
-                        "&:disabled": {
-                          background: "rgba(217, 78, 35, 0.5)",
+                            "linear-gradient(135deg, #C4451F 0%, #D94E23 100%)",
+                          boxShadow: "0 6px 25px rgba(232, 93, 42, 0.5)",
                         },
                       }}
                     >
                       {isLoading ? "Signing in..." : "Sign in with Google"}
-                    </Button>
-
-                    {/* Divider */}
-                    <Divider sx={{ my: 1 }}>OR</Divider>
-
-                    {/* Guest Access Button */}
-                    <Button
-                      variant="outlined"
-                      size="large"
-                      fullWidth
-                      onClick={handleGuestAccess}
-                      disabled={isLoading}
-                      sx={{
-                        py: 1.5,
-                        fontWeight: 600,
-                        fontSize: "1rem",
-                        textTransform: "none",
-                        borderRadius: 1.5,
-                        borderColor: "#E85D2A",
-                        color: "#E85D2A",
-                        "&:hover": {
-                          borderColor: "#D94E23",
-                          color: "#D94E23",
-                          backgroundColor: "rgba(217, 78, 35, 0.08)",
-                        },
-                        "&:disabled": {
-                          borderColor: "rgba(217, 78, 35, 0.5)",
-                          color: "rgba(217, 78, 35, 0.5)",
-                        },
-                      }}
-                    >
-                      Continue as Guest
                     </Button>
                   </Stack>
                 </CardContent>
@@ -259,6 +262,13 @@ export default function LandingPage() {
                 Policy
               </Typography>
             </Stack>
+
+            {/* Email Auth Dialog */}
+            <EmailAuthDialog
+              open={emailDialogOpen}
+              onClose={() => setEmailDialogOpen(false)}
+              onGoogleSignIn={handleGoogleSignIn}
+            />
           </Container>
         </Box>
       </ThemeProvider>

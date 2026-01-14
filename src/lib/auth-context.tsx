@@ -6,6 +6,11 @@ import {
   signOut,
   signInWithPopup,
   onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink,
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 
@@ -14,6 +19,10 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   signInWithGoogle: () => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  sendMagicLink: (email: string) => Promise<void>;
+  completeMagicLinkSignIn: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -61,6 +70,92 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Sign up with email and password
+  const signUpWithEmail = async (email: string, password: string) => {
+    try {
+      if (!auth) {
+        throw new Error("Firebase is not initialized");
+      }
+      setError(null);
+      setLoading(true);
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to create account";
+      setError(errorMessage);
+      console.error("Email Sign-Up Error:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sign in with email and password
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      if (!auth) {
+        throw new Error("Firebase is not initialized");
+      }
+      setError(null);
+      setLoading(true);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to sign in";
+      setError(errorMessage);
+      console.error("Email Sign-In Error:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Send magic link to email
+  const sendMagicLink = async (email: string) => {
+    try {
+      if (!auth) {
+        throw new Error("Firebase is not initialized");
+      }
+      setError(null);
+      const actionCodeSettings = {
+        // URL you want to redirect back to after email link is clicked
+        url: `${window.location.origin}/auth/verify`,
+        handleCodeInApp: true,
+      };
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      // Save email locally to complete sign-in after redirect
+      window.localStorage.setItem("emailForSignIn", email);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to send magic link";
+      setError(errorMessage);
+      console.error("Magic Link Error:", err);
+      throw err;
+    }
+  };
+
+  // Complete magic link sign in
+  const completeMagicLinkSignIn = async (email: string) => {
+    try {
+      if (!auth) {
+        throw new Error("Firebase is not initialized");
+      }
+
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        setError(null);
+        setLoading(true);
+        await signInWithEmailLink(auth, email, window.location.href);
+        window.localStorage.removeItem("emailForSignIn");
+      } else {
+        throw new Error("Invalid sign-in link");
+      }
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to complete sign-in";
+      setError(errorMessage);
+      console.error("Magic Link Verification Error:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Sign out
   const logout = async () => {
     try {
@@ -85,6 +180,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loading,
         error,
         signInWithGoogle,
+        signUpWithEmail,
+        signInWithEmail,
+        sendMagicLink,
+        completeMagicLinkSignIn,
         logout,
       }}
     >

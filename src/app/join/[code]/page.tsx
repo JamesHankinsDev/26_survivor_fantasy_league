@@ -49,12 +49,16 @@ export default function JoinLeaguePage() {
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // First, redirect to home if not authenticated
+  // First, redirect to home if not authenticated (but save the join code)
   useEffect(() => {
     if (!user) {
+      // Save the join code to redirect back after sign-in
+      if (joinCode) {
+        sessionStorage.setItem("pendingJoinCode", joinCode);
+      }
       router.push("/");
     }
-  }, [user, router]);
+  }, [user, router, joinCode]);
 
   // Find league by join code
   useEffect(() => {
