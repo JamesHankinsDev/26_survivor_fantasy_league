@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Drawer,
@@ -26,10 +26,13 @@ import LeaderboardIcon from "@mui/icons-material/Leaderboard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 const DRAWER_WIDTH = 280;
 
-const navItems = [
+// Base navigation items (always shown)
+const baseNavItems = [
   { label: "Home", icon: HomeIcon, path: "/dashboard" },
   { label: "My Leagues", icon: GroupIcon, path: "/dashboard/my-leagues" },
   {
@@ -42,9 +45,21 @@ const navItems = [
     icon: SportsBaseballIcon,
     path: "/dashboard/castaways",
   },
-  { label: "Admin", icon: AdminPanelSettingsIcon, path: "/dashboard/admin" },
-  { label: "About", icon: InfoIcon, path: "/dashboard/about" },
 ];
+
+// Admin nav item (only shown to league owners)
+const adminNavItem = {
+  label: "Admin",
+  icon: AdminPanelSettingsIcon,
+  path: "/dashboard/admin",
+};
+
+// About nav item (always shown)
+const aboutNavItem = {
+  label: "About",
+  icon: InfoIcon,
+  path: "/dashboard/about",
+};
 
 export default function DashboardLayout({
   children,
@@ -52,9 +67,37 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { logout, user } = useAuth();
+
+  // Check if user owns any leagues
+  useEffect(() => {
+    const checkOwnership = async () => {
+      if (!user) {
+        setIsOwner(false);
+        return;
+      }
+
+      try {
+        const leaguesRef = collection(db, "leagues");
+        const q = query(leaguesRef, where("ownerId", "==", user.uid));
+        const snapshot = await getDocs(q);
+        setIsOwner(!snapshot.empty);
+      } catch (err) {
+        console.error("Error checking league ownership:", err);
+        setIsOwner(false);
+      }
+    };
+
+    checkOwnership();
+  }, [user]);
+
+  // Build navigation items based on ownership
+  const navItems = isOwner
+    ? [...baseNavItems, adminNavItem, aboutNavItem]
+    : [...baseNavItems, aboutNavItem];
 
   const handleToggleDrawer = () => {
     setDrawerOpen(!drawerOpen);

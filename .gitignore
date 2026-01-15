@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# documentation (auto-generated)
+FIRESTORE_SECURITY_RULES.md
+SECURITY_QUICK_REFERENCE.md

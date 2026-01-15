@@ -6,7 +6,7 @@
 
 #### `leagues`
 
-Stores all league information.
+Stores all league information with nested sub-collections for league-specific data.
 
 **Document Structure:**
 
@@ -14,48 +14,56 @@ Stores all league information.
 leagues/
 ├── {leagueId}
 │   ├── name: string (e.g., "Summer 2026 Showdown")
-│   ├── ownerId: string (Firebase User ID)
+│   ├── ownerId: string (Firebase User ID) - IMPORTANT for permissions
 │   ├── ownerName: string
 │   ├── ownerEmail: string
 │   ├── maxPlayers: number (2-20)
 │   ├── currentPlayers: number
 │   ├── joinCode: string (unique 6-char code, e.g., "ABC123")
 │   ├── members: array<string> (array of user IDs)
+│   ├── memberDetails: array<TribeMember> (detailed member info with rosters)
 │   ├── createdAt: timestamp
 │   ├── updatedAt: timestamp
 │   └── status: string ("active" | "archived")
+│   │
+│   └── seasons/
+│       └── {seasonNumber}
+│           ├── eliminated/
+│           │   └── {castawayId}
+│           │       ├── castawayId: string
+│           │       └── eliminatedAt: timestamp
+│           │
+│           ├── episodes/
+│           │   └── {episodeId} (e.g., "episode-1")
+│           │       ├── id: string
+│           │       ├── seasonNumber: number
+│           │       ├── episodeNumber: number
+│           │       ├── airDate: timestamp
+│           │       ├── events: map<castawayId, array<ScoringEvent>>
+│           │       ├── createdAt: timestamp
+│           │       └── updatedAt: timestamp
+│           │
+│           └── castaways/ (optional, if stored per league)
+│               └── {castawayId}
 ```
 
 ## Firestore Security Rules
 
-Add these rules to your Firestore security rules (Firebase Console → Firestore Database → Rules):
+**⚠️ IMPORTANT:** See `firestore.rules` and `FIRESTORE_SECURITY_RULES.md` for comprehensive security rules.
 
+The security rules enforce:
+
+- **League Owners** can manage episode scoring and eliminations for their leagues
+- **Players** (members) can view data but cannot modify scoring/eliminations
+- All users must be authenticated to access league data
+
+Quick deployment:
+
+```bash
+firebase deploy --only firestore:rules
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Leagues collection
-    match /leagues/{leagueId} {
-      // Read: Users can read leagues they are a member of
-      allow read: if request.auth != null &&
-                     request.auth.uid in resource.data.members;
 
-      // Create: Authenticated users can create leagues
-      allow create: if request.auth != null &&
-                       request.auth.uid == request.resource.data.ownerId &&
-                       request.resource.data.members.size() >= 1;
-
-      // Update: Only the league owner can update
-      allow update: if request.auth != null &&
-                       request.auth.uid == resource.data.ownerId;
-
-      // Delete: Only the league owner can delete
-      allow delete: if request.auth != null &&
-                       request.auth.uid == resource.data.ownerId;
-    }
-  }
-}
-```
+Or paste the contents of `firestore.rules` into the Firebase Console.
 
 ## Implementation Notes
 

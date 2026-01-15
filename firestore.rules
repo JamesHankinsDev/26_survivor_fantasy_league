@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is a league member
+    function isLeagueMember(leagueId) {
+      return isAuthenticated() && 
+             request.auth.uid in get(/databases/$(database)/documents/leagues/$(leagueId)).data.members;
+    }
+    
+    // Helper function to check if user is a league owner
+    function isLeagueOwner(leagueId) {
+      return isAuthenticated() && 
+             request.auth.uid == get(/databases/$(database)/documents/leagues/$(leagueId)).data.ownerId;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner() {
+      return isAuthenticated() && 
+             request.auth.uid == resource.data.ownerId;
+    }
+    
+    // ========================================
+    // LEAGUES COLLECTION
+    // ========================================
+    match /leagues/{leagueId} {
+      // Read: Users can read leagues they are a member of
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid in resource.data.members ||
+                      request.auth.uid in resource.data.memberDetails[0].userId);
+      
+      // Create: Authenticated users can create leagues (they must be the owner)
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == request.resource.data.ownerId &&
+                       request.resource.data.maxPlayers >= 2 &&
+                       request.resource.data.maxPlayers <= 20;
+      
+      // Update: Only the league owner can update league settings
+      // OR members can update their own tribe details within memberDetails array
+      allow update: if isAuthenticated() && 
+                       (request.auth.uid == resource.data.ownerId ||
+                        request.auth.uid in resource.data.members);
+      
+      // Delete: Only the league owner can delete
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid == resource.data.ownerId;
+      
+      // ========================================
+      // LEAGUE SUB-COLLECTIONS: SEASONS
+      // ========================================
+      match /seasons/{seasonNumber} {
+        // Allow members to read season data
+        allow read: if isLeagueMember(leagueId);
+        
+        // ========================================
+        // ELIMINATED CASTAWAYS (League-Specific)
+        // ========================================
+        match /eliminated/{castawayId} {
+          // Members can read eliminations
+          allow read: if isLeagueMember(leagueId);
+          
+          // Only league owner can write (add/remove eliminations)
+          allow write: if isLeagueOwner(leagueId);
+        }
+        
+        // ========================================
+        // EPISODE EVENTS (League-Specific)
+        // ========================================
+        match /episodes/{episodeId} {
+          // Members can read episode events/scores
+          allow read: if isLeagueMember(leagueId);
+          
+          // Only league owner can write episode data
+          allow write: if isLeagueOwner(leagueId);
+        }
+        
+        // ========================================
+        // CASTAWAYS (if stored per league)
+        // ========================================
+        match /castaways/{castawayId} {
+          // Members can read castaway data
+          allow read: if isLeagueMember(leagueId);
+          
+          // Only league owner can write castaway data
+          allow write: if isLeagueOwner(leagueId);
+        }
+      }
+    }
+    
+    // ========================================
+    // USERS COLLECTION (if you add user profiles)
+    // ========================================
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can write their own profile
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ========================================
+    // GLOBAL SEASONS COLLECTION (Legacy - if still used)
+    // ========================================
+    // Note: You may want to remove this if you've fully migrated to league-specific data
+    match /seasons/{seasonNumber} {
+      // Allow authenticated users to read season info
+      allow read: if isAuthenticated();
+      
+      // No one can write to global seasons (deprecated)
+      allow write: if false;
+      
+      match /eliminated/{castawayId} {
+        allow read: if isAuthenticated();
+        allow write: if false; // Deprecated - use league-specific instead
+      }
+      
+      match /episodes/{episodeId} {
+        allow read: if isAuthenticated();
+        allow write: if false; // Deprecated - use league-specific instead
+      }
+      
+      match /castaways/{castawayId} {
+        allow read: if isAuthenticated();
+        allow write: if false;
+      }
+    }
+  }
+}

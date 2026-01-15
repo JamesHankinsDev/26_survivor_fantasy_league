@@ -12,6 +12,7 @@ import {
   Card,
   CardContent,
   Divider,
+  Chip,
 } from "@mui/material";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -72,25 +73,23 @@ export default function LeagueDetailPage() {
       return;
     }
 
-    // Load eliminated castaways
-    const loadEliminated = async () => {
-      try {
-        const eliminated = await loadEliminatedCastaways(CURRENT_SEASON.number);
-        setEliminatedCastawayIds(eliminated);
-      } catch (err) {
-        console.error("Failed to load eliminated castaways:", err);
-      }
-    };
-
-    loadEliminated();
-
     if (!user || !leagueId) return;
 
-    // Load castaway season scores
-    const loadCastawayScores = async () => {
+    // Load league-specific data
+    const loadLeagueData = async () => {
       try {
+        // Load eliminated castaways for this league
+        const eliminated = await loadEliminatedCastaways(
+          leagueId,
+          CURRENT_SEASON.number
+        );
+        setEliminatedCastawayIds(eliminated);
+
+        // Load castaway season scores for this league
         const episodesRef = collection(
           db,
+          "leagues",
+          leagueId,
           "seasons",
           CURRENT_SEASON.number.toString(),
           "episodes"
@@ -109,11 +108,11 @@ export default function LeagueDetailPage() {
 
         setCastawaySeasonScores(scores);
       } catch (err) {
-        console.error("Error loading castaway scores:", err);
+        console.error("Error loading league data:", err);
       }
     };
 
-    loadCastawayScores();
+    loadLeagueData();
 
     try {
       // Listen for league details
@@ -403,10 +402,40 @@ export default function LeagueDetailPage() {
         >
           {league.name}
         </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Owner: {league.ownerName} - {league.currentPlayers}/
-          {league.maxPlayers} Players
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            flexWrap: "wrap",
+          }}
+        >
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Owner: {league.ownerName}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            •
+          </Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {league.currentPlayers}/{league.maxPlayers} Players
+          </Typography>
+          {user?.uid === league.ownerId && (
+            <>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                •
+              </Typography>
+              <Chip
+                label="You are the Owner"
+                size="small"
+                sx={{
+                  bgcolor: "rgba(232, 93, 42, 0.1)",
+                  color: "#E85D2A",
+                  fontWeight: 600,
+                }}
+              />
+            </>
+          )}
+        </Box>
       </Box>
 
       {/* Current User's Tribe Card (Highlighted) */}

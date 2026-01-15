@@ -183,13 +183,17 @@ export const formatPointsBreakdown = (
 };
 
 /**
- * Load eliminated castaways for a season from Firestore
+ * Load eliminated castaways for a specific league from Firestore
  */
 export const loadEliminatedCastaways = async (
+  leagueId: string,
   seasonNumber: number
 ): Promise<string[]> => {
   try {
-    const collectionRef = collection(db, `seasons/${seasonNumber}/eliminated`);
+    const collectionRef = collection(
+      db,
+      `leagues/${leagueId}/seasons/${seasonNumber}/eliminated`
+    );
     const q = query(collectionRef);
     const snapshot = await getDocs(q);
     return snapshot.docs.map((doc) => doc.id);
@@ -200,14 +204,18 @@ export const loadEliminatedCastaways = async (
 };
 
 /**
- * Save a castaway as eliminated for a season
+ * Save a castaway as eliminated for a specific league
  */
 export const saveEliminatedCastaway = async (
+  leagueId: string,
   seasonNumber: number,
   castawayId: string
 ): Promise<void> => {
   try {
-    const docRef = doc(db, `seasons/${seasonNumber}/eliminated/${castawayId}`);
+    const docRef = doc(
+      db,
+      `leagues/${leagueId}/seasons/${seasonNumber}/eliminated/${castawayId}`
+    );
     await setDoc(docRef, {
       castawayId,
       eliminatedAt: new Date(),
@@ -219,14 +227,18 @@ export const saveEliminatedCastaway = async (
 };
 
 /**
- * Remove a castaway from eliminated list
+ * Remove a castaway from eliminated list for a specific league
  */
 export const removeEliminatedCastaway = async (
+  leagueId: string,
   seasonNumber: number,
   castawayId: string
 ): Promise<void> => {
   try {
-    const docRef = doc(db, `seasons/${seasonNumber}/eliminated/${castawayId}`);
+    const docRef = doc(
+      db,
+      `leagues/${leagueId}/seasons/${seasonNumber}/eliminated/${castawayId}`
+    );
     await deleteDoc(docRef);
   } catch (err) {
     console.error("Error removing eliminated castaway:", err);

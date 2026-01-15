@@ -11,11 +11,18 @@ import {
   Alert,
   CircularProgress,
   Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import CASTAWAYS from "@/data/castaways";
 import { CURRENT_SEASON } from "@/data/seasons";
+import { League } from "@/types/league";
 import {
   loadEliminatedCastaways,
   saveEliminatedCastaway,
@@ -25,6 +32,8 @@ import {
 export default function AdminCastawaysPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const [ownedLeagues, setOwnedLeagues] = useState<League[]>([]);
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
   const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,20 +41,58 @@ export default function AdminCastawaysPage() {
   const [error, setError] = useState("");
   const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
 
+  // Load leagues owned by the user
   useEffect(() => {
-    const loadEliminations = async () => {
+    const loadOwnedLeagues = async () => {
+      if (!user) return;
+
       try {
-        const eliminated = await loadEliminatedCastaways(CURRENT_SEASON.number);
-        setEliminatedIds(new Set(eliminated));
+        const leaguesRef = collection(db, "leagues");
+        const q = query(leaguesRef, where("ownerId", "==", user.uid));
+        const snapshot = await getDocs(q);
+        const leagues = snapshot.docs.map(
+          (doc) =>
+            ({
+              id: doc.id,
+              ...doc.data(),
+            } as League)
+        );
+        setOwnedLeagues(leagues);
+
+        // Auto-select first league if available
+        if (leagues.length > 0) {
+          setSelectedLeagueId(leagues[0].id);
+        }
       } catch (err) {
-        console.error("Failed to load eliminations:", err);
+        console.error("Failed to load owned leagues:", err);
+        setError("Failed to load your leagues");
       } finally {
         setLoading(false);
       }
     };
 
+    loadOwnedLeagues();
+  }, [user]);
+
+  // Load eliminations for selected league
+  useEffect(() => {
+    const loadEliminations = async () => {
+      if (!selectedLeagueId) return;
+
+      try {
+        const eliminated = await loadEliminatedCastaways(
+          selectedLeagueId,
+          CURRENT_SEASON.number
+        );
+        setEliminatedIds(new Set(eliminated));
+        setChangedIds(new Set());
+      } catch (err) {
+        console.error("Failed to load eliminations:", err);
+      }
+    };
+
     loadEliminations();
-  }, []);
+  }, [selectedLeagueId]);
 
   const handleToggleEliminated = (castawayId: string) => {
     const newEliminated = new Set(eliminatedIds);
@@ -65,6 +112,11 @@ export default function AdminCastawaysPage() {
   };
 
   const handleSaveEliminations = async () => {
+    if (!selectedLeagueId) {
+      setError("Please select a league");
+      return;
+    }
+
     if (changedIds.size === 0) {
       setError("No changes to save");
       return;
@@ -77,6 +129,7 @@ export default function AdminCastawaysPage() {
     try {
       // Get previously loaded eliminatedIds
       const previouslyLoaded = await loadEliminatedCastaways(
+        selectedLeagueId,
         CURRENT_SEASON.number
       );
       const previousSet = new Set(previouslyLoaded);
@@ -97,14 +150,19 @@ export default function AdminCastawaysPage() {
 
       // Save changes
       await Promise.all([
-        ...toAdd.map((id) => saveEliminatedCastaway(CURRENT_SEASON.number, id)),
+        ...toAdd.map((id) =>
+          saveEliminatedCastaway(selectedLeagueId, CURRENT_SEASON.number, id)
+        ),
         ...toRemove.map((id) =>
-          removeEliminatedCastaway(CURRENT_SEASON.number, id)
+          removeEliminatedCastaway(selectedLeagueId, CURRENT_SEASON.number, id)
         ),
       ]);
 
       // Reload the state to confirm changes
-      const updated = await loadEliminatedCastaways(CURRENT_SEASON.number);
+      const updated = await loadEliminatedCastaways(
+        selectedLeagueId,
+        CURRENT_SEASON.number
+      );
       setEliminatedIds(new Set(updated));
       setChangedIds(new Set());
 
@@ -113,7 +171,7 @@ export default function AdminCastawaysPage() {
         message.push(`Marked ${toAdd.length} as eliminated`);
       if (toRemove.length > 0) message.push(`Un-eliminated ${toRemove.length}`);
 
-      setSuccess(`${message.join(" and ")}. All active leagues updated.`);
+      setSuccess(`${message.join(" and ")} for this league.`);
 
       // Keep success visible longer for confirmation
       setTimeout(() => setSuccess(""), 4000);
@@ -142,11 +200,51 @@ export default function AdminCastawaysPage() {
     );
   }
 
+  if (ownedLeagues.length === 0) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          You don&apos;t own any leagues. Only league owners can manage
+          eliminations.
+        </Alert>
+        <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
+          To manage eliminations, you need to create your own league. Players
+          who join via invite link cannot access admin functions.
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => router.push("/dashboard/admin")}
+          sx={{ mt: 2 }}
+        >
+          Create a League
+        </Button>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: "bold" }}>
-        Admin: Manage {CURRENT_SEASON.name} Eliminations
+        Manage {CURRENT_SEASON.name} Eliminations
       </Typography>
+
+      <Box sx={{ mb: 3 }}>
+        <FormControl fullWidth sx={{ maxWidth: 400 }}>
+          <InputLabel>Select League</InputLabel>
+          <Select
+            value={selectedLeagueId}
+            onChange={(e) => setSelectedLeagueId(e.target.value)}
+            label="Select League"
+          >
+            {ownedLeagues.map((league) => (
+              <MenuItem key={league.id} value={league.id}>
+                {league.name} ({league.currentPlayers}/{league.maxPlayers}{" "}
+                players)
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -160,15 +258,18 @@ export default function AdminCastawaysPage() {
         </Alert>
       )}
 
-      <Typography variant="body2" sx={{ mb: 3, color: "#666" }}>
-        Click castaways to mark them as eliminated from the game. Eliminated
-        castaways:
-        <ul>
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Mark castaways as eliminated for the selected league. This affects only{" "}
+        <strong>
+          {ownedLeagues.find((l) => l.id === selectedLeagueId)?.name}
+        </strong>
+        . Eliminated castaways:
+        <ul style={{ marginBottom: 0 }}>
           <li>Cannot be drafted by new players</li>
           <li>Cannot be added/dropped once eliminated on a team</li>
           <li>Cease earning points for their teams</li>
         </ul>
-      </Typography>
+      </Alert>
 
       <Box
         sx={{
