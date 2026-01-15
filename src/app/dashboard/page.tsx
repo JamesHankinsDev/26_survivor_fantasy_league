@@ -96,7 +96,7 @@ export default function DashboardHome() {
       <Box
         sx={{
           flex: 1,
-          bgcolor: "#f5f5f5",
+          bgcolor: "background.default",
           p: { xs: 2, md: 4 },
           overflow: "auto",
         }}
@@ -177,7 +177,7 @@ export default function DashboardHome() {
       <Box
         sx={{
           flex: 1,
-          bgcolor: "#f5f5f5",
+          bgcolor: "background.default",
           p: { xs: 2, md: 4 },
           overflow: "auto",
         }}
@@ -215,7 +215,7 @@ export default function DashboardHome() {
     <Box
       sx={{
         flex: 1,
-        bgcolor: "#f5f5f5",
+        bgcolor: "background.default",
         p: { xs: 2, md: 4 },
         overflow: "auto",
       }}
@@ -226,7 +226,7 @@ export default function DashboardHome() {
             variant="h4"
             sx={{
               fontWeight: 700,
-              color: "#1A1A1A",
+              color: "text.primary",
               mb: 1,
             }}
           >
@@ -346,8 +346,9 @@ export default function DashboardHome() {
           <Box
             sx={{
               p: 3,
-              bgcolor: "rgba(232, 93, 42, 0.05)",
-              borderBottom: "1px solid #E0E0E0",
+              bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(232, 93, 42, 0.15)" : "rgba(232, 93, 42, 0.05)",
+              borderBottom: "1px solid",
+              borderColor: "divider",
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -362,7 +363,7 @@ export default function DashboardHome() {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#f5f5f5" }}>
                   <TableCell sx={{ fontWeight: 600 }}>Rank</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Tribe</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Player</TableCell>
@@ -485,7 +486,7 @@ export default function DashboardHome() {
             </Table>
           </TableContainer>
 
-          <Box sx={{ p: 2, bgcolor: "#f5f5f5", textAlign: "center" }}>
+          <Box sx={{ p: 2, bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#f5f5f5", textAlign: "center" }}>
             <Button
               component={Link}
               href={`/dashboard/my-leagues/${selectedLeagueId}`}

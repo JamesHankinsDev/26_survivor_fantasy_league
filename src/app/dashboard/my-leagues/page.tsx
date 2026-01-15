@@ -108,7 +108,7 @@ export default function MyLeaguesPage() {
       <Box sx={{ mb: 4 }}>
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, color: "#1A1A1A", mb: 1 }}
+          sx={{ fontWeight: 700, color: "text.primary", mb: 1 }}
         >
           My Leagues
         </Typography>

@@ -14,6 +14,7 @@ import {
   AppBar,
   Toolbar,
   Typography,
+  Tooltip,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
@@ -24,8 +25,11 @@ import InfoIcon from "@mui/icons-material/Info";
 import SportsBaseballIcon from "@mui/icons-material/SportsBaseball";
 import LeaderboardIcon from "@mui/icons-material/Leaderboard";
 import LogoutIcon from "@mui/icons-material/Logout";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
@@ -71,6 +75,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { logout, user } = useAuth();
+  const { mode, toggleTheme } = useTheme();
 
   // Check if user owns any leagues
   useEffect(() => {
@@ -198,6 +203,30 @@ export default function DashboardLayout({
           {user?.displayName || user?.email}
         </Typography>
 
+        {/* Theme Toggle Button */}
+        <Box sx={{ mb: 2 }}>
+          <Tooltip title="Toggle light/dark mode">
+            <IconButton
+              onClick={toggleTheme}
+              sx={{
+                width: "100%",
+                color: "text.primary",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                "&:hover": {
+                  backgroundColor: "action.hover",
+                },
+              }}
+            >
+              {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
+              <Typography variant="body2" sx={{ ml: 1 }}>
+                {mode === "dark" ? "Light Mode" : "Dark Mode"}
+              </Typography>
+            </IconButton>
+          </Tooltip>
+        </Box>
+
         {/* Logout Button */}
         <ListItem disablePadding>
           <ListItemButton
@@ -247,6 +276,11 @@ export default function DashboardLayout({
           >
             Survivor League
           </Typography>
+          <Tooltip title="Toggle light/dark mode">
+            <IconButton onClick={toggleTheme} sx={{ color: "text.primary" }}>
+              {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+          </Tooltip>
         </Toolbar>
       </AppBar>
 

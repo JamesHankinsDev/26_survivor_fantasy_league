@@ -137,13 +137,13 @@ export default function LeaderboardPage() {
     <Box
       sx={{
         flex: 1,
-        bgcolor: "#f5f5f5",
+        bgcolor: "background.default",
         p: { xs: 2, md: 4 },
         overflow: "auto",
       }}
     >
       <Container maxWidth="lg">
-        <Typography variant="h4" sx={{ mb: 3, fontWeight: "bold" }}>
+        <Typography variant="h4" sx={{ mb: 3, fontWeight: "bold", color: "text.primary" }}>
           Leaderboards
         </Typography>
 
@@ -180,32 +180,32 @@ export default function LeaderboardPage() {
             }}
           >
             <Box>
-              <Typography variant="body2" sx={{ color: "#666" }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 League Name
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "text.primary" }}>
                 {selectedLeague.name}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="body2" sx={{ color: "#666" }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 Members
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "text.primary" }}>
                 {selectedLeague.memberDetails?.length || 0}/
                 {selectedLeague.maxPlayers}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="body2" sx={{ color: "#666" }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 Season
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "text.primary" }}>
                 {CURRENT_SEASON.name}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="body2" sx={{ color: "#666" }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 Status
               </Typography>
               <Chip
@@ -222,7 +222,7 @@ export default function LeaderboardPage() {
         {/* Leaderboard Table */}
         <TableContainer component={Paper}>
           <Table sx={{ minWidth: 600 }}>
-            <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
+            <TableHead sx={{ backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#f5f5f5" }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: "bold" }}>Rank</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Tribe Owner</TableCell>
@@ -248,13 +248,13 @@ export default function LeaderboardPage() {
                     key={member.userId}
                     sx={{
                       backgroundColor: isCurrentUser
-                        ? "#E3F2FD"
+                        ? "rgba(232, 93, 42, 0.08)"
                         : "transparent",
                       borderLeft: isCurrentUser
-                        ? "4px solid #1976D2"
+                        ? "4px solid #E85D2A"
                         : "4px solid transparent",
                       "&:hover": {
-                        backgroundColor: isCurrentUser ? "#E3F2FD" : "#fafafa",
+                        backgroundColor: isCurrentUser ? "rgba(232, 93, 42, 0.12)" : "action.hover",
                       },
                     }}
                   >
@@ -363,10 +363,10 @@ export default function LeaderboardPage() {
                     {member.rank === 2 && "🥈"}
                     {member.rank === 3 && "🥉"}
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: "bold", mb: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: "bold", mb: 1, color: "text.primary" }}>
                     {member.displayName || "Tribe Member"}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#666", mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
                     #{member.rank}
                   </Typography>
                   <Typography

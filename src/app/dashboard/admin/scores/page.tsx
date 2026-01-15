@@ -348,10 +348,6 @@ export default function AdminScoresPage() {
         },
         { merge: true }
       );
-
-      console.log(
-        `Updated ${memberDetails.length} tribe members in league ${leagueId}`
-      );
     } catch (err) {
       console.error("Error cascading scores:", err);
       throw err;

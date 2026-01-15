@@ -10,7 +10,7 @@ export default function AboutPage() {
           variant="h4"
           sx={{
             fontWeight: 700,
-            color: "#1A1A1A",
+            color: "text.primary",
             mb: 1,
           }}
         >
@@ -56,16 +56,16 @@ export default function AboutPage() {
           for the championship.
         </Typography>
 
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
           Features
         </Typography>
-        <ul style={{ color: "#666", lineHeight: 1.8, marginLeft: "20px" }}>
+        <Box component="ul" sx={{ color: "text.secondary", lineHeight: 1.8, marginLeft: "20px" }}>
           <li>Real-time scoring updates</li>
           <li>Multiple league types and scoring systems</li>
           <li>Detailed player statistics and analytics</li>
           <li>League chat and notifications</li>
           <li>Mobile-friendly interface</li>
-        </ul>
+        </Box>
       </Paper>
 
       <Paper sx={{ p: 3, mb: 3 }}>
