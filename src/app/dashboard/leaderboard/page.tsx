@@ -30,6 +30,7 @@ import {
 } from "firebase/firestore";
 import { League, TribeMember } from "@/types/league";
 import { CURRENT_SEASON } from "@/data/seasons";
+import { loadEliminatedCastaways } from "@/utils/scoring";
 
 // Prevent static generation for this page
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ export default function LeaderboardPage() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
+  const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) {
@@ -87,6 +89,25 @@ export default function LeaderboardPage() {
 
     return () => unsubscribe();
   }, [user, router, selectedLeagueId]);
+
+  // Load eliminated castaways for selected league
+  useEffect(() => {
+    if (!selectedLeagueId) return;
+
+    const loadEliminated = async () => {
+      try {
+        const eliminated = await loadEliminatedCastaways(
+          selectedLeagueId,
+          CURRENT_SEASON.number
+        );
+        setEliminatedIds(new Set(eliminated));
+      } catch (err) {
+        console.error("Error loading eliminated castaways:", err);
+      }
+    };
+
+    loadEliminated();
+  }, [selectedLeagueId]);
 
   if (!user) {
     return null;
@@ -257,8 +278,9 @@ export default function LeaderboardPage() {
             <TableBody>
               {rankedMembers.map((member) => {
                 const activeCastaways =
-                  member.roster?.filter((r) => r.status === "active").length ||
-                  0;
+                  member.roster?.filter(
+                    (r) => r.status === "active" && !eliminatedIds.has(r.castawayId)
+                  ).length || 0;
 
                 const isCurrentUser = member.userId === user.uid;
 

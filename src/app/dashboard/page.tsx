@@ -32,6 +32,8 @@ import {
 import { League, TribeMember } from "@/types/league";
 import Link from "next/link";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import { loadEliminatedCastaways } from "@/utils/scoring";
+import { CURRENT_SEASON } from "@/data/seasons";
 
 interface LeagueMember extends TribeMember {
   rank: number;
@@ -43,6 +45,7 @@ export default function DashboardHome() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
+  const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) {
@@ -86,6 +89,25 @@ export default function DashboardHome() {
 
     return () => unsubscribe();
   }, [user, router, selectedLeagueId]);
+
+  // Load eliminated castaways for selected league
+  useEffect(() => {
+    if (!selectedLeagueId) return;
+
+    const loadEliminated = async () => {
+      try {
+        const eliminated = await loadEliminatedCastaways(
+          selectedLeagueId,
+          CURRENT_SEASON.number
+        );
+        setEliminatedIds(new Set(eliminated));
+      } catch (err) {
+        console.error("Error loading eliminated castaways:", err);
+      }
+    };
+
+    loadEliminated();
+  }, [selectedLeagueId]);
 
   if (!user) {
     return null;
@@ -379,8 +401,9 @@ export default function DashboardHome() {
                 {rankedMembers.map((member) => {
                   const isCurrentUser = member.userId === user.uid;
                   const activeRoster =
-                    member.roster?.filter((r) => r.status === "active")
-                      .length || 0;
+                    member.roster?.filter(
+                      (r) => r.status === "active" && !eliminatedIds.has(r.castawayId)
+                    ).length || 0;
 
                   return (
                     <TableRow
