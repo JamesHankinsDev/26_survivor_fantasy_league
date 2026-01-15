@@ -68,7 +68,7 @@ export default function AdminPage() {
     <Box
       sx={{
         flex: 1,
-        bgcolor: "#f5f5f5",
+        bgcolor: "background.default",
         p: { xs: 2, md: 4 },
         overflow: "auto",
       }}
@@ -90,7 +90,7 @@ export default function AdminPage() {
                 variant="h4"
                 sx={{
                   fontWeight: 700,
-                  color: "#1A1A1A",
+                  color: "text.primary",
                   mb: 0.5,
                 }}
               >
@@ -119,16 +119,12 @@ export default function AdminPage() {
 
           {!isOwner && !checkingOwnership && (
             <Alert severity="info" sx={{ mb: 3 }}>
-              <strong>Welcome!</strong> You&apos;re currently a player in one or
-              more leagues. To access admin tools for managing episode scoring
-              and eliminations, create your own league.
+              <strong>Get Started!</strong> Create your own league to access admin tools for managing episode scoring and eliminations.
             </Alert>
           )}
           {isOwner && (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              Create leagues and share join links with your friends. Each league
-              can have between 2 and 20 players. As a league owner, you&apos;ll
-              manage episode scoring and eliminations for your specific league.
+            <Alert severity="success" sx={{ mb: 3 }}>
+              As a league owner, you can manage episode scoring and eliminations for your leagues below.
             </Alert>
           )}
         </Box>
@@ -139,15 +135,19 @@ export default function AdminPage() {
             <CircularProgress />
           </Box>
         ) : isOwner ? (
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, 1fr)",
-                md: "repeat(3, 1fr)",
-              },
-              gap: 2,
+          <>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+              Admin Tools
+            </Typography>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "repeat(2, 1fr)",
+                  md: "repeat(3, 1fr)",
+                },
+                gap: 2,
               mb: 4,
             }}
           >
@@ -201,20 +201,15 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </Box>
-        ) : (
-          <Alert severity="info" sx={{ mb: 4 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              League Owner Features
-            </Typography>
-            <Typography variant="body2">
-              Episode scoring and elimination management are only available to
-              league owners. Create your own league above to access these admin
-              tools.
-            </Typography>
-          </Alert>
-        )}
+          </>
+        ) : null}
 
-        <LeagueList refreshTrigger={refreshTrigger} />
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+            Your Leagues
+          </Typography>
+          <LeagueList refreshTrigger={refreshTrigger} />
+        </Box>
       </Container>
 
       {/* Create League Dialog */}

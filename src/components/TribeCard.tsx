@@ -162,7 +162,7 @@ export default function TribeCard({
                   display: "block",
                 }}
               >
-                Roster ({member.roster.length})
+                Roster ({member.roster.filter(r => r.status !== "dropped").length})
               </Typography>
               <Box
                 sx={{
@@ -171,7 +171,7 @@ export default function TribeCard({
                   gap: 1,
                 }}
               >
-                {member.roster.map((entry) => {
+                {member.roster.filter(entry => entry.status !== "dropped").map((entry) => {
                   const castaway = allCastaways.find(
                     (c) => c.id === entry.castawayId
                   );
@@ -217,7 +217,7 @@ export default function TribeCard({
                           display: "block",
                         }}
                       >
-                        {castawaySeasonScores[entry.castawayId]} pts
+                        {castawaySeasonScores[entry.castawayId] || 0} pts
                       </Typography>
                       {entry.status !== "active" && (
                         <Typography

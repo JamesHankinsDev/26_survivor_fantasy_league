@@ -29,16 +29,14 @@ service cloud.firestore {
     // LEAGUES COLLECTION
     // ========================================
     match /leagues/{leagueId} {
-      // Read: Users can read leagues they are a member of
+      // Read: Users can read leagues they are a member of OR own
       allow read: if isAuthenticated() && 
                      (request.auth.uid in resource.data.members ||
-                      request.auth.uid in resource.data.memberDetails[0].userId);
+                      request.auth.uid == resource.data.ownerId);
       
       // Create: Authenticated users can create leagues (they must be the owner)
       allow create: if isAuthenticated() &&
-                       request.auth.uid == request.resource.data.ownerId &&
-                       request.resource.data.maxPlayers >= 2 &&
-                       request.resource.data.maxPlayers <= 20;
+                       request.auth.uid == request.resource.data.ownerId;
       
       // Update: Only the league owner can update league settings
       // OR members can update their own tribe details within memberDetails array

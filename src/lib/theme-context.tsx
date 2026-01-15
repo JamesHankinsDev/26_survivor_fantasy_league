@@ -27,12 +27,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    // Load theme preference from localStorage
+    // Load theme preference from localStorage after mount
     const savedMode = localStorage.getItem("themeMode") as ThemeMode;
     if (savedMode === "dark" || savedMode === "light") {
       setMode(savedMode);
     }
+    setMounted(true);
   }, []);
 
   const toggleTheme = () => {
@@ -97,11 +97,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       }),
     [mode]
   );
-
-  // Prevent flash of unstyled content
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme }}>

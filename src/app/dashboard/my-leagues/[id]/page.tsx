@@ -398,7 +398,7 @@ export default function LeagueDetailPage() {
         </Button>
         <Typography
           variant="h4"
-          sx={{ fontWeight: 700, color: "#1A1A1A", mb: 1 }}
+          sx={{ fontWeight: 700, color: "text.primary", mb: 1 }}
         >
           {league.name}
         </Typography>
@@ -443,7 +443,7 @@ export default function LeagueDetailPage() {
         <Box sx={{ mb: 4 }}>
           <Typography
             variant="subtitle1"
-            sx={{ fontWeight: 600, mb: 2, color: "#1A1A1A" }}
+            sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}
           >
             Your Tribe
           </Typography>
@@ -487,7 +487,7 @@ export default function LeagueDetailPage() {
       <Box>
         <Typography
           variant="subtitle1"
-          sx={{ fontWeight: 600, mb: 2, color: "#1A1A1A" }}
+          sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}
         >
           Other Tribes ({otherCount})
         </Typography>

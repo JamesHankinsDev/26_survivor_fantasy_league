@@ -25,6 +25,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Checkbox,
+  FormControlLabel,
+  OutlinedInput,
+  SelectChangeEvent,
+  Chip,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -63,7 +68,8 @@ export default function AdminScoresPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [ownedLeagues, setOwnedLeagues] = useState<League[]>([]);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([]);
+  const [applyToAll, setApplyToAll] = useState(false);
   const [castaways, setCastaways] = useState<Castaway[]>([]);
   const [episodes, setEpisodes] = useState<
     Record<
@@ -101,7 +107,7 @@ export default function AdminScoresPage() {
 
         // Auto-select first league if available
         if (leagues.length > 0) {
-          setSelectedLeagueId(leagues[0].id);
+          setSelectedLeagueIds([leagues[0].id]);
         }
       } catch (err) {
         console.error("Failed to load owned leagues:", err);
@@ -139,13 +145,13 @@ export default function AdminScoresPage() {
   // Load previous episode events when episode number or league changes
   useEffect(() => {
     const loadEpisodeEvents = async () => {
-      if (!selectedLeagueId || castaways.length === 0) return;
+      if (selectedLeagueIds.length === 0 || castaways.length === 0) return;
 
       try {
         const episodeRef = doc(
           db,
           "leagues",
-          selectedLeagueId,
+          selectedLeagueIds[0],
           "seasons",
           CURRENT_SEASON.number.toString(),
           "episodes",
@@ -192,7 +198,14 @@ export default function AdminScoresPage() {
     };
 
     loadEpisodeEvents();
-  }, [episodeNumber, selectedLeagueId, castaways]);
+  }, [episodeNumber, selectedLeagueIds, castaways]);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push("/");
+    }
+  }, [user, router]);
 
   const handleEventChange = (
     castawayId: string,
@@ -235,8 +248,10 @@ export default function AdminScoresPage() {
   };
 
   const handleSaveScores = async () => {
-    if (!selectedLeagueId) {
-      setError("Please select a league");
+    const targetLeagueIds = applyToAll ? ownedLeagues.map(l => l.id) : selectedLeagueIds;
+    
+    if (targetLeagueIds.length === 0) {
+      setError("Please select at least one league");
       return;
     }
 
@@ -266,32 +281,34 @@ export default function AdminScoresPage() {
         updatedAt: Timestamp.now(),
       };
 
-      // Save to Firestore under the specific league
-      const eventsRef = doc(
-        db,
-        "leagues",
-        selectedLeagueId,
-        "seasons",
-        CURRENT_SEASON.number.toString(),
-        "episodes",
-        `episode-${episodeNumber}`
-      );
-
-      await setDoc(eventsRef, episodeEventsData);
-
       // Calculate flat scores from events for cascading
       const flatScores: Record<string, number> = {};
       Object.entries(episodes).forEach(([castawayId, data]) => {
         flatScores[castawayId] = getTotalForCastaway(castawayId);
       });
 
-      // Cascade scores to this specific league
-      await cascadeScoresToLeague(selectedLeagueId, flatScores);
+      // Save to all target leagues
+      await Promise.all(
+        targetLeagueIds.map(async (leagueId) => {
+          // Save episode events
+          const eventsRef = doc(
+            db,
+            "leagues",
+            leagueId,
+            "seasons",
+            CURRENT_SEASON.number.toString(),
+            "episodes",
+            `episode-${episodeNumber}`
+          );
+          await setDoc(eventsRef, episodeEventsData);
+
+          // Cascade scores to league
+          await cascadeScoresToLeague(leagueId, flatScores);
+        })
+      );
 
       setSuccess(
-        `Episode ${episodeNumber} events saved successfully for ${
-          ownedLeagues.find((l) => l.id === selectedLeagueId)?.name
-        }!`
+        `Episode ${episodeNumber} events saved successfully to ${targetLeagueIds.length} league(s)!`
       );
 
       // Reset form
@@ -325,10 +342,35 @@ export default function AdminScoresPage() {
       const league = leagueDoc.data() as any;
       const memberDetails = league.memberDetails || [];
 
-      const updatedMembers = memberDetails.map((member: any) => {
-        const allEpisodeScores: Record<number, Record<string, number>> = {};
-        allEpisodeScores[episodeNumber] = episodeScores;
+      // Load ALL episodes from database to calculate cumulative points
+      const episodesRef = collection(
+        db,
+        "leagues",
+        leagueId,
+        "seasons",
+        CURRENT_SEASON.number.toString(),
+        "episodes"
+      );
+      const episodesSnapshot = await getDocs(episodesRef);
 
+      const allEpisodeScores: Record<number, Record<string, number>> = {};
+      
+      // Aggregate scores from all existing episodes
+      episodesSnapshot.forEach((doc) => {
+        const episode = doc.data() as EpisodeEvents;
+        const epNum = episode.episodeNumber;
+        allEpisodeScores[epNum] = {};
+        
+        Object.entries(episode.events).forEach(([castawayId, events]) => {
+          const points = calculatePointsFromEvents(events);
+          allEpisodeScores[epNum][castawayId] = points;
+        });
+      });
+
+      // Add/update the current episode being saved
+      allEpisodeScores[episodeNumber] = episodeScores;
+
+      const updatedMembers = memberDetails.map((member: any) => {
         const newTotalPoints = calculateTribeTotalPoints(
           member,
           allEpisodeScores
@@ -354,17 +396,16 @@ export default function AdminScoresPage() {
     }
   };
 
-  if (!user) {
-    router.push("/");
-    return null;
-  }
-
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
         <CircularProgress />
       </Container>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   if (ownedLeagues.length === 0) {
@@ -404,21 +445,50 @@ export default function AdminScoresPage() {
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Box sx={{ mb: 3 }}>
-          <FormControl fullWidth sx={{ maxWidth: 400, mb: 3 }}>
-            <InputLabel>Select League</InputLabel>
-            <Select
-              value={selectedLeagueId}
-              onChange={(e) => setSelectedLeagueId(e.target.value)}
-              label="Select League"
+          <FormControl fullWidth sx={{ maxWidth: 400, mb: 2 }}>
+            <InputLabel>Select League(s)</InputLabel>
+            <Select<string[]>
+              multiple
+              value={selectedLeagueIds}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedLeagueIds(typeof value === 'string' ? value.split(',') : value);
+                setApplyToAll(false);
+              }}
+              input={<OutlinedInput label="Select League(s)" />}
+              renderValue={(selected: string[]) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value: string) => {
+                    const league = ownedLeagues.find(l => l.id === value);
+                    return <Chip key={value} label={league?.name || value} size="small" />;
+                  })}
+                </Box>
+              )}
+              disabled={applyToAll}
             >
               {ownedLeagues.map((league) => (
                 <MenuItem key={league.id} value={league.id}>
+                  <Checkbox checked={selectedLeagueIds.indexOf(league.id) > -1} />
                   {league.name} ({league.currentPlayers}/{league.maxPlayers}{" "}
                   players)
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={applyToAll}
+                onChange={(e) => {
+                  setApplyToAll(e.target.checked);
+                  if (e.target.checked) {
+                    setSelectedLeagueIds(ownedLeagues.map(l => l.id));
+                  }
+                }}
+              />
+            }
+            label={`Apply to all my leagues (${ownedLeagues.length})`}
+          />
         </Box>
 
         <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
@@ -458,7 +528,7 @@ export default function AdminScoresPage() {
         <TableContainer sx={{ overflowX: "auto" }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+              <TableRow sx={{ backgroundColor: "action.hover" }}>
                 <TableCell sx={{ fontWeight: 600 }}>Castaway</TableCell>
                 {ALL_EVENT_TYPES.map((eventType) => (
                   <TableCell
@@ -468,7 +538,7 @@ export default function AdminScoresPage() {
                   >
                     {getEventLabel(eventType)}
                     <br />
-                    <span style={{ fontSize: "0.75rem", color: "#666" }}>
+                    <span style={{ fontSize: "0.75rem", color: "text.secondary" }}>
                       {SCORING_CONFIG[eventType] > 0 ? "+" : ""}
                       {SCORING_CONFIG[eventType]}
                     </span>
@@ -559,9 +629,13 @@ export default function AdminScoresPage() {
             <Typography sx={{ mt: 2, fontSize: "0.9em", color: "#666" }}>
               These events will be saved for{" "}
               <strong>
-                {ownedLeagues.find((l) => l.id === selectedLeagueId)?.name}
+                {applyToAll 
+                  ? `all ${ownedLeagues.length} league(s)` 
+                  : selectedLeagueIds.length === 1 
+                    ? ownedLeagues.find((l) => l.id === selectedLeagueIds[0])?.name
+                    : `${selectedLeagueIds.length} selected league(s)`}
               </strong>{" "}
-              only. Points will only count for teams that had each castaway at
+              . Points will only count for teams that had each castaway at
               the time of scoring.
             </Typography>
             <Typography sx={{ mt: 1, fontSize: "0.9em", color: "#666" }}>

@@ -15,6 +15,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Checkbox,
+  FormControlLabel,
+  OutlinedInput,
+  SelectChangeEvent,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
@@ -33,7 +37,8 @@ export default function AdminCastawaysPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [ownedLeagues, setOwnedLeagues] = useState<League[]>([]);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([]);
+  const [applyToAll, setApplyToAll] = useState(false);
   const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,7 +66,7 @@ export default function AdminCastawaysPage() {
 
         // Auto-select first league if available
         if (leagues.length > 0) {
-          setSelectedLeagueId(leagues[0].id);
+          setSelectedLeagueIds([leagues[0].id]);
         }
       } catch (err) {
         console.error("Failed to load owned leagues:", err);
@@ -77,11 +82,12 @@ export default function AdminCastawaysPage() {
   // Load eliminations for selected league
   useEffect(() => {
     const loadEliminations = async () => {
-      if (!selectedLeagueId) return;
+      if (selectedLeagueIds.length === 0) return;
 
       try {
+        // Load from first selected league
         const eliminated = await loadEliminatedCastaways(
-          selectedLeagueId,
+          selectedLeagueIds[0],
           CURRENT_SEASON.number
         );
         setEliminatedIds(new Set(eliminated));
@@ -92,7 +98,14 @@ export default function AdminCastawaysPage() {
     };
 
     loadEliminations();
-  }, [selectedLeagueId]);
+  }, [selectedLeagueIds]);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push("/");
+    }
+  }, [user, router]);
 
   const handleToggleEliminated = (castawayId: string) => {
     const newEliminated = new Set(eliminatedIds);
@@ -112,8 +125,10 @@ export default function AdminCastawaysPage() {
   };
 
   const handleSaveEliminations = async () => {
-    if (!selectedLeagueId) {
-      setError("Please select a league");
+    const targetLeagueIds = applyToAll ? ownedLeagues.map(l => l.id) : selectedLeagueIds;
+    
+    if (targetLeagueIds.length === 0) {
+      setError("Please select at least one league");
       return;
     }
 
@@ -127,51 +142,54 @@ export default function AdminCastawaysPage() {
     setSuccess("");
 
     try {
-      // Get previously loaded eliminatedIds
-      const previouslyLoaded = await loadEliminatedCastaways(
-        selectedLeagueId,
-        CURRENT_SEASON.number
-      );
-      const previousSet = new Set(previouslyLoaded);
+      // Process each league
+      const results = await Promise.all(
+        targetLeagueIds.map(async (leagueId) => {
+          // Get previously loaded eliminatedIds for this league
+          const previouslyLoaded = await loadEliminatedCastaways(
+            leagueId,
+            CURRENT_SEASON.number
+          );
+          const previousSet = new Set(previouslyLoaded);
 
-      // Find new eliminations and removals
-      const toAdd = Array.from(eliminatedIds).filter(
-        (id) => !previousSet.has(id)
-      );
-      const toRemove = Array.from(previousSet).filter(
-        (id) => !eliminatedIds.has(id)
-      );
+          // Find new eliminations and removals
+          const toAdd = Array.from(eliminatedIds).filter(
+            (id) => !previousSet.has(id)
+          );
+          const toRemove = Array.from(previousSet).filter(
+            (id) => !eliminatedIds.has(id)
+          );
 
-      if (toAdd.length === 0 && toRemove.length === 0) {
-        setError("No changes detected");
-        setSaving(false);
-        return;
-      }
+          if (toAdd.length === 0 && toRemove.length === 0) {
+            return { leagueId, changes: 0 };
+          }
 
-      // Save changes
-      await Promise.all([
-        ...toAdd.map((id) =>
-          saveEliminatedCastaway(selectedLeagueId, CURRENT_SEASON.number, id)
-        ),
-        ...toRemove.map((id) =>
-          removeEliminatedCastaway(selectedLeagueId, CURRENT_SEASON.number, id)
-        ),
-      ]);
+          // Save changes
+          await Promise.all([
+            ...toAdd.map((id) =>
+              saveEliminatedCastaway(leagueId, CURRENT_SEASON.number, id)
+            ),
+            ...toRemove.map((id) =>
+              removeEliminatedCastaway(leagueId, CURRENT_SEASON.number, id)
+            ),
+          ]);
+
+          return { leagueId, changes: toAdd.length + toRemove.length };
+        })
+      );
 
       // Reload the state to confirm changes
       const updated = await loadEliminatedCastaways(
-        selectedLeagueId,
+        selectedLeagueIds[0],
         CURRENT_SEASON.number
       );
       setEliminatedIds(new Set(updated));
       setChangedIds(new Set());
 
-      const message = [];
-      if (toAdd.length > 0)
-        message.push(`Marked ${toAdd.length} as eliminated`);
-      if (toRemove.length > 0) message.push(`Un-eliminated ${toRemove.length}`);
-
-      setSuccess(`${message.join(" and ")} for this league.`);
+      const totalChanges = results.reduce((sum, r) => sum + r.changes, 0);
+      setSuccess(
+        `Successfully updated eliminations for ${targetLeagueIds.length} league(s) with ${totalChanges} total change(s).`
+      );
 
       // Keep success visible longer for confirmation
       setTimeout(() => setSuccess(""), 4000);
@@ -187,17 +205,16 @@ export default function AdminCastawaysPage() {
     }
   };
 
-  if (!user) {
-    router.push("/");
-    return null;
-  }
-
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
         <CircularProgress />
       </Container>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   if (ownedLeagues.length === 0) {
@@ -229,21 +246,50 @@ export default function AdminCastawaysPage() {
       </Typography>
 
       <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth sx={{ maxWidth: 400 }}>
-          <InputLabel>Select League</InputLabel>
-          <Select
-            value={selectedLeagueId}
-            onChange={(e) => setSelectedLeagueId(e.target.value)}
-            label="Select League"
+        <FormControl fullWidth sx={{ maxWidth: 400, mb: 2 }}>
+          <InputLabel>Select League(s)</InputLabel>
+          <Select<string[]>
+            multiple
+            value={selectedLeagueIds}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedLeagueIds(typeof value === 'string' ? value.split(',') : value);
+              setApplyToAll(false); // Disable apply to all when manually selecting
+            }}
+            input={<OutlinedInput label="Select League(s)" />}
+            renderValue={(selected: string[]) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value: string) => {
+                  const league = ownedLeagues.find(l => l.id === value);
+                  return <Chip key={value} label={league?.name || value} size="small" />;
+                })}
+              </Box>
+            )}
+            disabled={applyToAll}
           >
             {ownedLeagues.map((league) => (
               <MenuItem key={league.id} value={league.id}>
+                <Checkbox checked={selectedLeagueIds.indexOf(league.id) > -1} />
                 {league.name} ({league.currentPlayers}/{league.maxPlayers}{" "}
                 players)
               </MenuItem>
             ))}
           </Select>
         </FormControl>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={applyToAll}
+              onChange={(e) => {
+                setApplyToAll(e.target.checked);
+                if (e.target.checked) {
+                  setSelectedLeagueIds(ownedLeagues.map(l => l.id));
+                }
+              }}
+            />
+          }
+          label={`Apply to all my leagues (${ownedLeagues.length})`}
+        />
       </Box>
 
       {success && (
@@ -261,7 +307,11 @@ export default function AdminCastawaysPage() {
       <Alert severity="info" sx={{ mb: 3 }}>
         Mark castaways as eliminated for the selected league. This affects only{" "}
         <strong>
-          {ownedLeagues.find((l) => l.id === selectedLeagueId)?.name}
+          {applyToAll 
+            ? "all your leagues" 
+            : selectedLeagueIds.length === 1 
+              ? ownedLeagues.find((l) => l.id === selectedLeagueIds[0])?.name
+              : `${selectedLeagueIds.length} selected league(s)`}
         </strong>
         . Eliminated castaways:
         <ul style={{ marginBottom: 0 }}>

@@ -71,38 +71,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { logout, user } = useAuth();
   const { mode, toggleTheme } = useTheme();
 
-  // Check if user owns any leagues
-  useEffect(() => {
-    const checkOwnership = async () => {
-      if (!user) {
-        setIsOwner(false);
-        return;
-      }
-
-      try {
-        const leaguesRef = collection(db, "leagues");
-        const q = query(leaguesRef, where("ownerId", "==", user.uid));
-        const snapshot = await getDocs(q);
-        setIsOwner(!snapshot.empty);
-      } catch (err) {
-        console.error("Error checking league ownership:", err);
-        setIsOwner(false);
-      }
-    };
-
-    checkOwnership();
-  }, [user]);
-
-  // Build navigation items based on ownership
-  const navItems = isOwner
-    ? [...baseNavItems, adminNavItem, aboutNavItem]
-    : [...baseNavItems, aboutNavItem];
+  // Build navigation items - Admin is now available to all users
+  const navItems = [...baseNavItems, adminNavItem, aboutNavItem];
 
   const handleToggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
@@ -254,8 +229,8 @@ export default function DashboardLayout({
       <AppBar
         sx={{
           display: { xs: "flex", md: "none" },
-          bgcolor: "white",
-          color: "#1A1A1A",
+          bgcolor: "background.paper",
+          color: "text.primary",
           boxShadow: 1,
           zIndex: 1300,
         }}

@@ -137,7 +137,7 @@ export default function DashboardHome() {
       <Box
         sx={{
           flex: 1,
-          bgcolor: "#f5f5f5",
+          bgcolor: "background.default",
           p: { xs: 2, md: 4 },
           overflow: "auto",
         }}
@@ -148,7 +148,7 @@ export default function DashboardHome() {
               variant="h4"
               sx={{
                 fontWeight: 700,
-                color: "#1A1A1A",
+                color: "text.primary",
                 mb: 1,
               }}
             >
