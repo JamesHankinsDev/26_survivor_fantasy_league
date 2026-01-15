@@ -1,7 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
-import { ThemeProvider as MUIThemeProvider, createTheme } from "@mui/material/styles";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
+import {
+  ThemeProvider as MUIThemeProvider,
+  createTheme,
+} from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 
 type ThemeMode = "light" | "dark";
@@ -59,7 +68,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           },
         },
         typography: {
-          fontFamily: "inherit",
+          fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         },
         components: {
           MuiButton: {

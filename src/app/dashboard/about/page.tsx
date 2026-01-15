@@ -56,10 +56,16 @@ export default function AboutPage() {
           for the championship.
         </Typography>
 
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
+        <Typography
+          variant="h6"
+          sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}
+        >
           Features
         </Typography>
-        <Box component="ul" sx={{ color: "text.secondary", lineHeight: 1.8, marginLeft: "20px" }}>
+        <Box
+          component="ul"
+          sx={{ color: "text.secondary", lineHeight: 1.8, marginLeft: "20px" }}
+        >
           <li>Real-time scoring updates</li>
           <li>Multiple league types and scoring systems</li>
           <li>Detailed player statistics and analytics</li>
