@@ -29,7 +29,12 @@ import { LeagueMessage, MessageMention, League } from "@/types/league";
 import MessageItem from "./MessageItem";
 import PersonIcon from "@mui/icons-material/Person";
 import GroupIcon from "@mui/icons-material/Group";
-import { notifyMention } from "@/utils/notifications"; // Add this import
+import { notifyMention } from "@/utils/notifications";
+import {
+  sanitizeMessageContent,
+  isValidMessageLength,
+  VALIDATION_LIMITS,
+} from "@/utils/inputValidation";
 
 interface MessageBoardProps {
   league: League;
@@ -193,6 +198,15 @@ export default function MessageBoard({
   const handleSendMessage = async () => {
     if (!messageContent.trim() || sending) return;
 
+    // Sanitize and validate input
+    const sanitizedContent = sanitizeMessageContent(messageContent);
+    if (!isValidMessageLength(sanitizedContent)) {
+      setError(
+        `Message must be between 1 and ${VALIDATION_LIMITS.MAX_MESSAGE_LENGTH} characters`,
+      );
+      return;
+    }
+
     setSending(true);
     setError("");
 
@@ -204,7 +218,7 @@ export default function MessageBoard({
       let searchPos = 0;
       mentions.forEach((mention) => {
         const mentionText = `@${mention.name}`;
-        const index = messageContent.indexOf(mentionText, searchPos);
+        const index = sanitizedContent.indexOf(mentionText, searchPos);
         if (index !== -1) {
           finalMentions.push({
             ...mention,
@@ -221,7 +235,7 @@ export default function MessageBoard({
         authorId: currentUserId,
         authorName: currentUserName,
         authorAvatar: currentUserAvatar || "",
-        content: messageContent.trim(),
+        content: sanitizedContent,
         mentions: finalMentions,
         createdAt: Timestamp.now(),
         isEdited: false,

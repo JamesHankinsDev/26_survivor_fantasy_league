@@ -148,7 +148,8 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
               bgcolor: "background.paper",
               boxShadow: 4,
             },
-            animation: unreadCount > 0 ? "shake 2s ease-in-out infinite" : "none",
+            animation:
+              unreadCount > 0 ? "shake 2s ease-in-out infinite" : "none",
           }}
         >
           <Badge badgeContent={unreadCount} color="error">

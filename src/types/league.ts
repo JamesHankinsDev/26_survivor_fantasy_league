@@ -25,7 +25,6 @@ export interface League {
   name: string;
   ownerId: string;
   ownerName: string;
-  ownerEmail: string;
   maxPlayers: number;
   currentPlayers: number;
   joinCode: string;

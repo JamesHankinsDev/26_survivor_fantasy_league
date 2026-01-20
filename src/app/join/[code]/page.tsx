@@ -29,6 +29,10 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { League } from "@/types/league";
+import {
+  sanitizeDisplayName,
+  sanitizeAvatarURL,
+} from "@/utils/inputValidation";
 
 type JoinStatus =
   | "loading"
@@ -72,7 +76,7 @@ export default function JoinLeaguePage() {
         const leaguesRef = collection(db, "leagues");
         const q = query(
           leaguesRef,
-          where("joinCode", "==", joinCode.toUpperCase())
+          where("joinCode", "==", joinCode.toUpperCase()),
         );
         const snapshot = await getDocs(q);
 
@@ -122,7 +126,7 @@ export default function JoinLeaguePage() {
         console.error("Error finding league:", err);
         setStatus("error");
         setMessage(
-          err.message || "An error occurred while looking up the league."
+          err.message || "An error occurred while looking up the league.",
         );
       }
     };
@@ -139,11 +143,15 @@ export default function JoinLeaguePage() {
 
       const leagueRef = doc(db, "leagues", league.id);
 
+      // Sanitize user data before adding to league
+      const sanitizedDisplayName = sanitizeDisplayName(user.displayName);
+      const sanitizedAvatar = sanitizeAvatarURL(user.photoURL);
+
       // Create new tribe member entry for the user
       const newMember = {
         userId: user.uid,
-        displayName: user.displayName || "Unknown",
-        avatar: user.photoURL || "",
+        displayName: sanitizedDisplayName,
+        avatar: sanitizedAvatar,
         tribeColor: "#20B2AA",
         points: 0,
         joinedAt: new Date(),

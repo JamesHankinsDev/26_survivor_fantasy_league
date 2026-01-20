@@ -16,6 +16,11 @@ import { useAuth } from "@/lib/auth-context";
 import { generateJoinCode, generateLeagueId, League } from "@/types/league";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  sanitizeLeagueName,
+  sanitizeDisplayName,
+  sanitizeAvatarURL,
+} from "@/utils/inputValidation";
 
 interface CreateLeagueDialogProps {
   open: boolean;
@@ -60,11 +65,21 @@ export default function CreateLeagueDialog({
       const joinCode = generateJoinCode();
       const leagueId = generateLeagueId();
 
+      // Sanitize inputs
+      const sanitizedLeagueName = sanitizeLeagueName(leagueName);
+      const sanitizedDisplayName = sanitizeDisplayName(user.displayName);
+      const sanitizedAvatar = sanitizeAvatarURL(user.photoURL);
+
+      if (!sanitizedLeagueName) {
+        setError("League name cannot be empty");
+        setCreating(false);
+        return;
+      }
+
       const newLeague: Omit<League, "id"> = {
-        name: leagueName.trim(),
+        name: sanitizedLeagueName,
         ownerId: user.uid,
-        ownerName: user.displayName || "Unknown",
-        ownerEmail: user.email || "",
+        ownerName: sanitizedDisplayName,
         maxPlayers: playerCount,
         currentPlayers: 1,
         joinCode,
@@ -72,8 +87,8 @@ export default function CreateLeagueDialog({
         memberDetails: [
           {
             userId: user.uid,
-            displayName: user.displayName || "Unknown",
-            avatar: user.photoURL || "",
+            displayName: sanitizedDisplayName,
+            avatar: sanitizedAvatar,
             tribeColor: "#20B2AA",
             points: 0,
             joinedAt: new Date(),
@@ -91,7 +106,7 @@ export default function CreateLeagueDialog({
       }
 
       const hasMemberDetail = newLeague.memberDetails.some(
-        (m) => m.userId === user.uid
+        (m) => m.userId === user.uid,
       );
       if (!hasMemberDetail) {
         newLeague.memberDetails.push({

@@ -120,6 +120,28 @@ service cloud.firestore {
       
       // Users can write their own profile
       allow write: if isAuthenticated() && request.auth.uid == userId;
+      
+      // ========================================
+      // USER NOTIFICATIONS SUBCOLLECTION
+      // ========================================
+      match /notifications/{notificationId} {
+        // Users can only read their own notifications
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        
+        // Notifications should ideally be created by backend/cloud functions
+        // For now, allow authenticated users to create notifications
+        // TODO: Restrict to cloud functions only when implemented
+        allow create: if isAuthenticated();
+        
+        // Users can update their own notifications (e.g., mark as read)
+        // Only allow updating the 'read' field
+        allow update: if isAuthenticated() && 
+                         request.auth.uid == userId &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        
+        // Users can delete their own notifications
+        allow delete: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
     
     // ========================================

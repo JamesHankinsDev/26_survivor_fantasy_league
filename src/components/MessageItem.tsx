@@ -48,6 +48,10 @@ import {
 } from "@/types/league";
 import { formatDistanceToNow } from "date-fns";
 import { notifyReaction } from "@/utils/notifications";
+import {
+  sanitizeMessageContent,
+  isValidMessageLength,
+} from "@/utils/inputValidation";
 
 interface MessageItemProps {
   message: LeagueMessage;
@@ -101,8 +105,15 @@ export default function MessageItem({
   };
 
   const handleSaveEdit = async () => {
-    if (!editContent.trim() || editContent === message.content) {
+    const sanitizedContent = sanitizeMessageContent(editContent);
+
+    if (!sanitizedContent || sanitizedContent === message.content) {
       handleCancelEdit();
+      return;
+    }
+
+    if (!isValidMessageLength(sanitizedContent)) {
+      alert("Message is too long or empty");
       return;
     }
 
@@ -116,7 +127,7 @@ export default function MessageItem({
       };
 
       await updateDoc(messageRef, {
-        content: editContent.trim(),
+        content: sanitizedContent,
         updatedAt: Timestamp.now(),
         isEdited: true,
         editHistory: arrayUnion(editHistoryEntry),
@@ -180,7 +191,7 @@ export default function MessageItem({
         await updateDoc(messageRef, {
           reactions: arrayUnion(newReaction),
         });
-        
+
         // Notify the message author (if it's not the current user)
         if (message.authorId !== currentUserId) {
           await notifyReaction(
