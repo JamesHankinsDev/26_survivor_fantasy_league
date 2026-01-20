@@ -239,20 +239,26 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                     </Typography>
                   }
                   secondary={
-                    <>
+                    <Box component="span">
                       <Typography
+                        component="span"
                         variant="body2"
                         color="text.secondary"
-                        sx={{ mb: 0.5 }}
+                        sx={{ display: "block", mb: 0.5 }}
                       >
                         {notification.message}
                       </Typography>
-                      <Typography variant="caption" color="text.disabled">
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{ display: "block" }}
+                      >
                         {formatDistanceToNow(notification.createdAt, {
                           addSuffix: true,
                         })}
                       </Typography>
-                    </>
+                    </Box>
                   }
                 />
               </MenuItem>

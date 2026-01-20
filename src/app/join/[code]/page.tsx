@@ -93,7 +93,6 @@ export default function JoinLeaguePage() {
           name: leagueData.name,
           ownerId: leagueData.ownerId,
           ownerName: leagueData.ownerName,
-          ownerEmail: leagueData.ownerEmail,
           maxPlayers: leagueData.maxPlayers,
           currentPlayers: leagueData.currentPlayers || 1,
           joinCode: leagueData.joinCode,

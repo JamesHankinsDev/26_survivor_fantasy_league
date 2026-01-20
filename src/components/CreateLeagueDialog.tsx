@@ -72,7 +72,7 @@ export default function CreateLeagueDialog({
 
       if (!sanitizedLeagueName) {
         setError("League name cannot be empty");
-        setCreating(false);
+        setLoading(false);
         return;
       }
 

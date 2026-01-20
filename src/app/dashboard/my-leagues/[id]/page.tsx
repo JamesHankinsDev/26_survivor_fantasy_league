@@ -130,7 +130,6 @@ export default function LeagueDetailPage() {
               name: raw.name,
               ownerId: raw.ownerId,
               ownerName: raw.ownerName,
-              ownerEmail: raw.ownerEmail,
               maxPlayers: raw.maxPlayers,
               currentPlayers:
                 raw.currentPlayers ??

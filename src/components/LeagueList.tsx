@@ -58,7 +58,6 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
               name: data.name,
               ownerId: data.ownerId,
               ownerName: data.ownerName,
-              ownerEmail: data.ownerEmail,
               maxPlayers: data.maxPlayers,
               currentPlayers: data.currentPlayers || 1,
               joinCode: data.joinCode,

@@ -274,7 +274,9 @@ export default function MessageItem({
     }
 
     return (
-      <Box
+      <Typography
+        component="div"
+        variant="body1"
         sx={{
           display: "flex",
           flexWrap: "wrap",
@@ -283,7 +285,7 @@ export default function MessageItem({
         }}
       >
         {parts}
-      </Box>
+      </Typography>
     );
   };
 
