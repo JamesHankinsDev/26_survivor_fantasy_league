@@ -1,11 +1,18 @@
 "use client";
 
-import { Box, Container, Typography, Paper } from "@mui/material";
+import { useState } from "react";
+import { Box, Container, Typography, Paper, Button } from "@mui/material";
+import { useAuth } from "@/lib/auth-context";
+import SchoolIcon from "@mui/icons-material/School";
+import AppTutorial from "@/components/AppTutorial";
 
 export default function AboutPage() {
+  const { user } = useAuth();
+  const [showTutorial, setShowTutorial] = useState(false);
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
         <Typography
           variant="h4"
           sx={{
@@ -16,6 +23,22 @@ export default function AboutPage() {
         >
           About Survivor Fantasy League
         </Typography>
+        
+        <Button
+          variant="outlined"
+          startIcon={<SchoolIcon />}
+          onClick={() => setShowTutorial(true)}
+          sx={{
+            borderColor: "#E85D2A",
+            color: "#E85D2A",
+            "&:hover": {
+              borderColor: "#D94E23",
+              bgcolor: "rgba(232, 93, 42, 0.08)",
+            },
+          }}
+        >
+          Replay Tutorial
+        </Button>
       </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -247,6 +270,15 @@ export default function AboutPage() {
           </Typography>
         </Box>
       </Paper>
+
+      {/* Tutorial Dialog */}
+      {user && (
+        <AppTutorial
+          userId={user.uid}
+          open={showTutorial}
+          onClose={() => setShowTutorial(false)}
+        />
+      )}
     </Container>
   );
 }

@@ -28,12 +28,15 @@ import {
   where,
   onSnapshot,
   QueryConstraint,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { League, TribeMember } from "@/types/league";
 import Link from "next/link";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { loadEliminatedCastaways } from "@/utils/scoring";
 import { CURRENT_SEASON } from "@/data/seasons";
+import AppTutorial from "@/components/AppTutorial";
 
 interface LeagueMember extends TribeMember {
   rank: number;
@@ -46,6 +49,29 @@ export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Check if user has completed tutorial
+  useEffect(() => {
+    const checkTutorialStatus = async () => {
+      if (!user) return;
+
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userRef);
+        const userData = userDoc.data();
+
+        // Show tutorial if user hasn't completed it
+        if (!userData?.tutorialCompleted) {
+          setShowTutorial(true);
+        }
+      } catch (error) {
+        console.error("Error checking tutorial status:", error);
+      }
+    };
+
+    checkTutorialStatus();
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -528,6 +554,15 @@ export default function DashboardHome() {
           </Box>
         </Paper>
       </Container>
+
+      {/* Tutorial Dialog */}
+      {user && (
+        <AppTutorial
+          userId={user.uid}
+          open={showTutorial}
+          onClose={() => setShowTutorial(false)}
+        />
+      )}
     </Box>
   );
 }
