@@ -37,6 +37,7 @@ import EditTribeDialog from "@/components/EditTribeDialog";
 import { DraftTeamModal } from "@/components/DraftTeamModal";
 import { AddDropModal } from "@/components/AddDropModal";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ForumIcon from "@mui/icons-material/Forum";
 import CASTAWAYS from "@/data/castaways";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { loadEliminatedCastaways } from "@/utils/scoring";
@@ -56,7 +57,7 @@ export default function LeagueDetailPage() {
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>(
-    []
+    [],
   );
   const [castawaySeasonScores, setCastawaySeasonScores] = useState<
     Record<string, number>
@@ -64,7 +65,7 @@ export default function LeagueDetailPage() {
 
   // Get current user's tribe member info
   const currentUserTribe = league?.memberDetails?.find(
-    (m) => m.userId === user?.uid
+    (m) => m.userId === user?.uid,
   );
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function LeagueDetailPage() {
         // Load eliminated castaways for this league
         const eliminated = await loadEliminatedCastaways(
           leagueId,
-          CURRENT_SEASON.number
+          CURRENT_SEASON.number,
         );
         setEliminatedCastawayIds(eliminated);
 
@@ -92,7 +93,7 @@ export default function LeagueDetailPage() {
           leagueId,
           "seasons",
           CURRENT_SEASON.number.toString(),
-          "episodes"
+          "episodes",
         );
         const snapshot = await getDocs(episodesRef);
 
@@ -170,7 +171,7 @@ export default function LeagueDetailPage() {
           console.error("Error fetching league:", err);
           setError("Failed to load league details");
           setLoading(false);
-        }
+        },
       );
 
       return () => unsubscribe();
@@ -184,7 +185,7 @@ export default function LeagueDetailPage() {
   const handleSaveTribeInfo = async (
     displayName: string,
     avatar: string,
-    tribeColor: string
+    tribeColor: string,
   ) => {
     if (!league || !user) throw new Error("Missing league or user info");
 
@@ -201,7 +202,7 @@ export default function LeagueDetailPage() {
               tribeColor,
               updatedAt: new Date(),
             }
-          : member
+          : member,
       );
 
       const leagueRef = doc(db, "leagues", league.id);
@@ -213,7 +214,7 @@ export default function LeagueDetailPage() {
       setEditDialogOpen(false);
     } catch (err) {
       throw new Error(
-        err instanceof Error ? err.message : "Failed to save tribe info"
+        err instanceof Error ? err.message : "Failed to save tribe info",
       );
     } finally {
       setIsSaving(false);
@@ -233,7 +234,7 @@ export default function LeagueDetailPage() {
           status: "active",
           addedWeek: 0, // Week 0 = draft
           accumulatedPoints: 0,
-        })
+        }),
       );
 
       // Update member details with roster
@@ -245,7 +246,7 @@ export default function LeagueDetailPage() {
               draftedAt: new Date(),
               updatedAt: new Date(),
             }
-          : member
+          : member,
       );
 
       const leagueRef = doc(db, "leagues", league.id);
@@ -257,7 +258,7 @@ export default function LeagueDetailPage() {
       setDraftDialogOpen(false);
     } catch (err) {
       throw new Error(
-        err instanceof Error ? err.message : "Failed to submit draft"
+        err instanceof Error ? err.message : "Failed to submit draft",
       );
     } finally {
       setIsSaving(false);
@@ -266,7 +267,7 @@ export default function LeagueDetailPage() {
 
   const handleSubmitAddDrop = async (
     dropId: string | null,
-    addId: string | null
+    addId: string | null,
   ) => {
     if (!league || !user || !currentUserTribe)
       throw new Error("Missing league or user info");
@@ -292,7 +293,7 @@ export default function LeagueDetailPage() {
       if (addId) {
         // Check if castaway was previously dropped - if so, reactivate instead of creating new
         const previouslyDropped = updatedRoster.find(
-          (entry) => entry.castawayId === addId && entry.status === "dropped"
+          (entry) => entry.castawayId === addId && entry.status === "dropped",
         );
 
         if (previouslyDropped) {
@@ -319,7 +320,7 @@ export default function LeagueDetailPage() {
               roster: updatedRoster,
               updatedAt: new Date(),
             }
-          : member
+          : member,
       );
 
       const leagueRef = doc(db, "leagues", league.id);
@@ -331,7 +332,7 @@ export default function LeagueDetailPage() {
       setAddDropDialogOpen(false);
     } catch (err) {
       throw new Error(
-        err instanceof Error ? err.message : "Failed to process add/drop"
+        err instanceof Error ? err.message : "Failed to process add/drop",
       );
     } finally {
       setIsSaving(false);
@@ -374,7 +375,7 @@ export default function LeagueDetailPage() {
 
   // Sort members by points (descending) to determine rank
   const sortedMembers = [...(league.memberDetails || [])].sort(
-    (a, b) => b.points - a.points
+    (a, b) => b.points - a.points,
   );
 
   // Safe member counts (support older docs without memberDetails)
@@ -389,13 +390,35 @@ export default function LeagueDetailPage() {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => router.push("/dashboard/my-leagues")}
-          sx={{ mb: 2, color: "#E85D2A" }}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 2,
+          }}
         >
-          Back to My Leagues
-        </Button>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => router.push("/dashboard/my-leagues")}
+            sx={{ color: "#E85D2A" }}
+          >
+            Back to My Leagues
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<ForumIcon />}
+            onClick={() =>
+              router.push(`/dashboard/my-leagues/${leagueId}/messages`)
+            }
+            sx={{
+              bgcolor: "#E85D2A",
+              "&:hover": { bgcolor: "#d14d1a" },
+            }}
+          >
+            Message Board
+          </Button>
+        </Box>
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: "text.primary", mb: 1 }}

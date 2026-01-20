@@ -88,6 +88,27 @@ service cloud.firestore {
           allow write: if isLeagueOwner(leagueId);
         }
       }
+      
+      // ========================================
+      // LEAGUE MESSAGE BOARD
+      // ========================================
+      match /messages/{messageId} {
+        // All league members can read messages
+        allow read: if isLeagueMember(leagueId);
+        
+        // League members can create messages (must be author)
+        allow create: if isLeagueMember(leagueId) &&
+                         request.auth.uid == request.resource.data.authorId;
+        
+        // Authors can update their own messages
+        allow update: if isLeagueMember(leagueId) &&
+                         request.auth.uid == resource.data.authorId;
+        
+        // Authors can delete their own messages OR league owner can delete any message
+        allow delete: if isLeagueMember(leagueId) &&
+                         (request.auth.uid == resource.data.authorId ||
+                          isLeagueOwner(leagueId));
+      }
     }
     
     // ========================================

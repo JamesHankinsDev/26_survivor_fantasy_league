@@ -32,6 +32,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import NotificationBell from "@/components/NotificationBell";
 
 const DRAWER_WIDTH = 280;
 
@@ -225,6 +226,20 @@ export default function DashboardLayout({
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      {/* Fixed Notification Bell in Top Right */}
+      {user && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 1400,
+          }}
+        >
+          <NotificationBell userId={user.uid} />
+        </Box>
+      )}
+
       {/* Mobile AppBar */}
       <AppBar
         sx={{

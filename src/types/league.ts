@@ -89,6 +89,34 @@ export interface ScoringEvent {
   count: number; // Number of times this event occurred (e.g., 2 jury votes)
 }
 
+// Message Board: Messages posted in a league
+export interface LeagueMessage {
+  id: string;
+  leagueId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  content: string;
+  mentions: MessageMention[]; // Tags of users or tribes
+  createdAt: Date | any;
+  updatedAt?: Date | any;
+  isEdited: boolean;
+  editHistory?: MessageEdit[];
+}
+
+export interface MessageMention {
+  type: "user" | "tribe";
+  id: string; // userId or tribeName
+  name: string; // Display name
+  startIndex: number; // Position in content where mention starts
+  endIndex: number; // Position in content where mention ends
+}
+
+export interface MessageEdit {
+  editedAt: Date | any;
+  previousContent: string;
+}
+
 // Episode events: records all events for all castaways in an episode
 export interface EpisodeEvents {
   id: string; // e.g., "episode-1"
@@ -103,7 +131,7 @@ export interface EpisodeEvents {
 // Helper to get member rank in league (1st place, 2nd place, etc)
 export const getMemberRank = (
   members: TribeMember[],
-  userId: string
+  userId: string,
 ): number => {
   const sorted = [...members].sort((a, b) => b.points - a.points);
   return sorted.findIndex((m) => m.userId === userId) + 1;
@@ -129,3 +157,64 @@ export const getLeagueJoinUrl = (joinCode: string): string => {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   return `${baseUrl}/join/${joinCode}`;
 };
+
+export type NotificationType =
+  | "score_update"
+  | "mention"
+  | "league_invite"
+  | "elimination"
+  | "new_message"
+  | "rank_change";
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link: string;
+  read: boolean;
+  createdAt: Date | any;
+  metadata?: {
+    leagueId?: string;
+    leagueName?: string;
+    messageId?: string;
+    points?: number;
+    rank?: number;
+    mentionedBy?: string;
+  };
+}
+
+export interface MessageReaction {
+  emoji: string;
+  userId: string;
+  userName: string;
+  createdAt: Date | any;
+}
+
+export const REACTION_EMOJIS = [
+  { emoji: "👍", label: "Like" },
+  { emoji: "❤️", label: "Love" },
+  { emoji: "😂", label: "Laugh" },
+  { emoji: "🔥", label: "Fire" },
+  { emoji: "🎯", label: "Bullseye" },
+  { emoji: "👀", label: "Eyes" },
+] as const;
+
+// Update LeagueMessage interface to add reactions
+export interface LeagueMessage {
+  id: string;
+  leagueId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  content: string;
+  mentions: MessageMention[];
+  createdAt: Date | any;
+  updatedAt?: Date | any;
+  isEdited: boolean;
+  editHistory?: MessageEdit[];
+  reactions: MessageReaction[]; // Add this
+  replyCount?: number; // Add this
+  parentMessageId?: string; // Add this
+}
