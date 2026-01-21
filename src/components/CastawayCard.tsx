@@ -57,7 +57,7 @@ export default function CastawayCard({
               height="280"
               image={castaway.image}
               alt={castaway.name}
-              sx={{ objectFit: "cover" }}
+              sx={{ objectFit: "cover", objectPosition: "top" }}
             />
           )}
           <CardContent sx={{ textAlign: "center", pb: 1 }}>
