@@ -116,7 +116,6 @@ export default function LeagueDetailPage() {
             setTimeout(() => router.push("/dashboard/my-leagues"), 2000);
             return;
           }
-          console.log("League Start Date:", normalized.leagueStartDate);
           setLeague(normalized);
           setLoading(false);
         } else {
@@ -277,12 +276,6 @@ export default function LeagueDetailPage() {
         // Reset to prior week
         if (dropId === "__RESET_TO_PRIOR_WEEK__") {
           const previousWeek = currentWeek - 1;
-          console.log("CURRENT WEEK:", currentWeek);
-          console.log("PRIOR WEEK: ", previousWeek);
-          console.log({
-            previousWeek,
-            previousSnapShot: currentUserTribe.weeklyRosterHistory,
-          });
           const previousSnapshot = currentUserTribe.weeklyRosterHistory?.find(
             (w) => w.week === previousWeek,
           );

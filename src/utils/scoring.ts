@@ -50,8 +50,6 @@ export const calculateTribeTotalPoints = (
 export const getCurrentWeek = (seasonStartDate: Date): number => {
   const now = new Date();
 
-  console.log({ seasonStartDate });
-
   // If before season premiere, no weeks have started
   if (now < seasonStartDate) {
     return 0; // Draft week
@@ -189,11 +187,9 @@ export const isNetRosterChangeAllowed = (
     addCastawayId,
   ];
 
-  console.log(prevIds, currIds);
   // Count how many castaways are the same
   const sameCount = prevIds.filter((id) => currIds.includes(id)).length;
   // Allow if at least 4 are the same
-  console.log("CURR IDS: ", currIds);
   return sameCount >= 4;
 };
 

@@ -70,16 +70,15 @@ export default function AdminScoresPage() {
         const snapshot = await getDocs(
           query(
             castawayCollection,
-            where("seasonNumber", "==", CURRENT_SEASON.number)
-          )
+            where("seasonNumber", "==", CURRENT_SEASON.number),
+          ),
         );
 
         // If no castaways in database, use hardcoded data
         let loadedCastaways: Castaway[] = [];
         if (snapshot.empty) {
-          const { default: defaultCastaways } = await import(
-            "@/data/castaways"
-          );
+          const { default: defaultCastaways } =
+            await import("@/data/castaways");
           loadedCastaways = defaultCastaways.map((c) => ({
             ...c,
             id: c.id,
@@ -124,7 +123,7 @@ export default function AdminScoresPage() {
   const handleScoreChange = (
     castawayId: string,
     category: "aliveBonus" | "immunityWin" | "juryVote" | "other",
-    value: number
+    value: number,
   ) => {
     setScores((prev) => ({
       ...prev,
@@ -180,7 +179,7 @@ export default function AdminScoresPage() {
         "seasons",
         CURRENT_SEASON.number.toString(),
         "episodes",
-        `episode-${episodeNumber}`
+        `episode-${episodeNumber}`,
       );
 
       await setDoc(scoresRef, episodeScoresData);
@@ -189,7 +188,7 @@ export default function AdminScoresPage() {
       await cascadeScoresToLeagues(flattenedScores);
 
       setSuccess(
-        `Episode ${episodeNumber} scores saved successfully! Cascading to all managed leagues...`
+        `Episode ${episodeNumber} scores saved successfully! Cascading to all managed leagues...`,
       );
 
       // Reset form with proper breakdown structure
@@ -222,7 +221,7 @@ export default function AdminScoresPage() {
   };
 
   const cascadeScoresToLeagues = async (
-    episodeScores: Record<string, number>
+    episodeScores: Record<string, number>,
   ) => {
     try {
       // Load all leagues
@@ -251,7 +250,7 @@ export default function AdminScoresPage() {
           // Calculate new total points based on complete roster history
           const newTotalPoints = calculateTribeTotalPoints(
             member,
-            allEpisodeScores
+            allEpisodeScores,
           );
 
           updatedCount++;
@@ -269,7 +268,6 @@ export default function AdminScoresPage() {
       });
 
       await batch.commit();
-      console.log(`Updated ${updatedCount} tribe members across all leagues`);
     } catch (err) {
       console.error("Error cascading scores:", err);
       // Don't throw - scores were saved, just failed to cascade
@@ -355,7 +353,7 @@ export default function AdminScoresPage() {
                         handleScoreChange(
                           castaway.id,
                           "aliveBonus",
-                          parseInt(e.target.value) || 0
+                          parseInt(e.target.value) || 0,
                         )
                       }
                       inputProps={{ min: 0, step: 1 }}
@@ -371,7 +369,7 @@ export default function AdminScoresPage() {
                         handleScoreChange(
                           castaway.id,
                           "immunityWin",
-                          parseInt(e.target.value) || 0
+                          parseInt(e.target.value) || 0,
                         )
                       }
                       inputProps={{ min: 0, step: 1 }}
@@ -387,7 +385,7 @@ export default function AdminScoresPage() {
                         handleScoreChange(
                           castaway.id,
                           "juryVote",
-                          parseInt(e.target.value) || 0
+                          parseInt(e.target.value) || 0,
                         )
                       }
                       inputProps={{ min: 0, step: 1 }}
@@ -403,7 +401,7 @@ export default function AdminScoresPage() {
                         handleScoreChange(
                           castaway.id,
                           "other",
-                          parseInt(e.target.value) || 0
+                          parseInt(e.target.value) || 0,
                         )
                       }
                       inputProps={{ min: 0, step: 1 }}
