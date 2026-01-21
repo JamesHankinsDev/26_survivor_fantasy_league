@@ -49,10 +49,10 @@ export default function TribeCard({
       rankNum % 10 === 1 && rankNum !== 11
         ? "st"
         : rankNum % 10 === 2 && rankNum !== 12
-        ? "nd"
-        : rankNum % 10 === 3 && rankNum !== 13
-        ? "rd"
-        : "th";
+          ? "nd"
+          : rankNum % 10 === 3 && rankNum !== 13
+            ? "rd"
+            : "th";
     return `${rankNum}${suffix}`;
   };
 
@@ -162,7 +162,8 @@ export default function TribeCard({
                   display: "block",
                 }}
               >
-                Roster ({member.roster.filter(r => r.status !== "dropped").length})
+                Roster (
+                {member.roster.filter((r) => r.status !== "dropped").length})
               </Typography>
               <Box
                 sx={{
@@ -171,69 +172,83 @@ export default function TribeCard({
                   gap: 1,
                 }}
               >
-                {member.roster.filter(entry => entry.status !== "dropped").map((entry) => {
-                  const castaway = allCastaways.find(
-                    (c) => c.id === entry.castawayId
-                  );
-                  const isEliminated = eliminatedCastawayIds.includes(
-                    entry.castawayId
-                  );
-                  const statusColor = isEliminated
-                    ? "#999"
-                    : entry.status === "dropped"
-                    ? "#E85D2A"
-                    : "#20B2AA";
-                  return (
-                    <Box
-                      key={entry.castawayId}
-                      sx={{
-                        p: 1,
-                        borderRadius: 1,
-                        border: `1px solid ${statusColor}`,
-                        bgcolor: `${statusColor}11`,
-                        textAlign: "center",
-                        opacity: isEliminated ? 0.5 : 1,
-                        filter: isEliminated ? "grayscale(100%)" : "none",
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
+                {member.roster
+                  .filter((entry) => entry.status !== "dropped")
+                  .map((entry) => {
+                    const castaway = allCastaways.find(
+                      (c) => c.id === entry.castawayId,
+                    );
+                    const isEliminated = eliminatedCastawayIds.includes(
+                      entry.castawayId,
+                    );
+                    const statusColor = isEliminated
+                      ? "#999"
+                      : entry.status === "dropped"
+                        ? "#E85D2A"
+                        : "#20B2AA";
+                    return (
+                      <Box
+                        key={entry.castawayId}
                         sx={{
-                          fontWeight: 500,
-                          fontSize: "0.75rem",
-                          display: "block",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
+                          p: 1,
+                          borderRadius: 1,
+                          border: `1px solid ${statusColor}`,
+                          bgcolor: `${statusColor}11`,
+                          textAlign: "center",
+                          opacity: isEliminated ? 0.5 : 1,
+                          filter: isEliminated ? "grayscale(100%)" : "none",
                         }}
                       >
-                        {castaway?.name?.split(" ")[0] || "Unknown"}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: "0.65rem",
-                          color: statusColor,
-                          fontWeight: 600,
-                          display: "block",
-                        }}
-                      >
-                        {castawaySeasonScores[entry.castawayId] || 0} pts
-                      </Typography>
-                      {entry.status !== "active" && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontWeight: 500,
+                            fontSize: "0.75rem",
+                            display: "block",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {castaway?.name?.split(" ")[0] || "Unknown"}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontSize: "0.65rem",
+                            color: statusColor,
+                            fontWeight: 600,
+                            display: "block",
+                          }}
+                        >
+                          {entry.accumulatedPoints} pts (team)
+                        </Typography>
                         <Typography
                           variant="caption"
                           sx={{
                             fontSize: "0.6rem",
                             color: statusColor,
-                            textTransform: "uppercase",
+                            fontWeight: 400,
+                            display: "block",
                           }}
                         >
-                          {isEliminated ? "eliminated" : entry.status}
+                          {castawaySeasonScores[entry.castawayId] || 0} pts
+                          (total)
                         </Typography>
-                      )}
-                    </Box>
-                  );
-                })}
+                        {entry.status !== "active" && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: "0.6rem",
+                              color: statusColor,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {isEliminated ? "eliminated" : entry.status}
+                          </Typography>
+                        )}
+                      </Box>
+                    );
+                  })}
               </Box>
             </Box>
           )}

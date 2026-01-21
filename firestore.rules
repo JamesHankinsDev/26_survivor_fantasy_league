@@ -2,47 +2,75 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is authenticated
+    // Helper: Authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // Helper function to check if user is a league member
+
+    // Helper: Is league member (by UID in members array)
     function isLeagueMember(leagueId) {
-      return isAuthenticated() && 
-             request.auth.uid in get(/databases/$(database)/documents/leagues/$(leagueId)).data.members;
+      return isAuthenticated() &&
+        request.auth.uid in get(/databases/$(database)/documents/leagues/$(leagueId)).data.members;
     }
-    
-    // Helper function to check if user is a league owner
+
+    // Helper: Is league owner
     function isLeagueOwner(leagueId) {
-      return isAuthenticated() && 
-             request.auth.uid == get(/databases/$(database)/documents/leagues/$(leagueId)).data.ownerId;
+      return isAuthenticated() &&
+        request.auth.uid == get(/databases/$(database)/documents/leagues/$(leagueId)).data.ownerId;
     }
-    
-    // Helper function to check if user owns the resource
-    function isOwner() {
-      return isAuthenticated() && 
-             request.auth.uid == resource.data.ownerId;
+
+    // Helper: check if UID is in memberDetails array of objects (up to 10 members)
+    function memberDetailsHasUser(arr, uid) {
+      return arr.size() > 0 && (
+        arr[0].userId == uid
+        || (arr.size() > 1 && arr[1].userId == uid)
+        || (arr.size() > 2 && arr[2].userId == uid)
+        || (arr.size() > 3 && arr[3].userId == uid)
+        || (arr.size() > 4 && arr[4].userId == uid)
+        || (arr.size() > 5 && arr[5].userId == uid)
+        || (arr.size() > 6 && arr[6].userId == uid)
+        || (arr.size() > 7 && arr[7].userId == uid)
+        || (arr.size() > 8 && arr[8].userId == uid)
+        || (arr.size() > 9 && arr[9].userId == uid)
+      );
     }
     
     // ========================================
     // LEAGUES COLLECTION
     // ========================================
     match /leagues/{leagueId} {
-      // Read: Users can read leagues they are a member of OR own
-      allow read: if isAuthenticated() && 
-                     (request.auth.uid in resource.data.members ||
-                      request.auth.uid == resource.data.ownerId);
-      
-      // Create: Authenticated users can create leagues (they must be the owner)
+      // Read: owner or member
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.ownerId ||
+         request.auth.uid in resource.data.members);
+
+      // Create: owner only
       allow create: if isAuthenticated() &&
-                       request.auth.uid == request.resource.data.ownerId;
-      
-      // Update: Only the league owner can update league settings
-      // OR members can update their own tribe details within memberDetails array
-      allow update: if isAuthenticated() && 
-                       (request.auth.uid == resource.data.ownerId ||
-                        request.auth.uid in resource.data.members);
+        request.auth.uid == request.resource.data.ownerId;
+
+      // Update: owner, member, or joining
+      allow update: if (
+        // Owner or member can update
+        isAuthenticated() && (
+          request.auth.uid == resource.data.ownerId ||
+          request.auth.uid in resource.data.members
+        )
+        // Or: joining by adding self to members
+        || (
+          isAuthenticated() &&
+          !(request.auth.uid in resource.data.members) &&
+          request.resource.data.members.hasAll(resource.data.members.concat([request.auth.uid])) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        )
+        // Or: joining by adding self to memberDetails
+        || (
+          isAuthenticated() &&
+          !memberDetailsHasUser(resource.data.memberDetails, request.auth.uid) &&
+          memberDetailsHasUser(request.resource.data.memberDetails, request.auth.uid) &&
+          request.resource.data.memberDetails.size() == resource.data.memberDetails.size() + 1 &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberDetails'])
+        )
+      );
       
       // Delete: Only the league owner can delete
       allow delete: if isAuthenticated() && 

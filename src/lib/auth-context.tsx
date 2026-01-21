@@ -12,7 +12,8 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
@@ -38,14 +39,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!auth) {
       setLoading(false);
       setError(
-        "Firebase is not initialized. Please configure your Firebase credentials."
+        "Firebase is not initialized. Please configure your Firebase credentials.",
       );
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+      // Create user document in Firestore if it doesn't exist
+      if (currentUser) {
+        try {
+          const { uid, displayName, email, photoURL } = currentUser;
+          const userRef = doc(db, "users", uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              displayName: displayName || "",
+              email: email || "",
+              avatar: photoURL || "",
+              joinedAt: serverTimestamp(),
+              tutorialCompleted: false,
+            });
+          }
+        } catch (err) {
+          console.error("Error creating user document:", err);
+        }
+      }
     });
 
     return () => unsubscribe();

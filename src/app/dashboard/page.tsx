@@ -110,7 +110,7 @@ export default function DashboardHome() {
       (error) => {
         console.error("Error loading leagues:", error);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -124,7 +124,7 @@ export default function DashboardHome() {
       try {
         const eliminated = await loadEliminatedCastaways(
           selectedLeagueId,
-          CURRENT_SEASON.number
+          CURRENT_SEASON.number,
         );
         setEliminatedIds(new Set(eliminated));
       } catch (err) {
@@ -239,7 +239,7 @@ export default function DashboardHome() {
 
   // Get current user's tribe info
   const currentUserTribe = selectedLeague.memberDetails?.find(
-    (m) => m.userId === user.uid
+    (m) => m.userId === user.uid,
   );
 
   // Sort members by points (descending) and assign ranks
@@ -269,7 +269,7 @@ export default function DashboardHome() {
       }}
     >
       <Container maxWidth="lg">
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
           <Typography
             variant="h4"
             sx={{
@@ -279,9 +279,6 @@ export default function DashboardHome() {
             }}
           >
             Welcome Back, {user?.displayName || user?.email?.split("@")[0]}!
-          </Typography>
-          <Typography variant="body1" sx={{ color: "text.secondary", mb: 2 }}>
-            Here&apos;s how you&apos;re performing in your leagues
           </Typography>
         </Box>
 
@@ -394,7 +391,10 @@ export default function DashboardHome() {
           <Box
             sx={{
               p: 3,
-              bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(232, 93, 42, 0.15)" : "rgba(232, 93, 42, 0.05)",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(232, 93, 42, 0.15)"
+                  : "rgba(232, 93, 42, 0.05)",
               borderBottom: "1px solid",
               borderColor: "divider",
             }}
@@ -411,7 +411,14 @@ export default function DashboardHome() {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#f5f5f5" }}>
+                <TableRow
+                  sx={{
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.05)"
+                        : "#f5f5f5",
+                  }}
+                >
                   <TableCell sx={{ fontWeight: 600 }}>Rank</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Tribe</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Player</TableCell>
@@ -428,7 +435,9 @@ export default function DashboardHome() {
                   const isCurrentUser = member.userId === user.uid;
                   const activeRoster =
                     member.roster?.filter(
-                      (r) => r.status === "active" && !eliminatedIds.has(r.castawayId)
+                      (r) =>
+                        r.status === "active" &&
+                        !eliminatedIds.has(r.castawayId),
                     ).length || 0;
 
                   return (
@@ -455,10 +464,10 @@ export default function DashboardHome() {
                                 member.rank === 1
                                   ? "#FFD700"
                                   : member.rank === 2
-                                  ? "#C0C0C0"
-                                  : member.rank === 3
-                                  ? "#CD7F32"
-                                  : "inherit",
+                                    ? "#C0C0C0"
+                                    : member.rank === 3
+                                      ? "#CD7F32"
+                                      : "inherit",
                             }}
                           >
                             {member.rank}
@@ -535,7 +544,16 @@ export default function DashboardHome() {
             </Table>
           </TableContainer>
 
-          <Box sx={{ p: 2, bgcolor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#f5f5f5", textAlign: "center" }}>
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#f5f5f5",
+              textAlign: "center",
+            }}
+          >
             <Button
               component={Link}
               href={`/dashboard/my-leagues/${selectedLeagueId}`}

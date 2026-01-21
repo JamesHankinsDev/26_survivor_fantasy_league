@@ -157,9 +157,16 @@ export default function JoinLeaguePage() {
         roster: [], // Will be populated during draft phase
       };
 
+      // Step 1: Add user to members and memberDetails (only these fields)
       await updateDoc(leagueRef, {
         members: arrayUnion(user.uid),
+      });
+      await updateDoc(leagueRef, {
         memberDetails: arrayUnion(newMember),
+      });
+
+      // Step 2: Update currentPlayers and updatedAt (only these fields)
+      await updateDoc(leagueRef, {
         currentPlayers: increment(1),
         updatedAt: new Date(),
       });
@@ -225,12 +232,16 @@ export default function JoinLeaguePage() {
               {/* League Info */}
               {league && (
                 <Box
-                  sx={{
-                    bgcolor: "#f5f5f5",
+                  sx={(theme) => ({
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? theme.palette.background.paper
+                        : "#fff",
                     p: 2,
                     borderRadius: 1,
                     width: "100%",
-                  }}
+                    boxShadow: 2,
+                  })}
                 >
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                     {league.name}
