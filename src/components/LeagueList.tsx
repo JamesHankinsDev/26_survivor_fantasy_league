@@ -70,6 +70,7 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
                 typeof data.addDropRestrictionEnabled !== "undefined"
                   ? data.addDropRestrictionEnabled
                   : false,
+              leagueStartDate: data.leagueStartDate || undefined,
             });
           });
           setLeagues(leaguesList);

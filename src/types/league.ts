@@ -35,6 +35,7 @@ export interface League {
   updatedAt: Date | any;
   status: "active" | "archived";
   addDropRestrictionEnabled?: boolean; // Admin can toggle add/drop restriction
+  leagueStartDate?: string; // ISO string
 }
 
 export interface LeagueInvite {

@@ -47,19 +47,18 @@ export const calculateTribeTotalPoints = (
  * Get the current week based on Wednesday 8pm locks
  * Week 0 = draft week, Week 1+ = post-episode weeks
  */
-export const getCurrentWeek = (
-  seasonStartDate: Date,
-  seasonPremierDate: Date,
-): number => {
+export const getCurrentWeek = (seasonStartDate: Date): number => {
   const now = new Date();
 
+  console.log({ seasonStartDate });
+
   // If before season premiere, no weeks have started
-  if (now < seasonPremierDate) {
+  if (now < seasonStartDate) {
     return 0; // Draft week
   }
 
   // Calculate weeks since premiere (each week is Wed 8pm to Wed 8pm)
-  const wednesdayEightPm = new Date(seasonPremierDate);
+  const wednesdayEightPm = new Date(seasonStartDate);
   wednesdayEightPm.setHours(20, 0, 0, 0); // 8pm
 
   let weekOffset = 0;
@@ -176,17 +175,25 @@ export const applyAddDropTransaction = (
 export const isNetRosterChangeAllowed = (
   previousRoster: RosterEntry[],
   currentRoster: RosterEntry[],
+  addCastawayId?: string | null,
+  dropCastawayId?: string | null,
 ): boolean => {
   // Get active castaway IDs for both rosters
   const prevIds = previousRoster
     .filter((r) => r.status === "active")
     .map((r) => r.castawayId);
-  const currIds = currentRoster
-    .filter((r) => r.status === "active")
-    .map((r) => r.castawayId);
+  const currIds = [
+    ...currentRoster
+      .filter((r) => r.status === "active" && r.castawayId !== dropCastawayId)
+      .map((r) => r.castawayId),
+    addCastawayId,
+  ];
+
+  console.log(prevIds, currIds);
   // Count how many castaways are the same
   const sameCount = prevIds.filter((id) => currIds.includes(id)).length;
   // Allow if at least 4 are the same
+  console.log("CURR IDS: ", currIds);
   return sameCount >= 4;
 };
 

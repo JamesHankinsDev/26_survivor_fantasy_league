@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Container,
   Box,
@@ -62,30 +62,82 @@ export default function LeagueDetailPage() {
     Record<string, number>
   >({});
 
-  // Get current user's tribe member info
-  const currentUserTribe = league?.memberDetails?.find(
-    (m) => m.userId === user?.uid,
-  );
-
+  // Load league and related data
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
       return;
     }
-
     if (!user || !leagueId) return;
 
-    // Load league-specific data
-    const loadLeagueData = async () => {
+    setLoading(true);
+    setError("");
+
+    // Firestore listener for league
+    const leagueRef = doc(db, "leagues", leagueId);
+    const unsubscribe = onSnapshot(
+      leagueRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const raw = docSnap.data() as any;
+          const normalized: League = {
+            id: docSnap.id,
+            name: raw.name,
+            ownerId: raw.ownerId,
+            ownerName: raw.ownerName,
+            maxPlayers: raw.maxPlayers,
+            currentPlayers:
+              raw.currentPlayers ??
+              raw.memberDetails?.length ??
+              raw.members?.length ??
+              0,
+            joinCode: raw.joinCode,
+            members: raw.members || [],
+            memberDetails: raw.memberDetails || [],
+            createdAt: raw.createdAt?.toDate
+              ? raw.createdAt.toDate()
+              : raw.createdAt || new Date(),
+            updatedAt: raw.updatedAt?.toDate
+              ? raw.updatedAt.toDate()
+              : raw.updatedAt || new Date(),
+            status: raw.status || "active",
+            addDropRestrictionEnabled:
+              typeof raw.addDropRestrictionEnabled !== "undefined"
+                ? raw.addDropRestrictionEnabled
+                : false,
+            leagueStartDate: raw.leagueStartDate || undefined,
+          } as League;
+          // Membership check
+          const isMember =
+            normalized.members?.includes(user.uid) ||
+            normalized.memberDetails?.some((m) => m.userId === user.uid);
+          if (!isMember) {
+            setError("You are not a member of this league");
+            setTimeout(() => router.push("/dashboard/my-leagues"), 2000);
+            return;
+          }
+          console.log("League Start Date:", normalized.leagueStartDate);
+          setLeague(normalized);
+          setLoading(false);
+        } else {
+          setError("League not found");
+          setLoading(false);
+        }
+      },
+      (err) => {
+        setError("Failed to load league details");
+        setLoading(false);
+      },
+    );
+
+    // Load eliminated castaways and scores
+    (async () => {
       try {
-        // Load eliminated castaways for this league
         const eliminated = await loadEliminatedCastaways(
           leagueId,
           CURRENT_SEASON.number,
         );
         setEliminatedCastawayIds(eliminated);
-
-        // Load castaway season scores for this league
         const episodesRef = collection(
           db,
           "leagues",
@@ -95,9 +147,7 @@ export default function LeagueDetailPage() {
           "episodes",
         );
         const snapshot = await getDocs(episodesRef);
-
         const scores: Record<string, number> = {};
-
         snapshot.forEach((doc) => {
           const episode = doc.data() as EpisodeEvents;
           Object.entries(episode.events).forEach(([castawayId, events]) => {
@@ -105,286 +155,274 @@ export default function LeagueDetailPage() {
             scores[castawayId] = (scores[castawayId] || 0) + points;
           });
         });
-
         setCastawaySeasonScores(scores);
       } catch (err) {
-        console.error("Error loading league data:", err);
+        // Non-fatal
       }
-    };
+    })();
 
-    loadLeagueData();
-
-    // Listen for league details
-    try {
-      const leagueRef = doc(db, "leagues", leagueId);
-      const unsubscribe = onSnapshot(
-        leagueRef,
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const raw = docSnap.data() as any;
-            // ...existing code...
-
-            // Normalize missing fields for older documents
-            const normalized: League = {
-              id: docSnap.id,
-              name: raw.name,
-              ownerId: raw.ownerId,
-              ownerName: raw.ownerName,
-              maxPlayers: raw.maxPlayers,
-              currentPlayers:
-                raw.currentPlayers ??
-                raw.memberDetails?.length ??
-                raw.members?.length ??
-                0,
-              joinCode: raw.joinCode,
-              members: raw.members || [],
-              memberDetails: raw.memberDetails || [],
-              createdAt: raw.createdAt?.toDate
-                ? raw.createdAt.toDate()
-                : raw.createdAt || new Date(),
-              updatedAt: raw.updatedAt?.toDate
-                ? raw.updatedAt.toDate()
-                : raw.updatedAt || new Date(),
-              status: raw.status || "active",
-              addDropRestrictionEnabled:
-                typeof raw.addDropRestrictionEnabled !== "undefined"
-                  ? raw.addDropRestrictionEnabled
-                  : false,
-            } as League;
-
-            // Robust membership check: either members array or memberDetails contains user
-            const isMember =
-              normalized.members?.includes(user.uid) ||
-              normalized.memberDetails?.some((m) => m.userId === user.uid);
-
-            if (!isMember) {
-              setError("You are not a member of this league");
-              setTimeout(() => router.push("/dashboard/my-leagues"), 2000);
-              return;
-            }
-
-            setLeague(normalized);
-            setLoading(false);
-          } else {
-            setError("League not found");
-            setLoading(false);
-          }
-        },
-        (err) => {
-          console.error("Error fetching league:", err);
-          setError("Failed to load league details");
-          setLoading(false);
-        },
-      );
-
-      return () => unsubscribe();
-    } catch (err) {
-      console.error("Error setting up league listener:", err);
-      setError("Failed to load league details");
-      setLoading(false);
-    }
+    return () => unsubscribe();
   }, [user, authLoading, leagueId, router]);
 
-  const handleSaveTribeInfo = async (
-    displayName: string,
-    avatar: string,
-    tribeColor: string,
-  ) => {
-    if (!league || !user) throw new Error("Missing league or user info");
+  // Get current user's tribe
+  const currentUserTribe = useMemo(
+    () => league?.memberDetails?.find((m) => m.userId === user?.uid),
+    [league, user],
+  );
 
-    setIsSaving(true);
+  // Calculate week number
+  const weekNumber = useMemo(() => {
+    if (!league?.leagueStartDate) return null;
+    const start = new Date(league.leagueStartDate);
+    const now = new Date();
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    return Math.max(
+      1,
+      Math.floor((now.getTime() - start.getTime()) / msPerWeek) + 1,
+    );
+  }, [league]);
 
-    try {
-      // Update member details in the league
-      const updatedMembers = league.memberDetails.map((member) =>
-        member.userId === user.uid
-          ? {
-              ...member,
-              displayName,
-              avatar,
-              tribeColor,
-              updatedAt: new Date(),
-            }
-          : member,
-      );
-
-      const leagueRef = doc(db, "leagues", league.id);
-      await updateDoc(leagueRef, {
-        memberDetails: updatedMembers,
-        updatedAt: new Date(),
-      });
-
-      setEditDialogOpen(false);
-    } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : "Failed to save tribe info",
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSubmitDraft = async (selectedCastawayIds: string[]) => {
-    if (!league || !user) throw new Error("Missing league or user info");
-
-    setIsSaving(true);
-
-    try {
-      // Create roster entries from selected castaways
-      const rosterEntries: RosterEntry[] = selectedCastawayIds.map(
-        (castawayId) => ({
-          castawayId,
-          status: "active",
-          addedWeek: 0, // Week 0 = draft
-          accumulatedPoints: 0,
-        }),
-      );
-
-      // Update member details with roster
-      const updatedMembers = league.memberDetails.map((member) =>
-        member.userId === user.uid
-          ? {
-              ...member,
-              roster: rosterEntries,
-              draftedAt: new Date(),
-              updatedAt: new Date(),
-            }
-          : member,
-      );
-
-      const leagueRef = doc(db, "leagues", league.id);
-      await updateDoc(leagueRef, {
-        memberDetails: updatedMembers,
-        updatedAt: new Date(),
-      });
-
-      setDraftDialogOpen(false);
-    } catch (err) {
-      throw new Error(
-        err instanceof Error ? err.message : "Failed to submit draft",
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSubmitAddDrop = async (
-    dropId: string | null,
-    addId: string | null,
-  ) => {
-    if (!league || !user || !currentUserTribe)
-      throw new Error("Missing league or user info");
-
-    setIsSaving(true);
-
-    try {
-      // Calculate the current week
-      const seasonStartDate = new Date("2025-01-01");
-      const seasonPremierDate = new Date(CURRENT_SEASON.premiereDate);
-      const getCurrentWeek = (seasonStart: Date, premiere: Date) => {
-        const now = new Date();
-        if (now < premiere) return 0;
-        // Weeks start at Wed 8pm ET
-        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-        const firstLock = new Date(premiere);
-        firstLock.setDate(
-          firstLock.getDate() + ((3 - firstLock.getDay() + 7) % 7),
+  // Tribe info save
+  const handleSaveTribeInfo = useCallback(
+    async (displayName: string, avatar: string, tribeColor: string) => {
+      if (!league || !user) throw new Error("Missing league or user info");
+      setIsSaving(true);
+      try {
+        const updatedMembers = league.memberDetails.map((member) =>
+          member.userId === user.uid
+            ? {
+                ...member,
+                displayName,
+                avatar,
+                tribeColor,
+                updatedAt: new Date(),
+              }
+            : member,
         );
-        firstLock.setHours(20, 0, 0, 0);
-        let week = 1;
-        let lock = new Date(firstLock);
-        while (now > lock) {
-          lock = new Date(lock.getTime() + msPerWeek);
-          week++;
-        }
-        return week - 1;
-      };
-      const currentWeek = getCurrentWeek(seasonStartDate, seasonPremierDate);
+        const leagueRef = doc(db, "leagues", league.id);
+        await updateDoc(leagueRef, {
+          memberDetails: updatedMembers,
+          updatedAt: new Date(),
+        });
+        setEditDialogOpen(false);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [league, user],
+  );
 
-      // Get previous week's roster for net change check
-      const previousWeek = currentWeek - 1;
-      const previousRoster =
-        currentUserTribe.weeklyRosterHistory?.find(
-          (w) => w.week === previousWeek,
-        )?.roster || [];
-
-      // Update roster with add/drop
-      const updatedRoster =
-        currentUserTribe.roster?.map((entry) => {
-          // Mark dropped castaway
-          if (entry.castawayId === dropId) {
-            return {
-              ...entry,
-              status: "dropped" as const,
-              droppedWeek: currentWeek,
-            };
-          }
-          return entry;
-        }) || [];
-
-      // Add new castaway if provided
-      if (addId) {
-        // Check if castaway was previously dropped - if so, reactivate instead of creating new
-        const previouslyDropped = updatedRoster.find(
-          (entry) => entry.castawayId === addId && entry.status === "dropped",
-        );
-
-        if (previouslyDropped) {
-          // Reactivate the dropped entry
-          previouslyDropped.status = "active";
-          // Remove the droppedWeek so it's not considered dropped anymore
-          delete previouslyDropped.droppedWeek;
-        } else {
-          // Add new castaway if they weren't previously on the team
-          updatedRoster.push({
-            castawayId: addId,
+  // Draft submit
+  const handleSubmitDraft = useCallback(
+    async (selectedCastawayIds: string[]) => {
+      if (!league || !user) throw new Error("Missing league or user info");
+      setIsSaving(true);
+      try {
+        const rosterEntries: RosterEntry[] = selectedCastawayIds.map(
+          (castawayId) => ({
+            castawayId,
             status: "active",
-            addedWeek: currentWeek,
+            addedWeek: 0,
             accumulatedPoints: 0,
+          }),
+        );
+        const leagueStartDate = league.leagueStartDate
+          ? new Date(league.leagueStartDate)
+          : new Date("2025-01-01");
+        const now = new Date();
+        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+        const week = Math.floor(
+          (now.getTime() - leagueStartDate.getTime()) / msPerWeek,
+        );
+        const weeklyRosterHistory = [{ week, roster: rosterEntries }];
+        const updatedMembers = league.memberDetails.map((member) =>
+          member.userId === user.uid
+            ? {
+                ...member,
+                roster: rosterEntries,
+                draftedAt: new Date(),
+                updatedAt: new Date(),
+                weeklyRosterHistory,
+              }
+            : member,
+        );
+        const leagueRef = doc(db, "leagues", league.id);
+        await updateDoc(leagueRef, {
+          memberDetails: updatedMembers,
+          updatedAt: new Date(),
+        });
+        setDraftDialogOpen(false);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [league, user],
+  );
+
+  // Add/Drop submit (with reset support)
+  const handleSubmitAddDrop = useCallback(
+    async (dropId: string | null, addId: string | null) => {
+      if (!league || !user || !currentUserTribe)
+        throw new Error("Missing league or user info");
+      setIsSaving(true);
+      try {
+        const leagueStartDate = league.leagueStartDate
+          ? new Date(league.leagueStartDate)
+          : new Date("2025-01-01");
+        const now = new Date();
+        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+        const currentWeek = Math.ceil(
+          (now.getTime() - leagueStartDate.getTime()) / msPerWeek,
+        );
+        // Reset to prior week
+        if (dropId === "__RESET_TO_PRIOR_WEEK__") {
+          const previousWeek = currentWeek - 1;
+          console.log("CURRENT WEEK:", currentWeek);
+          console.log("PRIOR WEEK: ", previousWeek);
+          console.log({
+            previousWeek,
+            previousSnapShot: currentUserTribe.weeklyRosterHistory,
+          });
+          const previousSnapshot = currentUserTribe.weeklyRosterHistory?.find(
+            (w) => w.week === previousWeek,
+          );
+          if (!previousSnapshot)
+            throw new Error("No prior week roster to reset to.");
+          let weeklyRosterHistory = currentUserTribe.weeklyRosterHistory
+            ? [...currentUserTribe.weeklyRosterHistory]
+            : [];
+          const snapshotIndex = weeklyRosterHistory.findIndex(
+            (w) => w.week === currentWeek,
+          );
+          if (snapshotIndex !== -1) {
+            weeklyRosterHistory[snapshotIndex] = {
+              week: currentWeek,
+              roster: previousSnapshot.roster,
+            };
+          } else {
+            weeklyRosterHistory.push({
+              week: currentWeek,
+              roster: previousSnapshot.roster,
+            });
+          }
+          const updatedMembers = league.memberDetails.map((member) =>
+            member.userId === user.uid
+              ? {
+                  ...member,
+                  roster: previousSnapshot.roster,
+                  updatedAt: new Date(),
+                  weeklyRosterHistory,
+                }
+              : member,
+          );
+          const leagueRef = doc(db, "leagues", league.id);
+          await updateDoc(leagueRef, {
+            memberDetails: updatedMembers,
+            updatedAt: new Date(),
+          });
+          setAddDropDialogOpen(false);
+          setIsSaving(false);
+          return;
+        }
+        // Normal add/drop
+        const previousWeek = currentWeek - 1;
+        const previousRoster =
+          currentUserTribe.weeklyRosterHistory?.find(
+            (w) => w.week === previousWeek,
+          )?.roster || [];
+        const updatedRoster =
+          currentUserTribe.roster?.map((entry) => {
+            if (entry.castawayId === dropId) {
+              return {
+                ...entry,
+                status: "dropped" as const,
+                droppedWeek: currentWeek,
+              };
+            }
+            return entry;
+          }) || [];
+        if (addId) {
+          const previouslyDropped = updatedRoster.find(
+            (entry) => entry.castawayId === addId && entry.status === "dropped",
+          );
+          if (previouslyDropped) {
+            previouslyDropped.status = "active";
+            delete previouslyDropped.droppedWeek;
+          } else {
+            updatedRoster.push({
+              castawayId: addId,
+              status: "active",
+              addedWeek: currentWeek,
+              accumulatedPoints: 0,
+            });
+          }
+        }
+        if (league.addDropRestrictionEnabled && previousRoster.length > 0) {
+          if (!isNetRosterChangeAllowed(previousRoster, updatedRoster)) {
+            setIsSaving(false);
+            throw new Error(
+              "You can only make one net roster change per week. At least 4 out of 5 castaways must remain the same as last week.",
+            );
+          }
+        }
+        let weeklyRosterHistory = currentUserTribe.weeklyRosterHistory
+          ? [...currentUserTribe.weeklyRosterHistory]
+          : [];
+        const snapshotIndex = weeklyRosterHistory.findIndex(
+          (w) => w.week === currentWeek,
+        );
+        if (snapshotIndex !== -1) {
+          weeklyRosterHistory[snapshotIndex] = {
+            week: currentWeek,
+            roster: updatedRoster,
+          };
+        } else {
+          weeklyRosterHistory.push({
+            week: currentWeek,
+            roster: updatedRoster,
           });
         }
+        const updatedMembers = league.memberDetails.map((member) =>
+          member.userId === user.uid
+            ? {
+                ...member,
+                roster: updatedRoster,
+                updatedAt: new Date(),
+                weeklyRosterHistory,
+              }
+            : member,
+        );
+        const leagueRef = doc(db, "leagues", league.id);
+        await updateDoc(leagueRef, {
+          memberDetails: updatedMembers,
+          updatedAt: new Date(),
+        });
+        setAddDropDialogOpen(false);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to process add/drop",
+        );
+        setIsSaving(false);
+        throw err;
+      } finally {
+        setIsSaving(false);
       }
+    },
+    [league, user, currentUserTribe],
+  );
 
-      // ENFORCE ADD/DROP RESTRICTION (backend)
-      if (league.addDropRestrictionEnabled && previousRoster.length > 0) {
-        // Import isNetRosterChangeAllowed from utils/scoring
-        // (already imported at top)
-        if (!isNetRosterChangeAllowed(previousRoster, updatedRoster)) {
-          setIsSaving(false);
-          throw new Error(
-            "You can only make one net roster change per week. At least 4 out of 5 castaways must remain the same as last week.",
-          );
-        }
-      }
-
-      // Update member details with new roster
-      const updatedMembers = league.memberDetails.map((member) =>
-        member.userId === user.uid
-          ? {
-              ...member,
-              roster: updatedRoster,
-              updatedAt: new Date(),
-            }
-          : member,
-      );
-
-      const leagueRef = doc(db, "leagues", league.id);
-      await updateDoc(leagueRef, {
-        memberDetails: updatedMembers,
-        updatedAt: new Date(),
-      });
-
-      setAddDropDialogOpen(false);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to process add/drop",
-      );
-      setIsSaving(false);
-      throw err;
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // Sorted members and counts
+  const sortedMembers = useMemo(
+    () =>
+      [...(league?.memberDetails || [])].sort((a, b) => b.points - a.points),
+    [league],
+  );
+  const totalMembers =
+    league?.memberDetails?.length ??
+    league?.members?.length ??
+    league?.currentPlayers ??
+    0;
+  const otherCount = Math.max(0, totalMembers - (currentUserTribe ? 1 : 0));
 
   if (authLoading || loading) {
     return (
@@ -402,7 +440,6 @@ export default function LeagueDetailPage() {
       </Container>
     );
   }
-
   if (error || !league) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -419,19 +456,6 @@ export default function LeagueDetailPage() {
       </Container>
     );
   }
-
-  // Sort members by points (descending) to determine rank
-  const sortedMembers = [...(league.memberDetails || [])].sort(
-    (a, b) => b.points - a.points,
-  );
-
-  // Safe member counts (support older docs without memberDetails)
-  const totalMembers =
-    league.memberDetails?.length ??
-    league.members?.length ??
-    league.currentPlayers ??
-    0;
-  const otherCount = Math.max(0, totalMembers - (currentUserTribe ? 1 : 0));
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -458,10 +482,7 @@ export default function LeagueDetailPage() {
             onClick={() =>
               router.push(`/dashboard/my-leagues/${leagueId}/messages`)
             }
-            sx={{
-              bgcolor: "#E85D2A",
-              "&:hover": { bgcolor: "#d14d1a" },
-            }}
+            sx={{ bgcolor: "#E85D2A", "&:hover": { bgcolor: "#d14d1a" } }}
           >
             Message Board
           </Button>
@@ -489,6 +510,22 @@ export default function LeagueDetailPage() {
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {league.currentPlayers}/{league.maxPlayers} Players
           </Typography>
+          {typeof weekNumber === "number" && (
+            <>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                •
+              </Typography>
+              <Chip
+                label={`Week #${weekNumber}`}
+                size="small"
+                sx={{
+                  bgcolor: "rgba(32, 178, 170, 0.1)",
+                  color: "#20B2AA",
+                  fontWeight: 600,
+                }}
+              />
+            </>
+          )}
           {user?.uid === league.ownerId && (
             <>
               <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -517,7 +554,6 @@ export default function LeagueDetailPage() {
           >
             Your Tribe
           </Typography>
-
           {!currentUserTribe.roster || currentUserTribe.roster.length === 0 ? (
             <Alert
               severity="info"
@@ -606,6 +642,7 @@ export default function LeagueDetailPage() {
       />
 
       {/* Add/Drop Modal */}
+
       {currentUserTribe && (
         <AddDropModal
           open={addDropDialogOpen}
@@ -614,9 +651,14 @@ export default function LeagueDetailPage() {
           tribeMember={currentUserTribe}
           allCastaways={CASTAWAYS}
           eliminatedCastawayIds={eliminatedCastawayIds}
-          seasonStartDate={new Date("2025-01-01")}
+          seasonStartDate={
+            league?.leagueStartDate
+              ? new Date(league.leagueStartDate)
+              : new Date()
+          }
           seasonPremierDate={new Date(CURRENT_SEASON.premiereDate)}
           castawaySeasonScores={castawaySeasonScores}
+          addDropRestrictionEnabled={league?.addDropRestrictionEnabled ?? false}
         />
       )}
     </Container>

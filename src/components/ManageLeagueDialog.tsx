@@ -45,19 +45,19 @@ export default function ManageLeagueDialog({
   onClose,
   onLeagueDeleted,
 }: ManageLeagueDialogProps) {
-  // ...existing code...
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
-  // ...existing code...
   const [restrictionEnabled, setRestrictionEnabled] = useState(
     league?.addDropRestrictionEnabled ?? false,
   );
+  const [leagueStartDate, setLeagueStartDate] = useState<string>(league?.leagueStartDate ? league.leagueStartDate.substring(0, 10) : "");
 
   // Sync restrictionEnabled with league prop
   useEffect(() => {
     setRestrictionEnabled(league?.addDropRestrictionEnabled ?? false);
+    setLeagueStartDate(league?.leagueStartDate ? league.leagueStartDate.substring(0, 10) : "");
   }, [league]);
   const [restrictionLoading, setRestrictionLoading] = useState(false);
 
@@ -160,6 +160,31 @@ export default function ManageLeagueDialog({
                   Toggle this restriction for testing or league rules. When
                   enabled, users can only add and drop once per week.
                 </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>League Start Date:</strong>
+                  </Typography>
+                  <input
+                    type="date"
+                    value={leagueStartDate}
+                    onChange={async (e) => {
+                      setLeagueStartDate(e.target.value);
+                      try {
+                        const leagueRef = doc(db, "leagues", league.id);
+                        await updateDoc(leagueRef, {
+                          leagueStartDate: new Date(e.target.value).toISOString(),
+                          updatedAt: new Date(),
+                        });
+                      } catch (err) {
+                        setError("Failed to update league start date");
+                      }
+                    }}
+                    style={{ fontSize: "1rem", padding: "0.5em" }}
+                  />
+                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    Set the start date for your league. Week counting will begin from this date.
+                  </Typography>
+                </Box>
               </CardContent>
             </Card>
             {/* League Info Summary */}
