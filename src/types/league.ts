@@ -17,6 +17,7 @@ export interface TribeMember {
   joinedAt: Date | any;
   roster: RosterEntry[]; // Roster of 5 (or 4 if dropped) castaways
   draftedAt?: Date | any; // When the tribe drafted their initial roster
+  weeklyRosterHistory?: { week: number; roster: RosterEntry[] }[]; // Track roster at start of each week
 }
 
 // League data model and types
@@ -33,6 +34,7 @@ export interface League {
   createdAt: Date | any;
   updatedAt: Date | any;
   status: "active" | "archived";
+  addDropRestrictionEnabled?: boolean; // Admin can toggle add/drop restriction
 }
 
 export interface LeagueInvite {

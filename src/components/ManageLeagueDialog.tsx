@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -17,6 +17,8 @@ import {
   CircularProgress,
   Avatar,
   Divider,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
@@ -43,16 +45,27 @@ export default function ManageLeagueDialog({
   onClose,
   onLeagueDeleted,
 }: ManageLeagueDialogProps) {
+  // ...existing code...
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+  // ...existing code...
+  const [restrictionEnabled, setRestrictionEnabled] = useState(
+    league?.addDropRestrictionEnabled ?? false,
+  );
+
+  // Sync restrictionEnabled with league prop
+  useEffect(() => {
+    setRestrictionEnabled(league?.addDropRestrictionEnabled ?? false);
+  }, [league]);
+  const [restrictionLoading, setRestrictionLoading] = useState(false);
 
   if (!league) return null;
 
   const canDelete = league.currentPlayers === 1; // Only owner remains
   const membersSortedByPoints = [...(league.memberDetails || [])].sort(
-    (a, b) => b.points - a.points
+    (a, b) => b.points - a.points,
   );
 
   const handleRemoveMember = async (userId: string, memberName: string) => {
@@ -62,7 +75,7 @@ export default function ManageLeagueDialog({
     try {
       const leagueRef = doc(db, "leagues", league.id);
       const memberToRemoveObj = league.memberDetails.find(
-        (m) => m.userId === userId
+        (m) => m.userId === userId,
       );
 
       if (!memberToRemoveObj) {
@@ -116,6 +129,39 @@ export default function ManageLeagueDialog({
           <Stack spacing={3}>
             {error && <Alert severity="error">{error}</Alert>}
 
+            {/* Add/Drop Restriction Toggle */}
+            <Card sx={{ bgcolor: "rgba(232, 93, 42, 0.05)" }}>
+              <CardContent>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={restrictionEnabled}
+                      onChange={async (e) => {
+                        setRestrictionLoading(true);
+                        setRestrictionEnabled(e.target.checked);
+                        try {
+                          const leagueRef = doc(db, "leagues", league.id);
+                          await updateDoc(leagueRef, {
+                            addDropRestrictionEnabled: e.target.checked,
+                            updatedAt: new Date(),
+                          });
+                        } catch (err) {
+                          setError("Failed to update restriction setting");
+                        } finally {
+                          setRestrictionLoading(false);
+                        }
+                      }}
+                      disabled={restrictionLoading}
+                    />
+                  }
+                  label="Limit Add/Drop to 1 per week (Wed 8pm - Wed 8pm)"
+                />
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  Toggle this restriction for testing or league rules. When
+                  enabled, users can only add and drop once per week.
+                </Typography>
+              </CardContent>
+            </Card>
             {/* League Info Summary */}
             <Card sx={{ bgcolor: "rgba(32, 178, 170, 0.05)" }}>
               <CardContent>
@@ -314,7 +360,7 @@ export default function ManageLeagueDialog({
             <Button
               onClick={() => {
                 const member = league.memberDetails.find(
-                  (m) => m.userId === memberToRemove
+                  (m) => m.userId === memberToRemove,
                 );
                 if (member) {
                   handleRemoveMember(memberToRemove, member.displayName);

@@ -22,6 +22,7 @@ import {
   getCurrentWeek,
   canAddDropCastaway,
   getAvailableCastaways,
+  isNetRosterChangeAllowed,
 } from "@/utils/scoring";
 import { CURRENT_SEASON } from "@/data/seasons";
 
@@ -73,7 +74,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
 
     if (hoursUntilLock < 1) {
       setLockoutMessage(
-        `Roster locks in ${Math.floor(hoursUntilLock * 60)} minutes!`
+        `Roster locks in ${Math.floor(hoursUntilLock * 60)} minutes!`,
       );
     }
   }, [open]);
@@ -83,26 +84,63 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
   const availableCastaways = getAvailableCastaways(
     allCastaways.map((c) => ({ id: c.id, name: c.name })),
     currentRoster,
-    eliminatedCastawayIds
+    eliminatedCastawayIds,
   );
 
   // Castaways that can be dropped (only active castaways)
   const droppableCastaways = currentRoster.filter(
     (r) =>
       canAddDropCastaway(r, currentWeek) &&
-      !eliminatedCastawayIds.includes(r.castawayId)
+      !eliminatedCastawayIds.includes(r.castawayId),
   );
 
   const handleSubmit = async () => {
     setError("");
     setLoading(true);
+    // Get previous week's roster for net change check
+    const previousWeek = currentWeek - 1;
+    const previousRoster =
+      tribeMember.weeklyRosterHistory?.find((w) => w.week === previousWeek)
+        ?.roster || [];
+    const newRoster = [...currentRoster];
+    // Simulate add/drop
+    if (dropCastawayId) {
+      const dropIndex = newRoster.findIndex(
+        (r) => r.castawayId === dropCastawayId,
+      );
+      if (dropIndex !== -1) {
+        newRoster[dropIndex].status = "dropped";
+        newRoster[dropIndex].droppedWeek = currentWeek;
+      }
+    }
+    if (addCastawayId) {
+      newRoster.push({
+        castawayId: addCastawayId,
+        status: "active",
+        addedWeek: currentWeek,
+        accumulatedPoints: 0,
+      });
+    }
+    // Enforce net roster change limit (if restriction enabled)
+    if (
+      tribeMember.league?.addDropRestrictionEnabled &&
+      previousRoster.length > 0
+    ) {
+      if (!isNetRosterChangeAllowed(previousRoster, newRoster)) {
+        setError(
+          "You can only make one net roster change per week. At least 4 out of 5 castaways must remain the same as last week.",
+        );
+        setLoading(false);
+        return;
+      }
+    }
 
     try {
       await onSubmit(dropCastawayId, addCastawayId);
       onClose();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to process add/drop"
+        err instanceof Error ? err.message : "Failed to process add/drop",
       );
     } finally {
       setLoading(false);
@@ -155,7 +193,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
               </MenuItem>
               {droppableCastaways.map((entry) => {
                 const castaway = allCastaways.find(
-                  (c) => c.id === entry.castawayId
+                  (c) => c.id === entry.castawayId,
                 );
                 const seasonScore = castawaySeasonScores[entry.castawayId] || 0;
                 return (
@@ -194,7 +232,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
                 Dropping <strong>{dropCastawayName}</strong> — you'll keep the{" "}
                 <strong>
                   {droppableCastaways.find(
-                    (r) => r.castawayId === dropCastawayId
+                    (r) => r.castawayId === dropCastawayId,
                   )?.accumulatedPoints || 0}
                 </strong>{" "}
                 points they've already earned.

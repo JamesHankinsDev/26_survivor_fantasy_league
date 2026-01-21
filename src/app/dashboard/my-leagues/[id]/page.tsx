@@ -5,12 +5,9 @@ import {
   Container,
   Box,
   Typography,
-  Stack,
   Button,
   CircularProgress,
   Alert,
-  Card,
-  CardContent,
   Divider,
   Chip,
 } from "@mui/material";
@@ -18,7 +15,6 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
   doc,
-  getDoc,
   onSnapshot,
   updateDoc,
   collection,
@@ -40,7 +36,10 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ForumIcon from "@mui/icons-material/Forum";
 import CASTAWAYS from "@/data/castaways";
 import { CURRENT_SEASON } from "@/data/seasons";
-import { loadEliminatedCastaways } from "@/utils/scoring";
+import {
+  loadEliminatedCastaways,
+  isNetRosterChangeAllowed,
+} from "@/utils/scoring";
 import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
 
 export default function LeagueDetailPage() {
@@ -115,14 +114,15 @@ export default function LeagueDetailPage() {
 
     loadLeagueData();
 
+    // Listen for league details
     try {
-      // Listen for league details
       const leagueRef = doc(db, "leagues", leagueId);
       const unsubscribe = onSnapshot(
         leagueRef,
         (docSnap) => {
           if (docSnap.exists()) {
             const raw = docSnap.data() as any;
+            // ...existing code...
 
             // Normalize missing fields for older documents
             const normalized: League = {
@@ -146,6 +146,10 @@ export default function LeagueDetailPage() {
                 ? raw.updatedAt.toDate()
                 : raw.updatedAt || new Date(),
               status: raw.status || "active",
+              addDropRestrictionEnabled:
+                typeof raw.addDropRestrictionEnabled !== "undefined"
+                  ? raw.addDropRestrictionEnabled
+                  : false,
             } as League;
 
             // Robust membership check: either members array or memberDetails contains user
@@ -274,6 +278,36 @@ export default function LeagueDetailPage() {
     setIsSaving(true);
 
     try {
+      // Calculate the current week
+      const seasonStartDate = new Date("2025-01-01");
+      const seasonPremierDate = new Date(CURRENT_SEASON.premiereDate);
+      const getCurrentWeek = (seasonStart: Date, premiere: Date) => {
+        const now = new Date();
+        if (now < premiere) return 0;
+        // Weeks start at Wed 8pm ET
+        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+        const firstLock = new Date(premiere);
+        firstLock.setDate(
+          firstLock.getDate() + ((3 - firstLock.getDay() + 7) % 7),
+        );
+        firstLock.setHours(20, 0, 0, 0);
+        let week = 1;
+        let lock = new Date(firstLock);
+        while (now > lock) {
+          lock = new Date(lock.getTime() + msPerWeek);
+          week++;
+        }
+        return week - 1;
+      };
+      const currentWeek = getCurrentWeek(seasonStartDate, seasonPremierDate);
+
+      // Get previous week's roster for net change check
+      const previousWeek = currentWeek - 1;
+      const previousRoster =
+        currentUserTribe.weeklyRosterHistory?.find(
+          (w) => w.week === previousWeek,
+        )?.roster || [];
+
       // Update roster with add/drop
       const updatedRoster =
         currentUserTribe.roster?.map((entry) => {
@@ -282,7 +316,7 @@ export default function LeagueDetailPage() {
             return {
               ...entry,
               status: "dropped" as const,
-              droppedWeek: 1, // TODO: Calculate actual week
+              droppedWeek: currentWeek,
             };
           }
           return entry;
@@ -305,9 +339,21 @@ export default function LeagueDetailPage() {
           updatedRoster.push({
             castawayId: addId,
             status: "active",
-            addedWeek: 1, // TODO: Calculate actual week
+            addedWeek: currentWeek,
             accumulatedPoints: 0,
           });
+        }
+      }
+
+      // ENFORCE ADD/DROP RESTRICTION (backend)
+      if (league.addDropRestrictionEnabled && previousRoster.length > 0) {
+        // Import isNetRosterChangeAllowed from utils/scoring
+        // (already imported at top)
+        if (!isNetRosterChangeAllowed(previousRoster, updatedRoster)) {
+          setIsSaving(false);
+          throw new Error(
+            "You can only make one net roster change per week. At least 4 out of 5 castaways must remain the same as last week.",
+          );
         }
       }
 
@@ -330,9 +376,11 @@ export default function LeagueDetailPage() {
 
       setAddDropDialogOpen(false);
     } catch (err) {
-      throw new Error(
+      setError(
         err instanceof Error ? err.message : "Failed to process add/drop",
       );
+      setIsSaving(false);
+      throw err;
     } finally {
       setIsSaving(false);
     }

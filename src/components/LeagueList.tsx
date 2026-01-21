@@ -66,6 +66,10 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
               createdAt: data.createdAt?.toDate() || new Date(),
               updatedAt: data.updatedAt?.toDate() || new Date(),
               status: data.status || "active",
+              addDropRestrictionEnabled:
+                typeof data.addDropRestrictionEnabled !== "undefined"
+                  ? data.addDropRestrictionEnabled
+                  : false,
             });
           });
           setLeagues(leaguesList);
@@ -76,7 +80,7 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
           console.error("Error fetching leagues:", err);
           setError("Failed to load leagues");
           setLoading(false);
-        }
+        },
       );
 
       return () => unsubscribe();
