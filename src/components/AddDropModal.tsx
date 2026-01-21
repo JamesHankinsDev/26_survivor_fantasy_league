@@ -70,7 +70,11 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
 
     // Check if roster is locked
     const now = new Date();
-    const nextLock = getNextWednesday8pm();
+    // Convert to EST
+    const nowEST = new Date(
+      now.toLocaleString("en-US", { timeZone: "America/New_York" }),
+    );
+    const nextLock = getNextWednesday8pm(nowEST);
 
     // If less than 1 hour until lock, show warning
     const timeUntilLock = nextLock.getTime() - now.getTime();
@@ -125,7 +129,10 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     dropCastawayId,
   );
 
-  if (!addDropRestrictionEnabled) {
+  const nowEST = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
+  );
+  if (!addDropRestrictionEnabled || seasonStartDate > nowEST) {
     submitDisabled =
       currentRoster.filter((el) => el.status === "active").length +
         (addCastawayId ? 1 : 0) -
@@ -243,17 +250,20 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     }
   };
 
-  const getNextWednesday8pm = (): Date => {
-    const now = new Date();
+  const getNextWednesday8pm = (baseDate?: Date): Date => {
+    // Use EST for all calculations
+    const now =
+      baseDate ||
+      new Date(
+        new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
+      );
     const daysUntilWednesday = (3 - now.getDay() + 7) % 7 || 7;
     const nextWednesday = new Date(now);
     nextWednesday.setDate(nextWednesday.getDate() + daysUntilWednesday);
     nextWednesday.setHours(20, 0, 0, 0);
-
     if (now.getDay() === 3 && now.getHours() >= 20) {
       nextWednesday.setDate(nextWednesday.getDate() + 7);
     }
-
     return nextWednesday;
   };
 
@@ -278,10 +288,16 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
           >
             {addDropRestrictionEnabled ? (
               <>
-                <strong>Roster Management Rule Enforced:</strong> You may only
-                have <strong>1 new player</strong> on your roster each week. At
-                least 4 out of 5 castaways must remain the same as last week.{" "}
-                <br />
+                <strong>Roster Management Rule Enforced:</strong> After your
+                leagues start date (
+                {seasonStartDate
+                  ? new Date(seasonStartDate).toLocaleDateString("en-US", {
+                      timeZone: "America/New_York",
+                    })
+                  : "currently unknown"}
+                ), you may only have <strong>1 new player</strong> on your
+                roster each week. At least 4 out of 5 castaways must remain the
+                same as last week. <br />
                 <strong>Note:</strong> You cannot drop eliminated castaways at
                 any time.
               </>
