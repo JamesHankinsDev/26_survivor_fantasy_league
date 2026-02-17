@@ -13,6 +13,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
+import { dbLogger } from "@/lib/logger";
 
 /**
  * Calculate total points for a tribe member based on current roster and episode scores
@@ -221,7 +222,7 @@ export const loadEliminatedCastaways = async (
     const snapshot = await getDocs(q);
     return snapshot.docs.map((doc) => doc.id);
   } catch (err) {
-    console.error("Error loading eliminated castaways:", err);
+    dbLogger.error("Error loading eliminated castaways:", err);
     return [];
   }
 };
@@ -244,7 +245,7 @@ export const saveEliminatedCastaway = async (
       eliminatedAt: new Date(),
     });
   } catch (err) {
-    console.error("Error saving eliminated castaway:", err);
+    dbLogger.error("Error saving eliminated castaway:", err);
     throw err;
   }
 };
@@ -264,7 +265,7 @@ export const removeEliminatedCastaway = async (
     );
     await deleteDoc(docRef);
   } catch (err) {
-    console.error("Error removing eliminated castaway:", err);
+    dbLogger.error("Error removing eliminated castaway:", err);
     throw err;
   }
 };

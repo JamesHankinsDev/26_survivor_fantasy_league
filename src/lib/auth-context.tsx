@@ -14,6 +14,7 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { authLogger } from "@/lib/logger";
 
 interface AuthContextType {
   user: User | null;
@@ -63,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             });
           }
         } catch (err) {
-          console.error("Error creating user document:", err);
+          authLogger.error("Error creating user document:", err);
         }
       }
     });
@@ -83,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to sign in with Google";
       setError(errorMessage);
-      console.error("Google Sign-In Error:", err);
+      authLogger.error("Google Sign-In Error:", err);
       throw err;
     } finally {
       setLoading(false);
@@ -102,7 +103,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to create account";
       setError(errorMessage);
-      console.error("Email Sign-Up Error:", err);
+      authLogger.error("Email Sign-Up Error:", err);
       throw err;
     } finally {
       setLoading(false);
@@ -121,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to sign in";
       setError(errorMessage);
-      console.error("Email Sign-In Error:", err);
+      authLogger.error("Email Sign-In Error:", err);
       throw err;
     } finally {
       setLoading(false);
@@ -146,7 +147,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to send magic link";
       setError(errorMessage);
-      console.error("Magic Link Error:", err);
+      authLogger.error("Magic Link Error:", err);
       throw err;
     }
   };
@@ -169,7 +170,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to complete sign-in";
       setError(errorMessage);
-      console.error("Magic Link Verification Error:", err);
+      authLogger.error("Magic Link Verification Error:", err);
       throw err;
     } finally {
       setLoading(false);
@@ -188,7 +189,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to sign out";
       setError(errorMessage);
-      console.error("Sign-Out Error:", err);
+      authLogger.error("Sign-Out Error:", err);
       throw err;
     }
   };
