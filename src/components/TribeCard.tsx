@@ -11,7 +11,7 @@ import {
   Avatar,
 } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import { TribeMember, getMemberRank } from "@/types/league";
+import { TribeMember } from "@/types/league";
 import { Castaway } from "@/types/castaway";
 
 interface TribeCardProps {
@@ -32,7 +32,7 @@ export default function TribeCard({
   isCurrentUser,
   onEdit,
   onAddDrop,
-  allMembers,
+  allMembers: _allMembers,
   allCastaways = [],
   castawaySeasonScores = {},
   eliminatedCastawayIds = [],

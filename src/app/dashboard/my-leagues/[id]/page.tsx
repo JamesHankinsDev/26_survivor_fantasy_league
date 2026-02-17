@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Container,
   Box,
@@ -13,20 +13,15 @@ import {
 } from "@mui/material";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import {
-  doc,
-  onSnapshot,
-  updateDoc,
-  collection,
-  getDocs,
-} from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useLeague } from "@/hooks/useLeagues";
+import { useEliminatedCastaways } from "@/hooks/useCastaways";
+import { useEpisodeScores } from "@/hooks/useEpisodes";
 import {
-  League,
   TribeMember,
   getMemberRank,
   RosterEntry,
-  EpisodeEvents,
 } from "@/types/league";
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
@@ -36,11 +31,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ForumIcon from "@mui/icons-material/Forum";
 import CASTAWAYS from "@/data/castaways";
 import { CURRENT_SEASON } from "@/data/seasons";
-import {
-  loadEliminatedCastaways,
-  isNetRosterChangeAllowed,
-} from "@/utils/scoring";
-import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
+import { isNetRosterChangeAllowed } from "@/utils/scoring";
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
@@ -48,120 +39,47 @@ export default function LeagueDetailPage() {
   const params = useParams();
   const leagueId = params.id as string;
 
-  const [league, setLeague] = useState<League | null>(null);
-  const [loading, setLoading] = useState(true);
+  // React Query hooks for data fetching
+  const {
+    data: league,
+    isLoading: loadingLeague,
+    error: leagueError,
+  } = useLeague(leagueId);
+
+  const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(
+    leagueId,
+    CURRENT_SEASON.number
+  );
+
+  const { data: castawaySeasonScores = {} } = useEpisodeScores(
+    leagueId,
+    CURRENT_SEASON.number
+  );
+
+  // Local UI state
   const [error, setError] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>(
-    [],
-  );
-  const [castawaySeasonScores, setCastawaySeasonScores] = useState<
-    Record<string, number>
-  >({});
+  const [_isSaving, setIsSaving] = useState(false);
 
-  // Load league and related data
+  // Check membership and redirect if not a member
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
       return;
     }
-    if (!user || !leagueId) return;
 
-    setLoading(true);
-    setError("");
-
-    // Firestore listener for league
-    const leagueRef = doc(db, "leagues", leagueId);
-    const unsubscribe = onSnapshot(
-      leagueRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const raw = docSnap.data() as any;
-          const normalized: League = {
-            id: docSnap.id,
-            name: raw.name,
-            ownerId: raw.ownerId,
-            ownerName: raw.ownerName,
-            maxPlayers: raw.maxPlayers,
-            currentPlayers:
-              raw.currentPlayers ??
-              raw.memberDetails?.length ??
-              raw.members?.length ??
-              0,
-            joinCode: raw.joinCode,
-            members: raw.members || [],
-            memberDetails: raw.memberDetails || [],
-            createdAt: raw.createdAt?.toDate
-              ? raw.createdAt.toDate()
-              : raw.createdAt || new Date(),
-            updatedAt: raw.updatedAt?.toDate
-              ? raw.updatedAt.toDate()
-              : raw.updatedAt || new Date(),
-            status: raw.status || "active",
-            addDropRestrictionEnabled:
-              typeof raw.addDropRestrictionEnabled !== "undefined"
-                ? raw.addDropRestrictionEnabled
-                : false,
-            leagueStartDate: raw.leagueStartDate || undefined,
-          } as League;
-          // Membership check
-          const isMember =
-            normalized.members?.includes(user.uid) ||
-            normalized.memberDetails?.some((m) => m.userId === user.uid);
-          if (!isMember) {
-            setError("You are not a member of this league");
-            setTimeout(() => router.push("/dashboard/my-leagues"), 2000);
-            return;
-          }
-          setLeague(normalized);
-          setLoading(false);
-        } else {
-          setError("League not found");
-          setLoading(false);
-        }
-      },
-      (err) => {
-        setError("Failed to load league details");
-        setLoading(false);
-      },
-    );
-
-    // Load eliminated castaways and scores
-    (async () => {
-      try {
-        const eliminated = await loadEliminatedCastaways(
-          leagueId,
-          CURRENT_SEASON.number,
-        );
-        setEliminatedCastawayIds(eliminated);
-        const episodesRef = collection(
-          db,
-          "leagues",
-          leagueId,
-          "seasons",
-          CURRENT_SEASON.number.toString(),
-          "episodes",
-        );
-        const snapshot = await getDocs(episodesRef);
-        const scores: Record<string, number> = {};
-        snapshot.forEach((doc) => {
-          const episode = doc.data() as EpisodeEvents;
-          Object.entries(episode.events).forEach(([castawayId, events]) => {
-            const points = calculatePointsFromEvents(events);
-            scores[castawayId] = (scores[castawayId] || 0) + points;
-          });
-        });
-        setCastawaySeasonScores(scores);
-      } catch (err) {
-        // Non-fatal
+    if (league && user) {
+      const isMember =
+        league.members?.includes(user.uid) ||
+        league.memberDetails?.some((m: TribeMember) => m.userId === user.uid);
+      if (!isMember) {
+        setError("You are not a member of this league");
+        setTimeout(() => router.push("/dashboard/my-leagues"), 2000);
       }
-    })();
-
-    return () => unsubscribe();
-  }, [user, authLoading, leagueId, router]);
+    }
+  }, [user, authLoading, league, router]);
 
   // Get current user's tribe
   const currentUserTribe = useMemo(
@@ -417,7 +335,7 @@ export default function LeagueDetailPage() {
     0;
   const otherCount = Math.max(0, totalMembers - (currentUserTribe ? 1 : 0));
 
-  if (authLoading || loading) {
+  if (authLoading || loadingLeague) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box
@@ -433,11 +351,11 @@ export default function LeagueDetailPage() {
       </Container>
     );
   }
-  if (error || !league) {
+  if (error || leagueError || !league) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error || "League not found"}
+          {error || (leagueError as Error)?.message || "League not found"}
         </Alert>
         <Button
           startIcon={<ArrowBackIcon />}

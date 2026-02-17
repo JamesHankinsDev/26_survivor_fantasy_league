@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -22,21 +22,14 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  QueryConstraint,
-  doc,
-  getDoc,
-} from "firebase/firestore";
-import { League, TribeMember } from "@/types/league";
+import { doc, getDoc } from "firebase/firestore";
+import { TribeMember } from "@/types/league";
 import Link from "next/link";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import { loadEliminatedCastaways } from "@/utils/scoring";
 import { CURRENT_SEASON } from "@/data/seasons";
 import AppTutorial from "@/components/AppTutorial";
+import { useUserLeagues } from "@/hooks/useLeagues";
+import { useEliminatedCastaways } from "@/hooks/useCastaways";
 
 interface LeagueMember extends TribeMember {
   rank: number;
@@ -45,11 +38,22 @@ interface LeagueMember extends TribeMember {
 export default function DashboardHome() {
   const { user } = useAuth();
   const router = useRouter();
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
-  const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
   const [showTutorial, setShowTutorial] = useState(false);
+
+  // Fetch user's leagues with React Query (cached for 5 minutes)
+  const {
+    data: leagues = [],
+    isLoading: loadingLeagues,
+  } = useUserLeagues(user?.uid || null);
+
+  // Fetch eliminated castaways for selected league (cached for 2 minutes)
+  const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(
+    selectedLeagueId,
+    CURRENT_SEASON.number
+  );
+
+  const eliminatedIds = new Set(eliminatedCastawayIds);
 
   // Check if user has completed tutorial
   useEffect(() => {
@@ -73,73 +77,25 @@ export default function DashboardHome() {
     checkTutorialStatus();
   }, [user]);
 
+  // Auto-select first league when leagues load
+  useEffect(() => {
+    if (leagues.length > 0 && !selectedLeagueId) {
+      setSelectedLeagueId(leagues[0].id);
+    }
+  }, [leagues, selectedLeagueId]);
+
+  // Redirect if not authenticated
   useEffect(() => {
     if (!user) {
       router.push("/");
-      return;
     }
-
-    // Subscribe to leagues where user is a member
-    const leaguesRef = collection(db, "leagues");
-    const constraints: QueryConstraint[] = [
-      where("members", "array-contains", user.uid),
-    ];
-
-    const unsubscribe = onSnapshot(
-      query(leaguesRef, ...constraints),
-      (snapshot) => {
-        const loadedLeagues = snapshot.docs.map((doc) => {
-          const rawData = doc.data() as any;
-          return {
-            id: doc.id,
-            ...rawData,
-            createdAt: rawData.createdAt?.toDate?.() || rawData.createdAt,
-            updatedAt: rawData.updatedAt?.toDate?.() || rawData.updatedAt,
-          } as League;
-        });
-
-        setLeagues(loadedLeagues);
-
-        // Auto-select first league
-        if (loadedLeagues.length > 0 && !selectedLeagueId) {
-          setSelectedLeagueId(loadedLeagues[0].id);
-        }
-
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error loading leagues:", error);
-        setLoading(false);
-      },
-    );
-
-    return () => unsubscribe();
-  }, [user, router, selectedLeagueId]);
-
-  // Load eliminated castaways for selected league
-  useEffect(() => {
-    if (!selectedLeagueId) return;
-
-    const loadEliminated = async () => {
-      try {
-        const eliminated = await loadEliminatedCastaways(
-          selectedLeagueId,
-          CURRENT_SEASON.number,
-        );
-        setEliminatedIds(new Set(eliminated));
-      } catch (err) {
-        console.error("Error loading eliminated castaways:", err);
-      }
-    };
-
-    loadEliminated();
-  }, [selectedLeagueId]);
+  }, [user, router]);
 
   if (!user) {
     return null;
   }
 
-  if (loading) {
+  if (loadingLeagues) {
     return (
       <Box
         sx={{

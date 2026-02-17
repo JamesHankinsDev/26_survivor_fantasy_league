@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Container, Box, Typography } from "@mui/material";
 import CASTAWAYS from "@/data/castaways";
 import CURRENT_SEASON from "@/data/seasons";
 import CastawayCard from "@/components/CastawayCard";
-import { db } from "@/lib/firebase";
 
 export default function CastawaysPage() {
   const premiereDate = new Date(CURRENT_SEASON.premiereDate);
@@ -15,30 +13,10 @@ export default function CastawaysPage() {
     day: "numeric",
   });
 
-  const [castawayScores, setCastawayScores] = useState<Record<string, number>>(
-    {}
-  );
-  const [eliminatedCastawayIds, setEliminatedCastawayIds] = useState<string[]>(
-    []
-  );
-
-  // Load all episode events and calculate castaway scores
-  // Note: This shows global scores across all leagues
-  useEffect(() => {
-    const loadScores = async () => {
-      try {
-        // For the castaways page, we'll show scores from the first available league
-        // or aggregate across all leagues (for now, just show empty if no global data)
-        // This page is more informational and doesn't need league-specific data
-        const scores: Record<string, number> = {};
-        setCastawayScores(scores);
-      } catch (err) {
-        console.error("Error loading castaway scores:", err);
-      }
-    };
-
-    loadScores();
-  }, []);
+  // This page shows global castaway information (not league-specific)
+  // Scores and elimination status are shown at the league level
+  const castawayScores: Record<string, number> = {};
+  const eliminatedCastawayIds: string[] = [];
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

@@ -1,6 +1,22 @@
 import "@testing-library/jest-dom";
-import { expect, afterEach, vi } from "vitest";
+import { afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+
+// Create a new QueryClient for each test
+export function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false, // Don't retry in tests
+        gcTime: Infinity, // Keep cache forever in tests
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+}
 
 // Cleanup after each test
 afterEach(() => {

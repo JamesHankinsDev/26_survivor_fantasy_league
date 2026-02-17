@@ -16,12 +16,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
   collection,
-  getDocs,
   query,
   where,
   onSnapshot,
-  doc,
-  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { League } from "@/types/league";
@@ -44,10 +41,10 @@ export default function MyLeaguesPage() {
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
-      return;
+      return undefined;
     }
 
-    if (!user) return;
+    if (!user) return undefined;
 
     try {
       // Listen for leagues where user is a member
@@ -83,6 +80,7 @@ export default function MyLeaguesPage() {
       console.error("Error setting up league listener:", err);
       setError("Failed to load your leagues");
       setLoading(false);
+      return undefined;
     }
   }, [user, authLoading, router]);
 

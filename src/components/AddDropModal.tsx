@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +16,7 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { RosterEntry, TribeMember } from "@/types/league";
+import { TribeMember } from "@/types/league";
 import { Castaway } from "@/types/castaway";
 import {
   getCurrentWeek,
@@ -24,8 +24,6 @@ import {
   getAvailableCastaways,
   isNetRosterChangeAllowed,
 } from "@/utils/scoring";
-import { CURRENT_SEASON } from "@/data/seasons";
-import { add } from "date-fns/fp";
 
 interface AddDropModalProps {
   open: boolean;
@@ -48,7 +46,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
   allCastaways,
   eliminatedCastawayIds,
   seasonStartDate,
-  seasonPremierDate,
+  seasonPremierDate: _seasonPremierDate,
   castawaySeasonScores = {},
   addDropRestrictionEnabled,
 }) => {

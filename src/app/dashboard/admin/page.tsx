@@ -7,7 +7,6 @@ import {
   Typography,
   Button,
   Alert,
-  Stack,
   Card,
   CardContent,
   CircularProgress,
@@ -22,11 +21,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { useRouter } from "next/navigation";
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isOwner, setIsOwner] = useState(false);
@@ -59,7 +56,7 @@ export default function AdminPage() {
     }
   }, [user, authLoading, refreshTrigger]);
 
-  const handleLeagueCreated = (league: League) => {
+  const handleLeagueCreated = (_league: League) => {
     // Trigger a refresh of the league list and ownership check
     setRefreshTrigger((prev) => prev + 1);
   };

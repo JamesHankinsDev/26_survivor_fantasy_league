@@ -9,7 +9,6 @@ import {
   CardContent,
   Typography,
   Button,
-  Alert,
   CircularProgress,
   Stack,
 } from "@mui/material";
@@ -26,7 +25,6 @@ import {
   doc,
   increment,
   arrayUnion,
-  serverTimestamp,
 } from "firebase/firestore";
 import { League } from "@/types/league";
 import {

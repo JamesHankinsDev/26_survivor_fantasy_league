@@ -2,9 +2,8 @@ import { initializeApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
-  connectAuthEmulator,
 } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 
 // Firebase configuration - only initialize if we have all required values
 const firebaseConfig = {
@@ -33,7 +32,6 @@ if (typeof window !== "undefined") {
   //     // Auth emulator
   //     if (!auth.emulatorConfig) {
   //       try {
-  //         connectAuthEmulator(auth, "http://localhost:9099", {
   //           disableWarnings: true,
   //         });
   //       } catch (error) {
@@ -43,7 +41,6 @@ if (typeof window !== "undefined") {
 
   //     // Firestore emulator
   //     try {
-  //       connectFirestoreEmulator(db, "localhost", 8080);
   //     } catch (error) {
   //       // Emulator already enabled or error connecting
   //     }

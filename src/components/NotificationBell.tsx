@@ -8,7 +8,6 @@ import {
   MenuItem,
   Box,
   Typography,
-  Divider,
   ListItemIcon,
   ListItemText,
   Button,

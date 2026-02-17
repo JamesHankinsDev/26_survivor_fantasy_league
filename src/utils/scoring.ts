@@ -97,7 +97,7 @@ export const getNextRosterLockTime = (): Date => {
  */
 export const canAddDropCastaway = (
   castaway: RosterEntry,
-  currentWeek: number,
+  _currentWeek: number,
 ): boolean => {
   // Cannot add/drop if eliminated
   if (castaway.status === "eliminated") {

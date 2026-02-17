@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Container,
   Box,
@@ -18,7 +18,6 @@ import {
   Checkbox,
   FormControlLabel,
   OutlinedInput,
-  SelectChangeEvent,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";

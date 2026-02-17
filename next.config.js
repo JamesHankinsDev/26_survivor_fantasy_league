@@ -5,8 +5,14 @@ const nextConfig = {
 
   // Image optimization configuration
   images: {
-    // Domains allowed for next/image optimization
-    domains: ["www.tvinsider.com"], // For castaway images
+    // Remote patterns for allowed image sources (Next.js 16+)
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.tvinsider.com",
+        pathname: "/**",
+      },
+    ],
     formats: ["image/avif", "image/webp"], // Modern image formats
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
@@ -28,6 +34,9 @@ const nextConfig = {
     // Optimize imports for MUI (reduces bundle size)
     optimizePackageImports: ["@mui/material", "@mui/icons-material"],
   },
+
+  // Turbopack configuration (Next.js 16+)
+  turbopack: {},
 
   // Headers for security and caching
   async headers() {

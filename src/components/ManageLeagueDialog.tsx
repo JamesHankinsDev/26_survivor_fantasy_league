@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
-import { League, TribeMember } from "@/types/league";
+import { League } from "@/types/league";
 import { db } from "@/lib/firebase";
 import {
   doc,
@@ -68,7 +68,7 @@ export default function ManageLeagueDialog({
     (a, b) => b.points - a.points,
   );
 
-  const handleRemoveMember = async (userId: string, memberName: string) => {
+  const handleRemoveMember = async (userId: string, _memberName: string) => {
     setLoading(true);
     setError("");
 

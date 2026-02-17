@@ -13,7 +13,7 @@ import {
   Box,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
-import { generateJoinCode, generateLeagueId, League } from "@/types/league";
+import { generateJoinCode, League } from "@/types/league";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import {
@@ -63,7 +63,6 @@ export default function CreateLeagueDialog({
 
       // Create league document
       const joinCode = generateJoinCode();
-      const leagueId = generateLeagueId();
 
       // Sanitize inputs
       const sanitizedLeagueName = sanitizeLeagueName(leagueName);

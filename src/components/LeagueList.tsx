@@ -12,7 +12,6 @@ import {
   CircularProgress,
   Alert,
   Stack,
-  IconButton,
   Tooltip,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -39,7 +38,7 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
   useEffect(() => {
     if (!user || !db) {
       setLoading(false);
-      return;
+      return undefined;
     }
 
     try {
@@ -89,6 +88,7 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
       console.error("Error setting up listener:", err);
       setError(err.message || "An error occurred");
       setLoading(false);
+      return undefined;
     }
   }, [user, db, refreshTrigger]);
 

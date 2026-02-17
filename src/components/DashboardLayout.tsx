@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
   Drawer,
@@ -30,8 +30,6 @@ import Brightness7Icon from "@mui/icons-material/Brightness7";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import NotificationBell from "@/components/NotificationBell";
 
 const DRAWER_WIDTH = 280;

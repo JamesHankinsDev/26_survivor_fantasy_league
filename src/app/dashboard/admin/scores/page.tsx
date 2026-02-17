@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -28,7 +28,6 @@ import {
   Checkbox,
   FormControlLabel,
   OutlinedInput,
-  SelectChangeEvent,
   Chip,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -45,7 +44,6 @@ import {
   doc,
   setDoc,
   Timestamp,
-  writeBatch,
 } from "firebase/firestore";
 import { Castaway } from "@/types/castaway";
 import {
@@ -283,7 +281,7 @@ export default function AdminScoresPage() {
 
       // Calculate flat scores from events for cascading
       const flatScores: Record<string, number> = {};
-      Object.entries(episodes).forEach(([castawayId, data]) => {
+      Object.entries(episodes).forEach(([castawayId, _data]) => {
         flatScores[castawayId] = getTotalForCastaway(castawayId);
       });
 
