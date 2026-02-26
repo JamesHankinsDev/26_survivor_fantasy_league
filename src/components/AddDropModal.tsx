@@ -323,10 +323,9 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
                 const castaway = allCastaways.find(
                   (c) => c.id === entry.castawayId,
                 );
-                const seasonScore = castawaySeasonScores[entry.castawayId] || 0;
                 return (
                   <MenuItem key={entry.castawayId} value={entry.castawayId}>
-                    {castaway?.name} ({seasonScore} pts)
+                    {castaway?.name} ({entry.accumulatedPoints} pts)
                   </MenuItem>
                 );
               })}
@@ -398,8 +397,17 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
             !previousRoster.length ||
             JSON.stringify(currentRoster) === JSON.stringify(previousRoster)
           }
+          sx={{
+            fontSize: { xs: "0.8rem", sm: "0.875rem" },
+            px: { xs: 1, sm: 2 },
+          }}
         >
-          Reset to Prior Week's Roster
+          <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+            Reset to Prior Week's Roster
+          </Box>
+          <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+            Reset Roster
+          </Box>
         </Button>
       </DialogActions>
     </Dialog>

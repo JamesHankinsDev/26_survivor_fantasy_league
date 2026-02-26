@@ -25,6 +25,7 @@ interface DraftTeamModalProps {
   onSubmit: (selectedCastawayIds: string[]) => Promise<void>;
   allCastaways: Castaway[];
   eliminatedCastawayIds: string[];
+  castawaySeasonScores?: Record<string, number>;
 }
 
 const DRAFT_SIZE = 5;
@@ -35,6 +36,7 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
   onSubmit,
   allCastaways,
   eliminatedCastawayIds,
+  castawaySeasonScores = {},
 }) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -109,11 +111,12 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
                 sm: "repeat(2, 1fr)",
                 md: "repeat(3, 1fr)",
               },
-              gap: 2,
+              gap: { xs: 1.5, sm: 2 },
             }}
           >
             {availableCastaways.map((castaway) => {
               const isSelected = selected.has(castaway.id);
+              const seasonScore = castawaySeasonScores[castaway.id] || 0;
               return (
                 <Card
                   key={castaway.id}
@@ -139,10 +142,14 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
                       height="200"
                       image={castaway.image}
                       alt={castaway.name}
-                      sx={{ objectFit: "cover" }}
+                      sx={{
+                        objectFit: "cover",
+                        objectPosition: "top",
+                        height: { xs: 150, sm: 180, md: 200 },
+                      }}
                     />
                   )}
-                  <CardContent sx={{ p: 1.5 }}>
+                  <CardContent sx={{ p: { xs: 1, sm: 1.5 } }}>
                     <Box
                       sx={{
                         display: "flex",
@@ -151,16 +158,27 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
                         gap: 1,
                       }}
                     >
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: "0.9rem",
-                          flex: 1,
-                        }}
-                      >
-                        {castaway.name}
-                      </Typography>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "0.9rem",
+                          }}
+                        >
+                          {castaway.name}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#E85D2A",
+                            fontWeight: 600,
+                            fontSize: "0.8rem",
+                          }}
+                        >
+                          {seasonScore} pts
+                        </Typography>
+                      </Box>
                       {isSelected && (
                         <CheckCircleIcon
                           sx={{

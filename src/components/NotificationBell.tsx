@@ -167,8 +167,10 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         onClose={handleClose}
         PaperProps={{
           sx: {
-            width: 380,
-            maxHeight: 500,
+            width: { xs: "90vw", sm: 380 },
+            maxWidth: 380,
+            maxHeight: { xs: "70vh", sm: 500 },
+            mx: { xs: 2, sm: 0 },
           },
         }}
       >

@@ -31,6 +31,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import NotificationBell from "@/components/NotificationBell";
+import PWAInstallButton from "@/components/PWAInstallButton";
 
 const DRAWER_WIDTH = 280;
 
@@ -271,6 +272,9 @@ export default function DashboardLayout({
           </Tooltip>
         </Toolbar>
       </AppBar>
+
+      {/* PWA Install Button - shown globally */}
+      <PWAInstallButton />
 
       {/* Sidebar Drawer */}
       <Drawer

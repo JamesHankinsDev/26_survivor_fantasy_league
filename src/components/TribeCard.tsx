@@ -22,7 +22,6 @@ interface TribeCardProps {
   onAddDrop?: () => void;
   allMembers: TribeMember[];
   allCastaways?: Castaway[];
-  castawaySeasonScores?: Record<string, number>; // Total points for each castaway this season
   eliminatedCastawayIds?: string[]; // IDs of castaways eliminated this season
 }
 
@@ -34,7 +33,6 @@ export default function TribeCard({
   onAddDrop,
   allMembers: _allMembers,
   allCastaways = [],
-  castawaySeasonScores = {},
   eliminatedCastawayIds = [],
 }: TribeCardProps) {
   const getRankColor = (rankNum: number) => {
@@ -168,8 +166,11 @@ export default function TribeCard({
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-                  gap: 1,
+                  gridTemplateColumns: {
+                    xs: "repeat(auto-fill, minmax(110px, 1fr))",
+                    sm: "repeat(auto-fill, minmax(100px, 1fr))",
+                  },
+                  gap: { xs: 1.5, sm: 1 },
                 }}
               >
                 {member.roster
@@ -203,7 +204,7 @@ export default function TribeCard({
                           variant="caption"
                           sx={{
                             fontWeight: 500,
-                            fontSize: "0.75rem",
+                            fontSize: { xs: "0.8rem", sm: "0.75rem" },
                             display: "block",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
@@ -214,31 +215,19 @@ export default function TribeCard({
                         <Typography
                           variant="caption"
                           sx={{
-                            fontSize: "0.65rem",
+                            fontSize: { xs: "0.75rem", sm: "0.7rem" },
                             color: statusColor,
                             fontWeight: 600,
                             display: "block",
                           }}
                         >
-                          {entry.accumulatedPoints} pts (team)
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: "0.6rem",
-                            color: statusColor,
-                            fontWeight: 400,
-                            display: "block",
-                          }}
-                        >
-                          {castawaySeasonScores[entry.castawayId] || 0} pts
-                          (total)
+                          {entry.accumulatedPoints} pts
                         </Typography>
                         {entry.status !== "active" && (
                           <Typography
                             variant="caption"
                             sx={{
-                              fontSize: "0.6rem",
+                              fontSize: { xs: "0.7rem", sm: "0.65rem" },
                               color: statusColor,
                               textTransform: "uppercase",
                             }}
@@ -264,6 +253,8 @@ export default function TribeCard({
                   sx={{
                     color: "#E85D2A",
                     borderColor: "#E85D2A",
+                    minHeight: { xs: 44, sm: 36 },
+                    py: { xs: 1.5, sm: 1 },
                     "&:hover": {
                       bgcolor: "rgba(232, 93, 42, 0.05)",
                       borderColor: "#D94E23",
@@ -282,6 +273,8 @@ export default function TribeCard({
                   sx={{
                     color: "#20B2AA",
                     borderColor: "#20B2AA",
+                    minHeight: { xs: 44, sm: 36 },
+                    py: { xs: 1.5, sm: 1 },
                     "&:hover": {
                       bgcolor: "rgba(32, 178, 170, 0.05)",
                       borderColor: "#1A8A7F",

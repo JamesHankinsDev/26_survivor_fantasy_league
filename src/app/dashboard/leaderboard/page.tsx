@@ -181,9 +181,9 @@ export default function LeaderboardPage() {
               color={selectedLeagueId === league.id ? "primary" : "default"}
               variant={selectedLeagueId === league.id ? "filled" : "outlined"}
               sx={{
-                fontSize: "1rem",
-                py: 3,
-                px: 2,
+                fontSize: { xs: "0.875rem", sm: "1rem" },
+                py: { xs: 2, md: 3 },
+                px: { xs: 1.5, md: 2 },
                 fontWeight: selectedLeagueId === league.id ? "bold" : "normal",
               }}
             />
@@ -252,9 +252,9 @@ export default function LeaderboardPage() {
           </Box>
         </Paper>
 
-        {/* Leaderboard Table */}
-        <TableContainer component={Paper}>
-          <Table sx={{ minWidth: 600 }}>
+        {/* Leaderboard Table - Desktop */}
+        <TableContainer component={Paper} sx={{ display: { xs: "none", md: "block" } }}>
+          <Table>
             <TableHead
               sx={{
                 backgroundColor: (theme) =>
@@ -373,6 +373,100 @@ export default function LeaderboardPage() {
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* Leaderboard Mobile Cards */}
+        <Box sx={{ display: { xs: "block", md: "none" } }}>
+          {rankedMembers.map((member) => {
+            const activeCastaways =
+              member.roster?.filter(
+                (r) => r.status === "active" && !eliminatedIds.has(r.castawayId)
+              ).length || 0;
+            const isCurrentUser = member.userId === user.uid;
+
+            return (
+              <Card
+                key={member.userId}
+                sx={{
+                  mb: 2,
+                  borderLeft: isCurrentUser ? "4px solid #E85D2A" : "none",
+                  backgroundColor: isCurrentUser
+                    ? "rgba(232, 93, 42, 0.08)"
+                    : "background.paper",
+                }}
+              >
+                <CardContent>
+                  {/* Rank and Trophy */}
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: "bold",
+                        color:
+                          member.rank === 1
+                            ? "#E85D2A"
+                            : member.rank === 2
+                            ? "#C0C0C0"
+                            : member.rank === 3
+                            ? "#CD7F32"
+                            : "text.primary",
+                      }}
+                    >
+                      {member.rank === 1 && "🏆 "}
+                      #{member.rank}
+                    </Typography>
+                    <Chip
+                      label={`${activeCastaways}/5 Active`}
+                      size="small"
+                      variant="outlined"
+                      color={activeCastaways === 5 ? "success" : "default"}
+                    />
+                  </Box>
+
+                  {/* Tribe Owner */}
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    {member.displayName || member.userId}
+                    {isCurrentUser && (
+                      <Chip
+                        label="You"
+                        size="small"
+                        sx={{ ml: 1 }}
+                        color="primary"
+                      />
+                    )}
+                  </Typography>
+
+                  {/* Tribe Name with Color */}
+                  {member.tribeColor && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          backgroundColor: member.tribeColor,
+                        }}
+                      />
+                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                        {member.displayName || "Unnamed Tribe"}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Points */}
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: "bold",
+                      color: member.rank === 1 ? "#E85D2A" : "text.primary",
+                    }}
+                  >
+                    {member.points || 0} points
+                  </Typography>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
 
         {/* Top Performers Card */}
         {rankedMembers.length > 0 && (

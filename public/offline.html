@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline - Survivor Fantasy League</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        text-align: center;
+        max-width: 500px;
+      }
+
+      .icon {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 30px;
+        background: #20b2aa;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 60px;
+      }
+
+      h1 {
+        font-size: 32px;
+        margin-bottom: 16px;
+        color: #20b2aa;
+      }
+
+      p {
+        font-size: 18px;
+        line-height: 1.6;
+        color: #b0b0b0;
+        margin-bottom: 30px;
+      }
+
+      .status {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 30px;
+      }
+
+      .status-text {
+        font-size: 14px;
+        color: #ff6b6b;
+        margin-bottom: 8px;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #ff6b6b;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .button {
+        background: #20b2aa;
+        color: white;
+        border: none;
+        padding: 14px 32px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .button:hover {
+        background: #1a9a94;
+        transform: translateY(-2px);
+      }
+
+      .features {
+        margin-top: 40px;
+        text-align: left;
+      }
+
+      .feature {
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
+        color: #b0b0b0;
+        font-size: 14px;
+      }
+
+      .feature-icon {
+        width: 24px;
+        height: 24px;
+        background: rgba(32, 178, 170, 0.2);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        color: #20b2aa;
+        font-size: 16px;
+      }
+
+      @media (prefers-color-scheme: light) {
+        body {
+          background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+          color: #121212;
+        }
+
+        p {
+          color: #666666;
+        }
+
+        .status {
+          background: rgba(0, 0, 0, 0.05);
+        }
+
+        .feature {
+          color: #666666;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">🔥</div>
+
+      <h1>You're Offline</h1>
+
+      <p>
+        Looks like you've lost your connection. Don't worry, your cached data is
+        still here!
+      </p>
+
+      <div class="status">
+        <div class="status-text">
+          <span class="status-indicator"></span>
+          No internet connection
+        </div>
+      </div>
+
+      <button class="button" onclick="window.location.reload()">
+        Try Again
+      </button>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">✓</div>
+          <div>Cached pages available offline</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">✓</div>
+          <div>Your data is safe and secure</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">✓</div>
+          <div>Sync when you're back online</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Auto-retry when connection is restored
+      window.addEventListener("online", () => {
+        window.location.reload();
+      });
+
+      // Update status when online/offline changes
+      function updateStatus() {
+        const statusText = document.querySelector(".status-text");
+        if (navigator.onLine) {
+          statusText.innerHTML =
+            '<span class="status-indicator" style="background: #51cf66;"></span>Back online! Reloading...';
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        }
+      }
+
+      window.addEventListener("online", updateStatus);
+      window.addEventListener("offline", updateStatus);
+    </script>
+  </body>
+</html>

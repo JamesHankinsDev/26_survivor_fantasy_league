@@ -34,7 +34,7 @@ export default function CastawayCard({
           position: "relative",
           width: "100%",
           height: "100%",
-          minHeight: 360,
+          minHeight: { xs: 320, sm: 360 },
           transformStyle: "preserve-3d",
           transition: "transform 0.6s",
         }}
@@ -56,13 +56,17 @@ export default function CastawayCard({
               height="280"
               image={castaway.image}
               alt={castaway.name}
-              sx={{ objectFit: "cover", objectPosition: "top" }}
+              sx={{
+                objectFit: "cover",
+                objectPosition: "top",
+                height: { xs: 200, sm: 240, md: 280 },
+              }}
             />
           )}
           <CardContent sx={{ textAlign: "center", pb: 1 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 700, fontSize: "1.1rem" }}
+              sx={{ fontWeight: 700, fontSize: { xs: "1rem", sm: "1.1rem" } }}
             >
               {castaway.name}
             </Typography>

@@ -146,12 +146,22 @@ export default function DashboardHome() {
             get started!
           </Alert>
 
-          <Box sx={{ display: "flex", gap: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 2,
+            }}
+          >
             <Button
               component={Link}
               href="/dashboard/admin"
               variant="contained"
+              fullWidth
               sx={{
+                maxWidth: { xs: "100%", sm: 200 },
+                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                py: { xs: 1.2, sm: 0.75 },
                 background: "linear-gradient(135deg, #D94E23 0%, #E85D2A 100%)",
                 "&:hover": {
                   background:
@@ -165,6 +175,12 @@ export default function DashboardHome() {
               component={Link}
               href="/dashboard/my-leagues"
               variant="outlined"
+              fullWidth
+              sx={{
+                maxWidth: { xs: "100%", sm: 200 },
+                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                py: { xs: 1.2, sm: 0.75 },
+              }}
             >
               View My Leagues
             </Button>
@@ -225,13 +241,14 @@ export default function DashboardHome() {
       }}
     >
       <Container maxWidth="lg">
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ mb: { xs: 3, md: 4 }, display: "flex", alignItems: "center", gap: 2 }}>
           <Typography
             variant="h4"
             sx={{
               fontWeight: 700,
               color: "text.primary",
               mb: 1,
+              fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2.125rem" },
             }}
           >
             Welcome Back, {user?.displayName || user?.email?.split("@")[0]}!
@@ -304,7 +321,12 @@ export default function DashboardHome() {
           <Box sx={{ mb: 3 }}>
             <Typography
               variant="subtitle2"
-              sx={{ mb: 1, color: "text.secondary", fontWeight: 600 }}
+              sx={{
+                mb: 1,
+                color: "text.secondary",
+                fontWeight: 600,
+                fontSize: { xs: "0.8rem", sm: "0.875rem" },
+              }}
             >
               Select League:
             </Typography>
@@ -319,9 +341,9 @@ export default function DashboardHome() {
                     selectedLeagueId === league.id ? "filled" : "outlined"
                   }
                   sx={{
-                    fontSize: "0.9rem",
-                    py: 2.5,
-                    px: 2,
+                    fontSize: { xs: "0.8rem", sm: "0.9rem" },
+                    py: { xs: 2, sm: 2.5 },
+                    px: { xs: 1.5, sm: 2 },
                     fontWeight:
                       selectedLeagueId === league.id ? "bold" : "normal",
                     bgcolor:
@@ -346,7 +368,7 @@ export default function DashboardHome() {
         <Paper sx={{ overflow: "hidden" }}>
           <Box
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               bgcolor: (theme) =>
                 theme.palette.mode === "dark"
                   ? "rgba(232, 93, 42, 0.15)"
@@ -355,16 +377,29 @@ export default function DashboardHome() {
               borderColor: "divider",
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: "1.1rem", sm: "1.25rem" },
+              }}
+            >
               {selectedLeague.name} Leaderboard
             </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: "0.8rem", sm: "0.875rem" },
+              }}
+            >
               {selectedLeague.memberDetails?.length || 0}/
               {selectedLeague.maxPlayers} Members
             </Typography>
           </Box>
 
-          <TableContainer>
+          {/* Desktop Table View */}
+          <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
             <Table>
               <TableHead>
                 <TableRow
@@ -500,9 +535,130 @@ export default function DashboardHome() {
             </Table>
           </TableContainer>
 
+          {/* Mobile Card View */}
+          <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+            {rankedMembers.map((member) => {
+              const isCurrentUser = member.userId === user.uid;
+              const activeRoster =
+                member.roster?.filter(
+                  (r) =>
+                    r.status === "active" && !eliminatedIds.has(r.castawayId),
+                ).length || 0;
+
+              return (
+                <Card
+                  key={member.userId}
+                  sx={{
+                    mb: 1.5,
+                    bgcolor: isCurrentUser
+                      ? "rgba(232, 93, 42, 0.08)"
+                      : "transparent",
+                    border: isCurrentUser
+                      ? "2px solid #E85D2A"
+                      : "1px solid #e0e0e0",
+                  }}
+                >
+                  <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "1.2rem",
+                            color:
+                              member.rank === 1
+                                ? "#FFD700"
+                                : member.rank === 2
+                                  ? "#C0C0C0"
+                                  : member.rank === 3
+                                    ? "#CD7F32"
+                                    : "text.primary",
+                          }}
+                        >
+                          #{member.rank}
+                        </Typography>
+                        {member.rank === 1 && (
+                          <EmojiEventsIcon
+                            sx={{ color: "#FFD700", fontSize: 20 }}
+                          />
+                        )}
+                      </Box>
+                      <Typography
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: "1.2rem",
+                          color: "#E85D2A",
+                        }}
+                      >
+                        {member.points || 0} pts
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 1,
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Box
+                          sx={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: "50%",
+                            bgcolor: member.tribeColor || "#999",
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            fontWeight: isCurrentUser ? 600 : 400,
+                            fontSize: "0.95rem",
+                          }}
+                        >
+                          {member.displayName}
+                        </Typography>
+                        {isCurrentUser && (
+                          <Chip
+                            label="You"
+                            size="small"
+                            sx={{
+                              bgcolor: "#E85D2A",
+                              color: "white",
+                              fontWeight: 600,
+                              fontSize: "0.65rem",
+                              height: 20,
+                            }}
+                          />
+                        )}
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        {activeRoster}/5
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Box>
+
           <Box
             sx={{
-              p: 2,
+              p: { xs: 1.5, sm: 2 },
               bgcolor: (theme) =>
                 theme.palette.mode === "dark"
                   ? "rgba(255, 255, 255, 0.05)"
@@ -514,9 +670,13 @@ export default function DashboardHome() {
               component={Link}
               href={`/dashboard/my-leagues/${selectedLeagueId}`}
               variant="outlined"
+              fullWidth
               sx={{
+                maxWidth: { xs: "100%", sm: 300 },
                 borderColor: "#E85D2A",
                 color: "#E85D2A",
+                fontSize: { xs: "0.875rem", sm: "0.9375rem" },
+                py: { xs: 1, sm: 0.75 },
                 "&:hover": {
                   borderColor: "#D94E23",
                   bgcolor: "rgba(232, 93, 42, 0.08)",

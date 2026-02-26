@@ -81,6 +81,19 @@ export default function LeagueDetailPage() {
     }
   }, [user, authLoading, league, router]);
 
+  // Merge eliminated IDs from Firestore subcollection and roster entries
+  const allEliminatedIds = useMemo(() => {
+    const ids = new Set(eliminatedCastawayIds);
+    league?.memberDetails?.forEach((member) => {
+      member.roster?.forEach((entry) => {
+        if (entry.status === "eliminated") {
+          ids.add(entry.castawayId);
+        }
+      });
+    });
+    return Array.from(ids);
+  }, [eliminatedCastawayIds, league]);
+
   // Get current user's tribe
   const currentUserTribe = useMemo(
     () => league?.memberDetails?.find((m) => m.userId === user?.uid),
@@ -491,8 +504,7 @@ export default function LeagueDetailPage() {
               onAddDrop={() => setAddDropDialogOpen(true)}
               allMembers={sortedMembers}
               allCastaways={CASTAWAYS}
-              castawaySeasonScores={castawaySeasonScores}
-              eliminatedCastawayIds={eliminatedCastawayIds}
+              eliminatedCastawayIds={allEliminatedIds}
             />
           )}
         </Box>
@@ -528,8 +540,7 @@ export default function LeagueDetailPage() {
                 rank={getMemberRank(sortedMembers, member.userId)}
                 allMembers={sortedMembers}
                 allCastaways={CASTAWAYS}
-                castawaySeasonScores={castawaySeasonScores}
-                eliminatedCastawayIds={eliminatedCastawayIds}
+                eliminatedCastawayIds={allEliminatedIds}
               />
             ))}
         </Box>
@@ -549,7 +560,8 @@ export default function LeagueDetailPage() {
         onClose={() => setDraftDialogOpen(false)}
         onSubmit={handleSubmitDraft}
         allCastaways={CASTAWAYS}
-        eliminatedCastawayIds={eliminatedCastawayIds}
+        eliminatedCastawayIds={allEliminatedIds}
+        castawaySeasonScores={castawaySeasonScores}
       />
 
       {/* Add/Drop Modal */}
@@ -561,7 +573,7 @@ export default function LeagueDetailPage() {
           onSubmit={handleSubmitAddDrop}
           tribeMember={currentUserTribe}
           allCastaways={CASTAWAYS}
-          eliminatedCastawayIds={eliminatedCastawayIds}
+          eliminatedCastawayIds={allEliminatedIds}
           seasonStartDate={
             league?.leagueStartDate
               ? new Date(league.leagueStartDate)
