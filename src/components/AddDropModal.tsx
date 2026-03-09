@@ -415,7 +415,7 @@ function SwipeCard({
         {...bind()}
         style={{
           transform: `translateX(${offset}px) rotate(${rotation}deg)`,
-          transition: swiping ? "none" : "transform 0.3s ease-out",
+          transition: swiping ? "none" : "transform 0.3s ease-out, opacity 0.25s ease-out 0.1s",
           opacity: exitDir ? 0 : 1,
         }}
         sx={{ touchAction: "pan-y" }}
@@ -465,18 +465,65 @@ function SwipeCard({
         </Card>
       </Box>
 
-      {/* Hint arrows */}
+      {/* Tappable action buttons */}
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
           mt: 1,
-          px: 2,
-          opacity: 0.5,
+          px: 1,
         }}
       >
-        <Typography variant="caption">← {leftLabel}</Typography>
-        <Typography variant="caption">{rightLabel} →</Typography>
+        <Button
+          size="small"
+          onClick={() => {
+            if (exitDir) return;
+            setExitDir("left");
+            setOffset(-400);
+            setTimeout(() => onSwipeLeft(), 300);
+          }}
+          startIcon={<BlockIcon sx={{ fontSize: 16 }} />}
+          sx={{
+            color: leftLabel === "Drop" ? "#d32f2f" : "#777",
+            fontWeight: 600,
+            fontSize: "0.8rem",
+            textTransform: "none",
+            minWidth: 0,
+            px: 1.5,
+            borderRadius: 2,
+            bgcolor: leftLabel === "Drop" ? "rgba(211, 47, 47, 0.08)" : "rgba(0,0,0,0.04)",
+            "&:hover": {
+              bgcolor: leftLabel === "Drop" ? "rgba(211, 47, 47, 0.15)" : "rgba(0,0,0,0.08)",
+            },
+          }}
+        >
+          {leftLabel}
+        </Button>
+        <Button
+          size="small"
+          onClick={() => {
+            if (exitDir) return;
+            setExitDir("right");
+            setOffset(400);
+            setTimeout(() => onSwipeRight(), 300);
+          }}
+          endIcon={<CheckIcon sx={{ fontSize: 16 }} />}
+          sx={{
+            color: rightLabel === "Keep" ? "#20B2AA" : "#2e7d32",
+            fontWeight: 600,
+            fontSize: "0.8rem",
+            textTransform: "none",
+            minWidth: 0,
+            px: 1.5,
+            borderRadius: 2,
+            bgcolor: rightLabel === "Keep" ? "rgba(32, 178, 170, 0.08)" : "rgba(46, 125, 50, 0.08)",
+            "&:hover": {
+              bgcolor: rightLabel === "Keep" ? "rgba(32, 178, 170, 0.15)" : "rgba(46, 125, 50, 0.15)",
+            },
+          }}
+        >
+          {rightLabel}
+        </Button>
       </Box>
     </Box>
   );
