@@ -37,7 +37,6 @@ export default function TribeCard({
   allCastaways = [],
   eliminatedCastawayIds = [],
   castawayPoints = {},
-  castawaySeasonScores = {},
 }: TribeCardProps) {
   const getRankColor = (rankNum: number) => {
     if (rankNum === 1) return "#FFD700"; // Gold
@@ -186,7 +185,6 @@ export default function TribeCard({
                   const isEliminated = eliminatedCastawayIds.includes(castawayId);
                   const statusColor = isEliminated ? "#999" : "#20B2AA";
                   const rosteredPts = castawayPoints[castawayId] || 0;
-                  const seasonPts = castawaySeasonScores[castawayId] || 0;
                   return (
                     <Box
                       key={castawayId}
@@ -222,16 +220,6 @@ export default function TribeCard({
                         }}
                       >
                         {rosteredPts} pts
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: { xs: "0.65rem", sm: "0.6rem" },
-                          color: "text.secondary",
-                          display: "block",
-                        }}
-                      >
-                        {seasonPts} season
                       </Typography>
                       {isEliminated && (
                         <Typography

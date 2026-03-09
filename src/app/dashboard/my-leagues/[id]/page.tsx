@@ -31,6 +31,7 @@ import ForumIcon from "@mui/icons-material/Forum";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
+import ScoringHistory from "@/components/ScoringHistory";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 
@@ -427,6 +428,17 @@ export default function LeagueDetailPage() {
               castawaySeasonScores={castawaySeasonScores}
             />
           )}
+
+          {/* Scoring History */}
+          {currentUserTribe.weeklyRosters &&
+            currentUserTribe.weeklyRosters.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <ScoringHistory
+                  weeklyRosters={currentUserTribe.weeklyRosters}
+                  allCastaways={castaways}
+                />
+              </Box>
+            )}
         </Box>
       )}
 
