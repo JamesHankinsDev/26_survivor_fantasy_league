@@ -27,10 +27,24 @@ export function normalizeMember(member: any): TribeMember {
       .filter((r: any) => r.status === "active")
       .map((r: any) => r.castawayId);
   }
+
+  const weeklyRosters = member.weeklyRosters || [];
+
+  // Migrate old "points" field → "totalPoints", then recompute from weekScores if available
+  let totalPoints = member.totalPoints ?? member.points ?? 0;
+  const weekScoreSum = weeklyRosters.reduce(
+    (sum: number, r: any) => sum + (r.weekScore || 0),
+    0,
+  );
+  if (weekScoreSum > 0) {
+    totalPoints = weekScoreSum;
+  }
+
   return {
     ...member,
     roster,
-    weeklyRosters: member.weeklyRosters || [],
+    weeklyRosters,
+    totalPoints,
   };
 }
 
