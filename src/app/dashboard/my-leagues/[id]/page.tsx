@@ -30,7 +30,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ForumIcon from "@mui/icons-material/Forum";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
-import { isNetRosterChangeAllowed, getPreviousWeekRoster } from "@/utils/scoring";
+import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
@@ -165,20 +165,10 @@ export default function LeagueDetailPage() {
         throw new Error("Missing league or user info");
       setIsSaving(true);
       try {
-        const leagueStartDate = league.leagueStartDate
-          ? new Date(league.leagueStartDate)
-          : new Date("2025-01-01");
-        const now = new Date();
-        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-        const currentWeek = Math.ceil(
-          (now.getTime() - leagueStartDate.getTime()) / msPerWeek,
-        );
-
         // Reset to prior week
         if (dropId === "__RESET_TO_PRIOR_WEEK__") {
-          const previousRoster = getPreviousWeekRoster(
+          const previousRoster = getLatestLockedRoster(
             currentUserTribe.weeklyRosters || [],
-            currentWeek,
           );
           if (previousRoster.length === 0)
             throw new Error("No prior week roster to reset to.");
@@ -213,9 +203,8 @@ export default function LeagueDetailPage() {
 
         // Enforce net roster change limit
         if (league.addDropRestrictionEnabled) {
-          const previousRoster = getPreviousWeekRoster(
+          const previousRoster = getLatestLockedRoster(
             currentUserTribe.weeklyRosters || [],
-            currentWeek,
           );
           if (previousRoster.length > 0 && !isNetRosterChangeAllowed(previousRoster, newRoster)) {
             setIsSaving(false);

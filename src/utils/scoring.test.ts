@@ -3,7 +3,7 @@ import {
   getCurrentWeek,
   getAvailableCastaways,
   isNetRosterChangeAllowed,
-  getPreviousWeekRoster,
+  getLatestLockedRoster,
 } from "./scoring";
 import { WeeklyRoster } from "@/types/league";
 
@@ -76,24 +76,30 @@ describe("scoring utils", () => {
     });
   });
 
-  describe("getPreviousWeekRoster", () => {
-    it("should return previous week roster snapshot", () => {
+  describe("getLatestLockedRoster", () => {
+    it("should return the most recent locked roster", () => {
       const weeklyRosters: WeeklyRoster[] = [
         { week: 2, castawayIds: ["c1", "c2"], weekScore: 25, lockedAt: new Date() },
         { week: 3, castawayIds: ["c1", "c3"], weekScore: 30, lockedAt: new Date() },
       ];
 
-      const result = getPreviousWeekRoster(weeklyRosters, 3);
-      expect(result).toEqual(["c1", "c2"]);
+      const result = getLatestLockedRoster(weeklyRosters);
+      expect(result).toEqual(["c1", "c3"]);
     });
 
-    it("should return empty array if no previous week exists", () => {
+    it("should return empty array if no weekly rosters exist", () => {
+      const result = getLatestLockedRoster([]);
+      expect(result).toEqual([]);
+    });
+
+    it("should return the highest week regardless of array order", () => {
       const weeklyRosters: WeeklyRoster[] = [
+        { week: 4, castawayIds: ["c3", "c4"], weekScore: 15, lockedAt: new Date() },
         { week: 2, castawayIds: ["c1", "c2"], weekScore: 25, lockedAt: new Date() },
       ];
 
-      const result = getPreviousWeekRoster(weeklyRosters, 2);
-      expect(result).toEqual([]);
+      const result = getLatestLockedRoster(weeklyRosters);
+      expect(result).toEqual(["c3", "c4"]);
     });
   });
 });

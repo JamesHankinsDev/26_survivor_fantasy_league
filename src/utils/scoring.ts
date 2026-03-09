@@ -69,14 +69,26 @@ export const isNetRosterChangeAllowed = (
 };
 
 /**
+ * Get the most recent locked roster for a team member.
+ * Returns the weeklyRoster with the highest week number.
+ */
+export const getLatestLockedRoster = (
+  weeklyRosters: WeeklyRoster[],
+): string[] => {
+  if (weeklyRosters.length === 0) return [];
+  const sorted = [...weeklyRosters].sort((a, b) => b.week - a.week);
+  return sorted[0].castawayIds || [];
+};
+
+/**
+ * @deprecated Use getLatestLockedRoster instead.
  * Get the previous week's locked roster for a team member.
  */
 export const getPreviousWeekRoster = (
   weeklyRosters: WeeklyRoster[],
-  currentWeek: number,
+  _currentWeek: number,
 ): string[] => {
-  const previousSnapshot = weeklyRosters.find((w) => w.week === currentWeek - 1);
-  return previousSnapshot?.castawayIds || [];
+  return getLatestLockedRoster(weeklyRosters);
 };
 
 /**
