@@ -31,12 +31,21 @@ import ForumIcon from "@mui/icons-material/Forum";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const leagueId = params.id as string;
+  const queryClient = useQueryClient();
+
+  /** Invalidate league caches so all views reflect the latest data */
+  const invalidateLeagueData = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.leagues.detail(leagueId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
+  }, [queryClient, leagueId]);
 
   // React Query hooks for data fetching
   const {
@@ -120,12 +129,13 @@ export default function LeagueDetailPage() {
           memberDetails: updatedMembers,
           updatedAt: new Date(),
         });
+        invalidateLeagueData();
         setEditDialogOpen(false);
       } finally {
         setIsSaving(false);
       }
     },
-    [league, user],
+    [league, user, invalidateLeagueData],
   );
 
   // Draft submit — saves roster as working roster (will be snapshotted at Wed 8pm)
@@ -150,12 +160,13 @@ export default function LeagueDetailPage() {
           memberDetails: updatedMembers,
           updatedAt: new Date(),
         });
+        invalidateLeagueData();
         setDraftDialogOpen(false);
       } finally {
         setIsSaving(false);
       }
     },
-    [league, user],
+    [league, user, invalidateLeagueData],
   );
 
   // Add/Drop submit
@@ -186,6 +197,7 @@ export default function LeagueDetailPage() {
             memberDetails: updatedMembers,
             updatedAt: new Date(),
           });
+          invalidateLeagueData();
           setAddDropDialogOpen(false);
           setIsSaving(false);
           return;
@@ -227,6 +239,7 @@ export default function LeagueDetailPage() {
           memberDetails: updatedMembers,
           updatedAt: new Date(),
         });
+        invalidateLeagueData();
         setAddDropDialogOpen(false);
       } catch (err) {
         setError(
@@ -238,7 +251,7 @@ export default function LeagueDetailPage() {
         setIsSaving(false);
       }
     },
-    [league, user, currentUserTribe],
+    [league, user, currentUserTribe, invalidateLeagueData],
   );
 
   // Sorted members and counts

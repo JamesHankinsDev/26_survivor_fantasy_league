@@ -21,6 +21,8 @@ import {
   sanitizeDisplayName,
   sanitizeAvatarURL,
 } from "@/utils/inputValidation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 
 interface CreateLeagueDialogProps {
   open: boolean;
@@ -34,6 +36,7 @@ export default function CreateLeagueDialog({
   onLeagueCreated,
 }: CreateLeagueDialogProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [leagueName, setLeagueName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState("8");
   const [loading, setLoading] = useState(false);
@@ -134,6 +137,7 @@ export default function CreateLeagueDialog({
         ...newLeague,
       };
 
+      queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
       onLeagueCreated(createdLeague);
       resetForm();
       onClose();

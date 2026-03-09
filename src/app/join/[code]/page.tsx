@@ -27,6 +27,8 @@ import {
   arrayUnion,
 } from "firebase/firestore";
 import { League } from "@/types/league";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 import {
   sanitizeDisplayName,
   sanitizeAvatarURL,
@@ -44,6 +46,7 @@ export default function JoinLeaguePage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const joinCode = params.code as string;
 
   const [status, setStatus] = useState<JoinStatus>("loading");
@@ -163,6 +166,9 @@ export default function JoinLeaguePage() {
         currentPlayers: increment(1),
         updatedAt: new Date(),
       });
+
+      // Invalidate caches so dashboard shows the new league immediately
+      queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
 
       setStatus("success");
       setMessage(`Successfully joined ${league.name}!`);
