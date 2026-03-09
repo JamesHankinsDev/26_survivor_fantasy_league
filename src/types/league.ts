@@ -1,10 +1,9 @@
-// Roster entry for a castaway on a tribe
-export interface RosterEntry {
-  castawayId: string;
-  status: "active" | "dropped" | "eliminated"; // active: on team, dropped: manually removed, eliminated: voted out
-  addedWeek: number; // Week castaway was added (0 = draft, 1+ = add/drop week)
-  droppedWeek?: number; // Week castaway was dropped (undefined if still active or eliminated)
-  accumulatedPoints: number; // Total points earned while on this team
+// Weekly roster snapshot — locked every Wednesday at 8 PM ET
+export interface WeeklyRoster {
+  week: number; // Week number (1 = premiere/scouting, 2+ = scoring weeks)
+  castawayIds: string[]; // The castaways rostered for this week ([] for week 1)
+  weekScore: number; // Points earned this week from rostered castaways
+  lockedAt: Date | any; // When this snapshot was taken
 }
 
 // Member/Tribe data
@@ -13,11 +12,11 @@ export interface TribeMember {
   displayName: string;
   avatar: string; // URL to avatar image
   tribeColor: string; // Hex color for tribe
-  points: number;
+  totalPoints: number; // Sum of all weeklyRoster weekScores
   joinedAt: Date | any;
-  roster: RosterEntry[]; // Roster of 5 (or 4 if dropped) castaways
+  roster: string[]; // Current working roster — array of castaway IDs (max 5)
+  weeklyRosters: WeeklyRoster[]; // Locked snapshots — source of truth for scoring
   draftedAt?: Date | any; // When the tribe drafted their initial roster
-  weeklyRosterHistory?: { week: number; roster: RosterEntry[] }[]; // Track roster at start of each week
 }
 
 // League data model and types
@@ -29,8 +28,8 @@ export interface League {
   maxPlayers: number;
   currentPlayers: number;
   joinCode: string;
-  members: string[]; // Array of user IDs (legacy, kept for backward compat)
-  memberDetails: TribeMember[]; // New: detailed member info with tribe data
+  members: string[]; // Array of user IDs (for Firestore rule checks)
+  memberDetails: TribeMember[]; // Detailed member info with tribe data
   createdAt: Date | any;
   updatedAt: Date | any;
   status: "active" | "archived";
@@ -44,32 +43,6 @@ export interface LeagueInvite {
   ownerName: string;
   joinCode: string;
   maxPlayers: number;
-}
-
-// Scoring: Weekly episode scores for castaways
-export interface EpisodeScores {
-  id: string; // e.g., "episode-1"
-  seasonNumber: number;
-  episodeNumber: number;
-  airDate: Date | any;
-  scores: Record<string, number>; // { castawayId: points }
-  createdAt: Date | any;
-  updatedAt: Date | any;
-}
-
-// Scoring: Accumulated seasonal stats per castaway
-export interface CastawaySeasonStats {
-  castawayId: string;
-  seasonNumber: number;
-  totalPoints: number;
-  pointBreakdown: {
-    aliveBonus: number;
-    immunityWins: number;
-    juryVotes: number;
-    placementBonus: number;
-    other: number;
-  };
-  lastUpdated: Date | any;
 }
 
 // Event-based scoring: individual events recorded per castaway per episode
@@ -104,6 +77,9 @@ export interface LeagueMessage {
   updatedAt?: Date | any;
   isEdited: boolean;
   editHistory?: MessageEdit[];
+  reactions: MessageReaction[];
+  replyCount?: number;
+  parentMessageId?: string;
 }
 
 export interface MessageMention {
@@ -119,23 +95,12 @@ export interface MessageEdit {
   previousContent: string;
 }
 
-// Episode events: records all events for all castaways in an episode
-export interface EpisodeEvents {
-  id: string; // e.g., "episode-1"
-  seasonNumber: number;
-  episodeNumber: number;
-  airDate: Date | any;
-  events: Record<string, ScoringEvent[]>; // { castawayId: [ScoringEvent[], ...] }
-  createdAt: Date | any;
-  updatedAt: Date | any;
-}
-
 // Helper to get member rank in league (1st place, 2nd place, etc)
 export const getMemberRank = (
   members: TribeMember[],
   userId: string,
 ): number => {
-  const sorted = [...members].sort((a, b) => b.points - a.points);
+  const sorted = [...members].sort((a, b) => b.totalPoints - a.totalPoints);
   return sorted.findIndex((m) => m.userId === userId) + 1;
 };
 
@@ -202,21 +167,3 @@ export const REACTION_EMOJIS = [
   { emoji: "🎯", label: "Bullseye" },
   { emoji: "👀", label: "Eyes" },
 ] as const;
-
-// Update LeagueMessage interface to add reactions
-export interface LeagueMessage {
-  id: string;
-  leagueId: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  content: string;
-  mentions: MessageMention[];
-  createdAt: Date | any;
-  updatedAt?: Date | any;
-  isEdited: boolean;
-  editHistory?: MessageEdit[];
-  reactions: MessageReaction[]; // Add this
-  replyCount?: number; // Add this
-  parentMessageId?: string; // Add this
-}

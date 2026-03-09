@@ -47,9 +47,8 @@ export default function DashboardHome() {
     isLoading: loadingLeagues,
   } = useUserLeagues(user?.uid || null);
 
-  // Fetch eliminated castaways for selected league (cached for 2 minutes)
+  // Fetch eliminated castaways (global, cached for 2 minutes)
   const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(
-    selectedLeagueId,
     CURRENT_SEASON.number
   );
 
@@ -220,7 +219,7 @@ export default function DashboardHome() {
       ...member,
       rank: idx + 1, // Will be updated after sort
     }))
-    .sort((a, b) => (b.points || 0) - (a.points || 0))
+    .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
     .map((member, idx) => ({
       ...member,
       rank: idx + 1,
@@ -228,7 +227,7 @@ export default function DashboardHome() {
 
   // Calculate user's stats
   const userRank = rankedMembers.find((m) => m.userId === user.uid)?.rank || 0;
-  const userPoints = currentUserTribe?.points || 0;
+  const userPoints = currentUserTribe?.totalPoints || 0;
   const totalLeagues = leagues.length;
 
   return (
@@ -426,9 +425,7 @@ export default function DashboardHome() {
                   const isCurrentUser = member.userId === user.uid;
                   const activeRoster =
                     member.roster?.filter(
-                      (r) =>
-                        r.status === "active" &&
-                        !eliminatedIds.has(r.castawayId),
+                      (id) => !eliminatedIds.has(id),
                     ).length || 0;
 
                   return (
@@ -520,7 +517,7 @@ export default function DashboardHome() {
                             color: "#E85D2A",
                           }}
                         >
-                          {member.points || 0}
+                          {member.totalPoints || 0}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
@@ -541,8 +538,7 @@ export default function DashboardHome() {
               const isCurrentUser = member.userId === user.uid;
               const activeRoster =
                 member.roster?.filter(
-                  (r) =>
-                    r.status === "active" && !eliminatedIds.has(r.castawayId),
+                  (id) => !eliminatedIds.has(id),
                 ).length || 0;
 
               return (
@@ -597,7 +593,7 @@ export default function DashboardHome() {
                           color: "#E85D2A",
                         }}
                       >
-                        {member.points || 0} pts
+                        {member.totalPoints || 0} pts
                       </Typography>
                     </Box>
 

@@ -1,54 +1,94 @@
-import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-client";
-import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
-import { EpisodeEvents } from "@/types/league";
-import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
+import { useMemo } from "react";
+import { ScoringEventType } from "@/types/league";
+import { SCORING_CONFIG } from "@/utils/eventScoringConfig";
+import { useSeasonCastaways } from "./useCastaways";
 
-/**
- * Fetch episode scores for a league season
- * Returns accumulated points per castaway across all episodes
- * Cached for 2 minutes (updates during episodes)
- */
-export function useEpisodeScores(
-  leagueId: string | null,
-  seasonNumber: number
-) {
-  return useQuery({
-    queryKey: queryKeys.episodes.scores(leagueId || "", seasonNumber),
-    queryFn: async () => {
-      if (!leagueId) return {};
-
-      const episodesRef = collection(
-        db,
-        "leagues",
-        leagueId,
-        "seasons",
-        seasonNumber.toString(),
-        "episodes"
-      );
-
-      const snapshot = await getDocs(episodesRef);
-      const scores: Record<string, number> = {};
-
-      snapshot.forEach((doc) => {
-        const episode = doc.data() as EpisodeEvents;
-        Object.entries(episode.events).forEach(([castawayId, events]) => {
-          const points = calculatePointsFromEvents(events);
-          scores[castawayId] = (scores[castawayId] || 0) + points;
-        });
-      });
-
-      return scores;
-    },
-    enabled: !!leagueId,
-    staleTime: 2 * 60 * 1000, // 2 minutes (more dynamic during episodes)
-  });
+export interface CastawayEventSummary {
+  eventType: ScoringEventType;
+  count: number;
+  points: number;
 }
 
 /**
- * Usage Example:
- *
- * const { data: scores = {} } = useEpisodeScores(leagueId, seasonNumber);
- * // scores is Record<string, number> mapping castawayId to total points
+ * Derive per-castaway total scores from castaway docs (which now store weeklyEvents).
+ * Returns Record<castawayId, totalPoints>
  */
+export function useEpisodeScores(seasonNumber: number) {
+  const { data: castaways = [], ...rest } = useSeasonCastaways(seasonNumber);
+
+  const scores = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const c of castaways) {
+      map[c.id] = c.totalPoints;
+    }
+    return map;
+  }, [castaways]);
+
+  return { data: scores, ...rest };
+}
+
+/**
+ * Derive per-episode score breakdowns from castaway weeklyEvents.
+ * Returns { episodeNumber: { castawayId: points } }
+ */
+export function useEpisodeScoresPerEpisode(seasonNumber: number) {
+  const { data: castaways = [], ...rest } = useSeasonCastaways(seasonNumber);
+
+  const scoresMap = useMemo(() => {
+    const map: Record<number, Record<string, number>> = {};
+
+    for (const castaway of castaways) {
+      for (const [epStr, events] of Object.entries(castaway.weeklyEvents || {})) {
+        const epNum = parseInt(epStr);
+        if (!map[epNum]) map[epNum] = {};
+        let total = 0;
+        for (const event of events) {
+          total += event.count * (SCORING_CONFIG[event.eventType] || 0);
+        }
+        map[epNum][castaway.id] = total;
+      }
+    }
+
+    return map;
+  }, [castaways]);
+
+  return { data: scoresMap, ...rest };
+}
+
+/**
+ * Derive aggregated scoring events per castaway across all episodes.
+ * Returns { castawayId: CastawayEventSummary[] }
+ */
+export function useEpisodeEventsByCastaway(seasonNumber: number) {
+  const { data: castaways = [], ...rest } = useSeasonCastaways(seasonNumber);
+
+  const eventsMap = useMemo(() => {
+    const result: Record<string, CastawayEventSummary[]> = {};
+
+    for (const castaway of castaways) {
+      const totals: Record<ScoringEventType, number> = {} as Record<ScoringEventType, number>;
+
+      for (const events of Object.values(castaway.weeklyEvents || {})) {
+        for (const event of events) {
+          totals[event.eventType] = (totals[event.eventType] || 0) + event.count;
+        }
+      }
+
+      const summaries = Object.entries(totals)
+        .filter(([, count]) => count > 0)
+        .map(([eventType, count]) => ({
+          eventType: eventType as ScoringEventType,
+          count,
+          points: count * SCORING_CONFIG[eventType as ScoringEventType],
+        }));
+
+      if (summaries.length > 0) {
+        result[castaway.id] = summaries;
+      }
+    }
+
+    return result;
+  }, [castaways]);
+
+  return { data: eventsMap, ...rest };
+}

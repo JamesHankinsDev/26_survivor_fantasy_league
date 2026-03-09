@@ -1,17 +1,15 @@
+import { ScoringEvent } from "@/types/league";
+
 export interface Castaway {
   id: string;
   name: string;
-  image?: string; // Legacy property
-  imageUrl?: string; // New property
+  image?: string;
+  imageUrl?: string;
   bio?: string;
   seasonNumber?: number;
-  stats?: Record<string, any>;
-  seasonalStats?: {
-    totalPoints: number;
-    aliveBonus: number;
-    immunityWins: number;
-    juryVotes: number;
-    placementBonus: number;
-    other: number;
-  };
+  totalPoints: number;
+  eliminated: boolean;
+  eliminatedWeek?: number;
+  /** Scoring events keyed by episode number, e.g. { "1": [...], "2": [...] } */
+  weeklyEvents: Record<string, ScoringEvent[]>;
 }

@@ -29,8 +29,10 @@ import {
   QueryConstraint,
 } from "firebase/firestore";
 import { League, TribeMember } from "@/types/league";
+import { normalizeMember } from "@/hooks/useLeagues";
 import { CURRENT_SEASON } from "@/data/seasons";
-import { loadEliminatedCastaways } from "@/utils/scoring";
+import { useEliminatedCastaways } from "@/hooks/useCastaways";
+import { useComputedScores } from "@/hooks/useScores";
 
 // Prevent static generation for this page
 export const dynamic = "force-dynamic";
@@ -45,7 +47,6 @@ export default function LeaderboardPage() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
-  const [eliminatedIds, setEliminatedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) {
@@ -64,9 +65,11 @@ export default function LeaderboardPage() {
       (snapshot) => {
         const loadedLeagues = snapshot.docs.map((doc) => {
           const rawData = doc.data() as any;
+          const memberDetails = (rawData.memberDetails || []).map(normalizeMember);
           return {
             id: doc.id,
             ...rawData,
+            memberDetails,
             createdAt: rawData.createdAt?.toDate?.() || rawData.createdAt,
             updatedAt: rawData.updatedAt?.toDate?.() || rawData.updatedAt,
           } as League;
@@ -90,25 +93,30 @@ export default function LeaderboardPage() {
     return () => unsubscribe();
   }, [user, router, selectedLeagueId]);
 
-  // Load eliminated castaways for selected league
-  useEffect(() => {
-    if (!selectedLeagueId) return;
+  const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(CURRENT_SEASON.number);
+  const eliminatedIds = new Set(eliminatedCastawayIds);
 
-    const loadEliminated = async () => {
-      try {
-        const eliminated = await loadEliminatedCastaways(
-          selectedLeagueId,
-          CURRENT_SEASON.number
-        );
-        setEliminatedIds(new Set(eliminated));
-      } catch (err) {
-        console.error("Error loading eliminated castaways:", err);
-      }
-    };
+  const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
 
-    loadEliminated();
-  }, [selectedLeagueId]);
+  // Recompute team scores from episode data via shared React Query cache.
+  const { computedMembers } = useComputedScores(
+    CURRENT_SEASON.number,
+    selectedLeague?.memberDetails || [],
+  );
 
+  // Sort members by points (descending) and assign ranks
+  const rankedMembers: LeagueMember[] = computedMembers
+    .map((member, idx) => ({
+      ...member,
+      rank: idx + 1, // Will be updated after sort
+    }))
+    .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
+    .map((member, idx) => ({
+      ...member,
+      rank: idx + 1,
+    }));
+
+  // Early returns AFTER all hooks to satisfy Rules of Hooks
   if (!user) {
     return null;
   }
@@ -125,14 +133,12 @@ export default function LeaderboardPage() {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="info">
-          You haven't joined any leagues yet. Create or join a league to see
+          You haven&apos;t joined any leagues yet. Create or join a league to see
           leaderboards.
         </Alert>
       </Container>
     );
   }
-
-  const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
 
   if (!selectedLeague) {
     return (
@@ -141,18 +147,6 @@ export default function LeaderboardPage() {
       </Container>
     );
   }
-
-  // Sort members by points (descending) and assign ranks
-  const rankedMembers: LeagueMember[] = (selectedLeague.memberDetails || [])
-    .map((member, idx) => ({
-      ...member,
-      rank: idx + 1, // Will be updated after sort
-    }))
-    .sort((a, b) => (b.points || 0) - (a.points || 0))
-    .map((member, idx) => ({
-      ...member,
-      rank: idx + 1,
-    }));
 
   return (
     <Box
@@ -279,7 +273,7 @@ export default function LeaderboardPage() {
               {rankedMembers.map((member) => {
                 const activeCastaways =
                   member.roster?.filter(
-                    (r) => r.status === "active" && !eliminatedIds.has(r.castawayId)
+                    (id) => !eliminatedIds.has(id)
                   ).length || 0;
 
                 const isCurrentUser = member.userId === user.uid;
@@ -356,7 +350,7 @@ export default function LeaderboardPage() {
                           color: member.rank === 1 ? "#E85D2A" : "inherit",
                         }}
                       >
-                        {member.points || 0}
+                        {member.totalPoints || 0}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -379,7 +373,7 @@ export default function LeaderboardPage() {
           {rankedMembers.map((member) => {
             const activeCastaways =
               member.roster?.filter(
-                (r) => r.status === "active" && !eliminatedIds.has(r.castawayId)
+                (id) => !eliminatedIds.has(id)
               ).length || 0;
             const isCurrentUser = member.userId === user.uid;
 
@@ -460,7 +454,7 @@ export default function LeaderboardPage() {
                       color: member.rank === 1 ? "#E85D2A" : "text.primary",
                     }}
                   >
-                    {member.points || 0} points
+                    {member.totalPoints || 0} points
                   </Typography>
                 </CardContent>
               </Card>
@@ -519,7 +513,7 @@ export default function LeaderboardPage() {
                       fontWeight: "bold",
                     }}
                   >
-                    {member.points || 0} points
+                    {member.totalPoints || 0} points
                   </Typography>
                 </CardContent>
               </Card>

@@ -89,9 +89,10 @@ export default function CreateLeagueDialog({
             displayName: sanitizedDisplayName,
             avatar: sanitizedAvatar,
             tribeColor: "#20B2AA",
-            points: 0,
+            totalPoints: 0,
             joinedAt: new Date(),
             roster: [], // Will be populated during draft phase
+            weeklyRosters: [], // Snapshots locked every Wednesday 8pm
           },
         ],
         createdAt: new Date(),
@@ -113,9 +114,10 @@ export default function CreateLeagueDialog({
           displayName: user.displayName || "Unknown",
           avatar: user.photoURL || "",
           tribeColor: "#20B2AA",
-          points: 0,
+          totalPoints: 0,
           joinedAt: new Date(),
           roster: [],
+          weeklyRosters: [],
         });
       }
 

@@ -81,24 +81,10 @@ export const queryKeys = {
     detail: (id: string) => ["leagues", id] as const,
     members: (id: string) => ["leagues", id, "members"] as const,
   },
-  // Castaways
+  // Castaways (global season data — source of truth for scores, events, eliminations)
   castaways: {
-    all: ["castaways"] as const,
     detail: (id: string) => ["castaways", id] as const,
     season: (seasonNumber: number) => ["castaways", "season", seasonNumber] as const,
-    eliminated: (leagueId: string, seasonNumber: number) =>
-      ["castaways", "eliminated", leagueId, seasonNumber] as const,
-  },
-  // Scores
-  scores: {
-    episode: (seasonNumber: number, episodeNumber: number) =>
-      ["scores", "episode", seasonNumber, episodeNumber] as const,
-    season: (seasonNumber: number) => ["scores", "season", seasonNumber] as const,
-  },
-  // Episodes
-  episodes: {
-    scores: (leagueId: string, seasonNumber: number) =>
-      ["episodes", "scores", leagueId, seasonNumber] as const,
   },
   // Messages
   messages: {

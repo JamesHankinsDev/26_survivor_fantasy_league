@@ -20,9 +20,9 @@ import { TribeMember } from "@/types/league";
 import { Castaway } from "@/types/castaway";
 import {
   getCurrentWeek,
-  canAddDropCastaway,
   getAvailableCastaways,
   isNetRosterChangeAllowed,
+  getPreviousWeekRoster,
 } from "@/utils/scoring";
 
 interface AddDropModalProps {
@@ -33,7 +33,6 @@ interface AddDropModalProps {
   allCastaways: Castaway[];
   eliminatedCastawayIds: string[];
   seasonStartDate: Date;
-  seasonPremierDate: Date;
   castawaySeasonScores?: Record<string, number>;
   addDropRestrictionEnabled: boolean;
 }
@@ -46,11 +45,9 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
   allCastaways,
   eliminatedCastawayIds,
   seasonStartDate,
-  seasonPremierDate: _seasonPremierDate,
   castawaySeasonScores = {},
   addDropRestrictionEnabled,
 }) => {
-  // ...existing code...
   const [dropCastawayId, setDropCastawayId] = useState<string | null>(null);
   const [addCastawayId, setAddCastawayId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,13 +65,11 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
 
     // Check if roster is locked
     const now = new Date();
-    // Convert to EST
     const nowEST = new Date(
       now.toLocaleString("en-US", { timeZone: "America/New_York" }),
     );
     const nextLock = getNextWednesday8pm(nowEST);
 
-    // If less than 1 hour until lock, show warning
     const timeUntilLock = nextLock.getTime() - now.getTime();
     const hoursUntilLock = timeUntilLock / (1000 * 60 * 60);
 
@@ -85,16 +80,26 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     }
   }, [open]);
 
-  // ...existing code...
-
   const currentWeek = getCurrentWeek(seasonStartDate);
   const currentRoster = tribeMember.roster || [];
-  const previousWeek = currentWeek - 1;
-  const previousRoster =
-    tribeMember.weeklyRosterHistory?.find((w) => w.week === previousWeek)
-      ?.roster || [];
+  const previousRoster = getPreviousWeekRoster(
+    tribeMember.weeklyRosters || [],
+    currentWeek,
+  );
 
-  // Find which castaway is the "new" one if net change already made
+  // Build proposed roster for validation
+  const getProposedRoster = () => {
+    let proposed = [...currentRoster];
+    if (dropCastawayId) {
+      proposed = proposed.filter((id) => id !== dropCastawayId);
+    }
+    if (addCastawayId) {
+      proposed.push(addCastawayId);
+    }
+    return proposed;
+  };
+
+  // Check if net change already exceeded (current roster vs previous)
   let netChangeExceeded = false;
   let onlyDroppableId: string | null = null;
   if (
@@ -104,51 +109,31 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
   ) {
     netChangeExceeded = true;
     // Find the new member (in current but not previous)
-    const prevIds = previousRoster
-      .filter((r) => r.status === "active")
-      .map((r) => r.castawayId);
-    const currIds = currentRoster
-      .filter((r) => r.status === "active")
-      .map((r) => r.castawayId);
-    const newIds = currIds.filter((id) => !prevIds.includes(id));
+    const newIds = currentRoster.filter((id) => !previousRoster.includes(id));
     onlyDroppableId = newIds.length === 1 ? newIds[0] : null;
   }
 
   // Contextual add/drop restrictions
   const maxRosterSize = 5;
-  const activeRosterCount = currentRoster.filter(
-    (r) => r.status === "active",
-  ).length;
+  const proposedRoster = getProposedRoster();
   let addDropWarning: string | null = null;
-  let submitDisabled = !isNetRosterChangeAllowed(
-    previousRoster,
-    currentRoster,
-    addCastawayId,
-    dropCastawayId,
-  );
+  let submitDisabled = false;
 
   const nowEST = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
   );
+
   if (!addDropRestrictionEnabled || seasonStartDate > nowEST) {
-    submitDisabled =
-      currentRoster.filter((el) => el.status === "active").length +
-        (addCastawayId ? 1 : 0) -
-        (dropCastawayId ? 1 : 0) >
-      maxRosterSize;
+    submitDisabled = proposedRoster.length > maxRosterSize;
     addDropWarning = submitDisabled
       ? `You cannot have more than ${maxRosterSize} castaways on your roster.`
       : null;
-  } else if (activeRosterCount >= maxRosterSize && !dropCastawayId) {
+  } else if (currentRoster.length >= maxRosterSize && !dropCastawayId) {
     addDropWarning = `You have the maximum of ${maxRosterSize} castaways. Drop a castaway before adding another.`;
     submitDisabled = true;
   } else if (
-    !isNetRosterChangeAllowed(
-      previousRoster,
-      currentRoster,
-      addCastawayId,
-      dropCastawayId,
-    )
+    previousRoster.length > 0 &&
+    !isNetRosterChangeAllowed(previousRoster, proposedRoster)
   ) {
     addDropWarning =
       "You have already made your one net roster change for this week. You may only drop the new castaway you added this week.";
@@ -170,48 +155,24 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     eliminatedCastawayIds,
   );
 
-  // Castaways that can be dropped (only active castaways)
+  // Castaways that can be dropped (on current roster, not eliminated)
   let droppableCastaways = currentRoster.filter(
-    (r) =>
-      canAddDropCastaway(r, currentWeek) &&
-      !eliminatedCastawayIds.includes(r.castawayId),
+    (id) => !eliminatedCastawayIds.includes(id),
   );
   if (netChangeExceeded && onlyDroppableId) {
     droppableCastaways = droppableCastaways.filter(
-      (r) => r.castawayId === onlyDroppableId,
+      (id) => id === onlyDroppableId,
     );
   }
 
   const handleSubmit = async () => {
     setError("");
     setLoading(true);
-    // Get previous week's roster for net change check
-    const previousWeek = currentWeek - 1;
-    const previousRoster =
-      tribeMember.weeklyRosterHistory?.find((w) => w.week === previousWeek)
-        ?.roster || [];
-    const newRoster = [...currentRoster];
-    // Simulate add/drop
-    if (dropCastawayId) {
-      const dropIndex = newRoster.findIndex(
-        (r) => r.castawayId === dropCastawayId,
-      );
-      if (dropIndex !== -1) {
-        newRoster[dropIndex].status = "dropped";
-        newRoster[dropIndex].droppedWeek = currentWeek;
-      }
-    }
-    if (addCastawayId) {
-      newRoster.push({
-        castawayId: addCastawayId,
-        status: "active",
-        addedWeek: currentWeek,
-        accumulatedPoints: 0,
-      });
-    }
-    // Enforce net roster change limit (if restriction enabled)
+
+    // Validate net roster change
     if (addDropRestrictionEnabled && previousRoster.length > 0) {
-      if (!isNetRosterChangeAllowed(previousRoster, newRoster)) {
+      const proposed = getProposedRoster();
+      if (!isNetRosterChangeAllowed(previousRoster, proposed)) {
         setError(
           "You can only make one net roster change per week. At least 4 out of 5 castaways must remain the same as last week.",
         );
@@ -237,8 +198,6 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     setError("");
     setLoading(true);
     try {
-      // We'll call onSubmit with a special signal to reset (null, null, true)
-      // But for now, just call onSubmit with a special dropId
       await onSubmit("__RESET_TO_PRIOR_WEEK__", null);
       onClose();
     } catch (err) {
@@ -249,7 +208,6 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
   };
 
   const getNextWednesday8pm = (baseDate?: Date): Date => {
-    // Use EST for all calculations
     const now =
       baseDate ||
       new Date(
@@ -265,11 +223,12 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     return nextWednesday;
   };
 
-  const dropCastawayName =
-    droppableCastaways.find((r) => r.castawayId === dropCastawayId)
-      ?.castawayId || "";
-  const addCastawayName =
-    availableCastaways.find((c) => c.id === addCastawayId)?.name || "";
+  const dropCastawayName = dropCastawayId
+    ? allCastaways.find((c) => c.id === dropCastawayId)?.name || ""
+    : "";
+  const addCastawayName = addCastawayId
+    ? availableCastaways.find((c) => c.id === addCastawayId)?.name || ""
+    : "";
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -319,13 +278,14 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
-              {droppableCastaways.map((entry) => {
+              {droppableCastaways.map((castawayId) => {
                 const castaway = allCastaways.find(
-                  (c) => c.id === entry.castawayId,
+                  (c) => c.id === castawayId,
                 );
+                const seasonScore = castawaySeasonScores[castawayId] || 0;
                 return (
-                  <MenuItem key={entry.castawayId} value={entry.castawayId}>
-                    {castaway?.name} ({entry.accumulatedPoints} pts)
+                  <MenuItem key={castawayId} value={castawayId}>
+                    {castaway?.name} ({seasonScore} season pts)
                   </MenuItem>
                 );
               })}
@@ -347,7 +307,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
                 const seasonScore = castawaySeasonScores[castaway.id] || 0;
                 return (
                   <MenuItem key={castaway.id} value={castaway.id}>
-                    {castaway.name} ({seasonScore} pts)
+                    {castaway.name} ({seasonScore} season pts)
                   </MenuItem>
                 );
               })}
@@ -356,23 +316,15 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
 
           {addDropWarning && <Alert severity="warning">{addDropWarning}</Alert>}
 
-          <Typography variant="caption" sx={{ color: "#666", mt: 1 }}>
-            {dropCastawayName && (
-              <>
-                Dropping <strong>{dropCastawayName}</strong> — you'll keep the{" "}
-                <strong>
-                  {droppableCastaways.find(
-                    (r) => r.castawayId === dropCastawayId,
-                  )?.accumulatedPoints || 0}
-                </strong>{" "}
-                points they've already earned.
-              </>
-            )}
-          </Typography>
+          {dropCastawayName && (
+            <Typography variant="caption" sx={{ color: "#666", mt: 1 }}>
+              Dropping <strong>{dropCastawayName}</strong> from your roster.
+            </Typography>
+          )}
 
           {addCastawayName && (
             <Typography variant="caption" sx={{ color: "#666" }}>
-              Adding <strong>{addCastawayName}</strong> — they'll be added to
+              Adding <strong>{addCastawayName}</strong> — they&apos;ll be on
               your roster starting this week.
             </Typography>
           )}
@@ -394,8 +346,8 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
           color="secondary"
           disabled={
             loading ||
-            !previousRoster.length ||
-            JSON.stringify(currentRoster) === JSON.stringify(previousRoster)
+            previousRoster.length === 0 ||
+            JSON.stringify(currentRoster.sort()) === JSON.stringify(previousRoster.sort())
           }
           sx={{
             fontSize: { xs: "0.8rem", sm: "0.875rem" },
@@ -403,7 +355,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
           }}
         >
           <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
-            Reset to Prior Week's Roster
+            Reset to Prior Week&apos;s Roster
           </Box>
           <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
             Reset Roster

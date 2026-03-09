@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import TribeCard from "./TribeCard";
 import { TribeMember } from "@/types/league";
@@ -9,22 +9,10 @@ describe("TribeCard", () => {
     displayName: "John Doe",
     avatar: "https://example.com/avatar.jpg",
     tribeColor: "#ff0000",
-    points: 150,
+    totalPoints: 150,
     joinedAt: new Date(),
-    roster: [
-      {
-        castawayId: "c1",
-        status: "active",
-        addedWeek: 0,
-        accumulatedPoints: 50,
-      },
-      {
-        castawayId: "c2",
-        status: "active",
-        addedWeek: 0,
-        accumulatedPoints: 100,
-      },
-    ],
+    roster: ["c1", "c2"],
+    weeklyRosters: [],
   };
 
   const mockAllMembers: TribeMember[] = [
@@ -34,9 +22,10 @@ describe("TribeCard", () => {
       displayName: "Jane Smith",
       avatar: "",
       tribeColor: "#00ff00",
-      points: 200,
+      totalPoints: 200,
       joinedAt: new Date(),
       roster: [],
+      weeklyRosters: [],
     },
   ];
 

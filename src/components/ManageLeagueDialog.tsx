@@ -65,7 +65,7 @@ export default function ManageLeagueDialog({
 
   const canDelete = league.currentPlayers === 1; // Only owner remains
   const membersSortedByPoints = [...(league.memberDetails || [])].sort(
-    (a, b) => b.points - a.points,
+    (a, b) => b.totalPoints - a.totalPoints,
   );
 
   const handleRemoveMember = async (userId: string, _memberName: string) => {
@@ -260,7 +260,7 @@ export default function ManageLeagueDialog({
                               variant="caption"
                               sx={{ color: "text.secondary" }}
                             >
-                              {member.points} points
+                              {member.totalPoints} points
                             </Typography>
                           </Box>
                         </Box>

@@ -150,21 +150,16 @@ export default function JoinLeaguePage() {
         displayName: sanitizedDisplayName,
         avatar: sanitizedAvatar,
         tribeColor: "#20B2AA",
-        points: 0,
+        totalPoints: 0,
         joinedAt: new Date(),
         roster: [], // Will be populated during draft phase
+        weeklyRosters: [], // Snapshots locked every Wednesday 8pm
       };
 
-      // Step 1: Add user to members and memberDetails (only these fields)
+      // Single atomic update: add user to members, memberDetails, bump count
       await updateDoc(leagueRef, {
         members: arrayUnion(user.uid),
-      });
-      await updateDoc(leagueRef, {
         memberDetails: arrayUnion(newMember),
-      });
-
-      // Step 2: Update currentPlayers and updatedAt (only these fields)
-      await updateDoc(leagueRef, {
         currentPlayers: increment(1),
         updatedAt: new Date(),
       });

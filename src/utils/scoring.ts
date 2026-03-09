@@ -1,64 +1,32 @@
 /**
  * Scoring utilities for Survivor Fantasy League
- * Handles point calculation, roster management, and weekly scoring
+ *
+ * New model:
+ * - Events are stored on each castaway doc (weeklyEvents keyed by episode number)
+ * - WeeklyRoster snapshots include weekScore (points earned that week)
+ * - TribeMember.totalPoints = sum of all weeklyRoster weekScores
+ * - Eliminated status is a boolean on the castaway doc
  */
 
-import { RosterEntry, TribeMember } from "@/types/league";
+import { WeeklyRoster, TribeMember, ScoringEvent } from "@/types/league";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  getDocs,
-  setDoc,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, getDocs, writeBatch } from "firebase/firestore";
 import { dbLogger } from "@/lib/logger";
+import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
 
 /**
- * Calculate total points for a tribe member based on current roster and episode scores
- * Only counts points from castaways on the team at the time the score was earned
- */
-export const calculateTribeTotalPoints = (
-  tribeMember: TribeMember,
-  episodeScoresMap: Record<number, Record<string, number>>, // { episodeNum: { castawayId: points } }
-): number => {
-  let total = 0;
-
-  // For each roster entry, accumulate points from episodes where they were active
-  tribeMember.roster.forEach((entry) => {
-    const droppedWeek = entry.droppedWeek || Infinity; // If never dropped, consider as Infinity
-
-    // Sum points from all episodes where castaway was on this team
-    Object.entries(episodeScoresMap).forEach(([episodeNumStr, scores]) => {
-      const episodeNum = parseInt(episodeNumStr);
-
-      // Count points only if castaway was added before or during this episode
-      // AND not dropped before this episode (or never dropped)
-      if (episodeNum >= entry.addedWeek && episodeNum < droppedWeek) {
-        total += scores[entry.castawayId] || 0;
-      }
-    });
-  });
-
-  return total;
-};
-
-/**
- * Get the current week based on Wednesday 8pm locks
- * Week 0 = draft week, Week 1+ = post-episode weeks
+ * Get the current week based on Wednesday 8pm ET locks.
+ * Week 1 = premiere week (scouting), Week 2+ = scoring weeks.
  */
 export const getCurrentWeek = (seasonStartDate: Date): number => {
   const now = new Date();
 
-  // If before season premiere, no weeks have started
   if (now < seasonStartDate) {
-    return 0; // Draft week
+    return 0; // Before season
   }
 
-  // Calculate weeks since premiere (each week is Wed 8pm to Wed 8pm)
   const wednesdayEightPm = new Date(seasonStartDate);
-  wednesdayEightPm.setHours(20, 0, 0, 0); // 8pm
+  wednesdayEightPm.setHours(20, 0, 0, 0);
 
   let weekOffset = 0;
   let currentWeekDeadline = new Date(wednesdayEightPm);
@@ -66,206 +34,224 @@ export const getCurrentWeek = (seasonStartDate: Date): number => {
   while (now > currentWeekDeadline) {
     weekOffset++;
     currentWeekDeadline = new Date(wednesdayEightPm);
-    currentWeekDeadline.setDate(currentWeekDeadline.getDate() + 7 * weekOffset);
+    currentWeekDeadline.setDate(wednesdayEightPm.getDate() + 7 * weekOffset);
   }
 
   return weekOffset;
 };
 
 /**
- * Get the next roster lock time (Wednesday 8pm)
- */
-export const getNextRosterLockTime = (): Date => {
-  const now = new Date();
-
-  // Find the next Wednesday
-  const daysUntilWednesday = (3 - now.getDay() + 7) % 7 || 7;
-  const nextWednesday = new Date(now);
-  nextWednesday.setDate(nextWednesday.getDate() + daysUntilWednesday);
-  nextWednesday.setHours(20, 0, 0, 0); // 8pm
-
-  // If we're already past 8pm on Wednesday, get next week's Wednesday
-  if (now.getDay() === 3 && now.getHours() >= 20) {
-    nextWednesday.setDate(nextWednesday.getDate() + 7);
-  }
-
-  return nextWednesday;
-};
-
-/**
- * Check if add/drop is allowed for a castaway
- */
-export const canAddDropCastaway = (
-  castaway: RosterEntry,
-  _currentWeek: number,
-): boolean => {
-  // Cannot add/drop if eliminated
-  if (castaway.status === "eliminated") {
-    return false;
-  }
-
-  // If dropped, can't drop again
-  if (castaway.status === "dropped") {
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * Get available castaways for add/drop (not on roster, not eliminated this week)
+ * Get available castaways for add/drop (not on current roster, not eliminated)
  */
 export const getAvailableCastaways = (
   allCastaways: Array<{ id: string; name: string }>,
-  currentRoster: RosterEntry[],
+  currentRoster: string[],
   eliminatedCastawayIds: string[],
 ): Array<{ id: string; name: string }> => {
-  // Only filter out ACTIVE roster members and eliminated castaways
-  // Dropped castaways should be available to re-add
-  const activeRosterIds = new Set(
-    currentRoster.filter((r) => r.status === "active").map((r) => r.castawayId),
-  );
+  const rosterSet = new Set(currentRoster);
   const eliminatedSet = new Set(eliminatedCastawayIds);
 
   return allCastaways.filter(
-    (c) => !activeRosterIds.has(c.id) && !eliminatedSet.has(c.id),
+    (c) => !rosterSet.has(c.id) && !eliminatedSet.has(c.id),
   );
 };
 
 /**
- * Apply an add/drop transaction to a roster
- */
-export const applyAddDropTransaction = (
-  roster: RosterEntry[],
-  dropCastawayId: string | null,
-  addCastawayId: string | null,
-  currentWeek: number,
-): RosterEntry[] => {
-  const newRoster = [...roster];
-
-  // Handle drop
-  if (dropCastawayId) {
-    const dropIndex = newRoster.findIndex(
-      (r) => r.castawayId === dropCastawayId,
-    );
-    if (dropIndex !== -1) {
-      newRoster[dropIndex].status = "dropped";
-      newRoster[dropIndex].droppedWeek = currentWeek;
-    }
-  }
-
-  // Handle add
-  if (addCastawayId) {
-    newRoster.push({
-      castawayId: addCastawayId,
-      status: "active",
-      addedWeek: currentWeek,
-      accumulatedPoints: 0,
-    });
-  }
-
-  return newRoster;
-};
-
-/**
- * Check if net roster change is allowed (max 1 change from previous week)
- * Returns true if at least 4 out of 5 castaways are the same as last week
+ * Check if net roster change is allowed (max 1 change from previous week).
+ * Returns true if at least 4 out of 5 castaways are the same as last week.
  */
 export const isNetRosterChangeAllowed = (
-  previousRoster: RosterEntry[],
-  currentRoster: RosterEntry[],
-  addCastawayId?: string | null,
-  dropCastawayId?: string | null,
+  previousRoster: string[],
+  proposedRoster: string[],
 ): boolean => {
-  // Get active castaway IDs for both rosters
-  const prevIds = previousRoster
-    .filter((r) => r.status === "active")
-    .map((r) => r.castawayId);
-  const currIds = [
-    ...currentRoster
-      .filter((r) => r.status === "active" && r.castawayId !== dropCastawayId)
-      .map((r) => r.castawayId),
-    addCastawayId,
-  ];
-
-  // Count how many castaways are the same
-  const sameCount = prevIds.filter((id) => currIds.includes(id)).length;
-  // Allow if at least 4 are the same
+  const sameCount = previousRoster.filter((id) => proposedRoster.includes(id)).length;
   return sameCount >= 4;
 };
 
 /**
- * Format points for display with breakdown
+ * Get the previous week's locked roster for a team member.
  */
-export const formatPointsBreakdown = (
-  breakdown: Record<string, number>,
-): string => {
-  return Object.entries(breakdown)
-    .filter(([_, value]) => value > 0)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join(" + ");
+export const getPreviousWeekRoster = (
+  weeklyRosters: WeeklyRoster[],
+  currentWeek: number,
+): string[] => {
+  const previousSnapshot = weeklyRosters.find((w) => w.week === currentWeek - 1);
+  return previousSnapshot?.castawayIds || [];
 };
 
 /**
- * Load eliminated castaways for a specific league from Firestore
+ * Lock rosters for a league — snapshot each member's current working roster
+ * into their weeklyRosters array for the given week number.
+ * weekScore is set to 0 initially (updated when episode is scored).
  */
-export const loadEliminatedCastaways = async (
+export const lockRostersForLeague = async (
   leagueId: string,
-  seasonNumber: number,
-): Promise<string[]> => {
-  try {
-    const collectionRef = collection(
-      db,
-      `leagues/${leagueId}/seasons/${seasonNumber}/eliminated`,
-    );
-    const q = query(collectionRef);
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => doc.id);
-  } catch (err) {
-    dbLogger.error("Error loading eliminated castaways:", err);
-    return [];
+  weekNumber: number,
+): Promise<number> => {
+  const leagueRef = doc(db, "leagues", leagueId);
+  const leagueDoc = await getDoc(leagueRef);
+
+  if (!leagueDoc.exists()) {
+    throw new Error("League not found");
   }
+
+  const league = leagueDoc.data();
+  const memberDetails: TribeMember[] = league.memberDetails || [];
+
+  const updatedMembers = memberDetails.map((member) => {
+    const weeklyRosters = member.weeklyRosters || [];
+
+    // Normalize roster from old RosterEntry[] format if needed
+    let roster: string[] = member.roster || [];
+    if (roster.length > 0 && typeof roster[0] === "object" && (roster[0] as any).castawayId) {
+      roster = (roster as any[])
+        .filter((r) => r.status === "active")
+        .map((r) => r.castawayId);
+    }
+
+    const existingIndex = weeklyRosters.findIndex((w) => w.week === weekNumber);
+
+    const newSnapshot: WeeklyRoster = {
+      week: weekNumber,
+      castawayIds: roster,
+      weekScore: 0,
+      lockedAt: new Date(),
+    };
+
+    if (existingIndex !== -1) {
+      weeklyRosters[existingIndex] = newSnapshot;
+    } else {
+      weeklyRosters.push(newSnapshot);
+    }
+
+    return {
+      ...member,
+      weeklyRosters,
+    };
+  });
+
+  await updateDoc(leagueRef, {
+    memberDetails: updatedMembers,
+    updatedAt: new Date(),
+  });
+
+  return updatedMembers.length;
 };
 
 /**
- * Save a castaway as eliminated for a specific league
+ * Save episode events to castaway docs and update league member scores.
+ *
+ * 1. Writes events to each castaway's weeklyEvents[episodeNumber]
+ * 2. Updates each castaway's totalPoints
+ * 3. For each target league, calculates weekScore for the matching weekly roster
+ * 4. Updates each member's totalPoints (sum of all weekScores)
  */
-export const saveEliminatedCastaway = async (
-  leagueId: string,
+export const saveEpisodeScores = async (
   seasonNumber: number,
-  castawayId: string,
+  episodeNumber: number,
+  castawayEvents: Record<string, ScoringEvent[]>, // { castawayId: events[] }
+  targetLeagueIds: string[],
 ): Promise<void> => {
-  try {
-    const docRef = doc(
-      db,
-      `leagues/${leagueId}/seasons/${seasonNumber}/eliminated/${castawayId}`,
-    );
-    await setDoc(docRef, {
-      castawayId,
-      eliminatedAt: new Date(),
+  // 1. Load all castaway docs to get previous state for delta calculation
+  const castawaysRef = collection(db, "seasons", seasonNumber.toString(), "castaways");
+  const castawaysSnap = await getDocs(castawaysRef);
+  const castawayDocs = new Map<string, any>();
+  castawaysSnap.forEach((d) => castawayDocs.set(d.id, d.data()));
+
+  // 2. Batch update castaway docs with new events and recalculated totalPoints
+  const batch = writeBatch(db);
+  const episodeScores: Record<string, number> = {}; // castawayId -> points this episode
+
+  for (const [castawayId, events] of Object.entries(castawayEvents)) {
+    const existingData = castawayDocs.get(castawayId);
+    if (!existingData) continue;
+
+    const weeklyEvents = { ...(existingData.weeklyEvents || {}) };
+    weeklyEvents[episodeNumber.toString()] = events;
+
+    // Recalculate totalPoints from all weekly events
+    let totalPoints = 0;
+    for (const epEvents of Object.values(weeklyEvents) as ScoringEvent[][]) {
+      totalPoints += calculatePointsFromEvents(epEvents);
+    }
+
+    const epPoints = calculatePointsFromEvents(events);
+    episodeScores[castawayId] = epPoints;
+
+    const castawayRef = doc(db, "seasons", seasonNumber.toString(), "castaways", castawayId);
+    batch.update(castawayRef, {
+      weeklyEvents,
+      totalPoints,
     });
-  } catch (err) {
-    dbLogger.error("Error saving eliminated castaway:", err);
-    throw err;
+  }
+
+  await batch.commit();
+
+  // 3. Update league member scores
+  for (const leagueId of targetLeagueIds) {
+    await updateLeagueWeekScores(leagueId, episodeNumber, episodeScores);
   }
 };
 
 /**
- * Remove a castaway from eliminated list for a specific league
+ * Update weekScore on matching weekly roster and recalculate member totalPoints.
  */
-export const removeEliminatedCastaway = async (
+const updateLeagueWeekScores = async (
   leagueId: string,
+  episodeNumber: number,
+  episodeScores: Record<string, number>,
+): Promise<void> => {
+  const leagueRef = doc(db, "leagues", leagueId);
+  const leagueDoc = await getDoc(leagueRef);
+
+  if (!leagueDoc.exists()) {
+    dbLogger.error(`League ${leagueId} not found`);
+    return;
+  }
+
+  const league = leagueDoc.data();
+  const memberDetails: TribeMember[] = league.memberDetails || [];
+
+  const updatedMembers = memberDetails.map((member) => {
+    const weeklyRosters = (member.weeklyRosters || []).map((roster) => {
+      if (roster.week !== episodeNumber) return roster;
+
+      // Calculate weekScore from rostered castaways' episode scores
+      let weekScore = 0;
+      for (const castawayId of roster.castawayIds) {
+        weekScore += episodeScores[castawayId] || 0;
+      }
+
+      return { ...roster, weekScore };
+    });
+
+    // Recalculate totalPoints from all weekScores
+    const totalPoints = weeklyRosters.reduce((sum, r) => sum + (r.weekScore || 0), 0);
+
+    return { ...member, weeklyRosters, totalPoints };
+  });
+
+  await updateDoc(leagueRef, {
+    memberDetails: updatedMembers,
+    updatedAt: new Date(),
+  });
+};
+
+/**
+ * Toggle a castaway's eliminated status on their global doc.
+ */
+export const toggleCastawayEliminated = async (
   seasonNumber: number,
   castawayId: string,
+  eliminated: boolean,
+  eliminatedWeek?: number,
 ): Promise<void> => {
-  try {
-    const docRef = doc(
-      db,
-      `leagues/${leagueId}/seasons/${seasonNumber}/eliminated/${castawayId}`,
-    );
-    await deleteDoc(docRef);
-  } catch (err) {
-    dbLogger.error("Error removing eliminated castaway:", err);
-    throw err;
+  const castawayRef = doc(db, "seasons", seasonNumber.toString(), "castaways", castawayId);
+  const updateData: Record<string, any> = { eliminated };
+  if (eliminated && eliminatedWeek !== undefined) {
+    updateData.eliminatedWeek = eliminatedWeek;
+  } else if (!eliminated) {
+    updateData.eliminatedWeek = null;
   }
+  await updateDoc(castawayRef, updateData);
 };

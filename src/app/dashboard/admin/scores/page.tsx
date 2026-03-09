@@ -21,13 +21,6 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  OutlinedInput,
   Chip,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -38,54 +31,46 @@ import { db } from "@/lib/firebase";
 import {
   collection,
   getDocs,
-  getDoc,
   query,
   where,
-  doc,
-  setDoc,
-  Timestamp,
 } from "firebase/firestore";
-import { Castaway } from "@/types/castaway";
 import {
-  EpisodeEvents,
   ScoringEvent,
   ScoringEventType,
   League,
 } from "@/types/league";
 import { CURRENT_SEASON } from "@/data/seasons";
-import CASTAWAYS from "@/data/castaways";
-import { calculateTribeTotalPoints } from "@/utils/scoring";
+import { useSeasonCastaways } from "@/hooks/useCastaways";
 import {
   SCORING_CONFIG,
   calculatePointsFromEvents,
   getEventLabel,
   ALL_EVENT_TYPES,
 } from "@/utils/eventScoringConfig";
+import { lockRostersForLeague, saveEpisodeScores } from "@/utils/scoring";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 
 export default function AdminScoresPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: castaways = [], isLoading: castawaysLoading } = useSeasonCastaways(CURRENT_SEASON.number);
   const [ownedLeagues, setOwnedLeagues] = useState<League[]>([]);
-  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([]);
-  const [applyToAll, setApplyToAll] = useState(false);
-  const [castaways, setCastaways] = useState<Castaway[]>([]);
   const [episodes, setEpisodes] = useState<
-    Record<
-      string,
-      {
-        events: ScoringEvent[];
-      }
-    >
+    Record<string, { events: ScoringEvent[] }>
   >({});
   const [episodeNumber, setEpisodeNumber] = useState(1);
-  const [airDate, setAirDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
+  const [lockWeek, setLockWeek] = useState(2);
+  const [locking, setLocking] = useState(false);
+  const [lockResult, setLockResult] = useState("");
 
-  // Load leagues owned by the user
+  // Load leagues owned by the user (for roster lock + score propagation)
   useEffect(() => {
     const loadOwnedLeagues = async () => {
       if (!user) return;
@@ -102,11 +87,6 @@ export default function AdminScoresPage() {
             } as League)
         );
         setOwnedLeagues(leagues);
-
-        // Auto-select first league if available
-        if (leagues.length > 0) {
-          setSelectedLeagueIds([leagues[0].id]);
-        }
       } catch (err) {
         console.error("Failed to load owned leagues:", err);
         setError("Failed to load your leagues");
@@ -118,85 +98,33 @@ export default function AdminScoresPage() {
     loadOwnedLeagues();
   }, [user]);
 
-  // Load castaways on mount
+  // Initialize empty events when castaways load
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load castaways - these are the same for all leagues
-        const loadedCastaways = CASTAWAYS;
-        setCastaways(loadedCastaways);
+    if (castaways.length === 0) return;
+    const initialEvents: Record<string, { events: ScoringEvent[] }> = {};
+    castaways.forEach((c) => {
+      initialEvents[c.id] = { events: [] };
+    });
+    setEpisodes(initialEvents);
+  }, [castaways]);
 
-        // Initialize empty events for all castaways
-        const initialEvents: Record<string, { events: ScoringEvent[] }> = {};
-        loadedCastaways.forEach((c) => {
-          initialEvents[c.id] = { events: [] };
-        });
-        setEpisodes(initialEvents);
-      } catch (err) {
-        console.error("Error loading castaways:", err);
-        setError("Failed to load castaways");
-      }
-    };
-    loadData();
-  }, []);
-
-  // Load previous episode events when episode number or league changes
+  // Load previous episode events from castaway docs when episode number changes
   useEffect(() => {
-    const loadEpisodeEvents = async () => {
-      if (selectedLeagueIds.length === 0 || castaways.length === 0) return;
+    if (castaways.length === 0) return;
 
-      try {
-        const episodeRef = doc(
-          db,
-          "leagues",
-          selectedLeagueIds[0],
-          "seasons",
-          CURRENT_SEASON.number.toString(),
-          "episodes",
-          `episode-${episodeNumber}`
-        );
+    const loadedEvents: Record<string, { events: ScoringEvent[] }> = {};
 
-        const snapshot = await getDoc(episodeRef);
-
-        if (snapshot.exists()) {
-          const episodeData = snapshot.data() as EpisodeEvents;
-          // Pre-populate the form with existing events
-          const loadedEvents: Record<string, { events: ScoringEvent[] }> = {};
-          Object.entries(episodeData.events).forEach(([castawayId, events]) => {
-            loadedEvents[castawayId] = { events };
-          });
-          setEpisodes(loadedEvents);
-          // Also pre-fill the air date if it exists
-          if (episodeData.airDate) {
-            const date = episodeData.airDate.toDate
-              ? episodeData.airDate.toDate()
-              : new Date(episodeData.airDate);
-            const isoDate = date.toISOString().split("T")[0];
-            setAirDate(isoDate);
-          }
-        } else {
-          // No previous episode found, reset to empty
-          const emptyEvents: Record<string, { events: ScoringEvent[] }> = {};
-          castaways.forEach((c) => {
-            emptyEvents[c.id] = { events: [] };
-          });
-          setEpisodes(emptyEvents);
-          setAirDate("");
-        }
-      } catch (err) {
-        console.error("Error loading episode events:", err);
-        // Reset on error
-        const emptyEvents: Record<string, { events: ScoringEvent[] }> = {};
-        castaways.forEach((c) => {
-          emptyEvents[c.id] = { events: [] };
-        });
-        setEpisodes(emptyEvents);
-        setAirDate("");
+    castaways.forEach((c) => {
+      const epEvents = c.weeklyEvents?.[episodeNumber.toString()];
+      if (epEvents && epEvents.length > 0) {
+        loadedEvents[c.id] = { events: epEvents };
+      } else {
+        loadedEvents[c.id] = { events: [] };
       }
-    };
+    });
 
-    loadEpisodeEvents();
-  }, [episodeNumber, selectedLeagueIds, castaways]);
+    setEpisodes(loadedEvents);
+  }, [episodeNumber, castaways]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -245,78 +173,73 @@ export default function AdminScoresPage() {
     return calculatePointsFromEvents(castawayEvents);
   };
 
+  const allLeagueIds = ownedLeagues.map(l => l.id);
+
+  const handleLockRosters = async () => {
+    if (allLeagueIds.length === 0) {
+      setError("You don't own any leagues to lock rosters for.");
+      return;
+    }
+
+    setLocking(true);
+    setError("");
+    setLockResult("");
+
+    try {
+      let totalMembers = 0;
+      await Promise.all(
+        allLeagueIds.map(async (leagueId) => {
+          const count = await lockRostersForLeague(leagueId, lockWeek);
+          totalMembers += count;
+        })
+      );
+
+      setLockResult(
+        `Rosters locked for Week ${lockWeek} across ${allLeagueIds.length} league(s) (${totalMembers} teams).`
+      );
+    } catch (err) {
+      console.error("Error locking rosters:", err);
+      setError("Failed to lock rosters. Please try again.");
+    } finally {
+      setLocking(false);
+    }
+  };
+
   const handleSaveScores = async () => {
-    const targetLeagueIds = applyToAll ? ownedLeagues.map(l => l.id) : selectedLeagueIds;
-    
-    if (targetLeagueIds.length === 0) {
-      setError("Please select at least one league");
-      return;
-    }
-
-    if (!airDate) {
-      setError("Please select an air date");
-      return;
-    }
-
     setSaving(true);
     setError("");
     setSuccess("");
 
     try {
-      // Create episode events document
-      const episodeEventsData: EpisodeEvents = {
-        id: `episode-${episodeNumber}`,
-        seasonNumber: CURRENT_SEASON.number,
-        episodeNumber,
-        airDate: new Date(airDate),
-        events: Object.fromEntries(
-          Object.entries(episodes).map(([castawayId, data]) => [
-            castawayId,
-            data.events,
-          ])
-        ),
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-      };
+      // Build events map (only include castaways with events)
+      const castawayEvents: Record<string, ScoringEvent[]> = {};
+      for (const [castawayId, data] of Object.entries(episodes)) {
+        if (data.events.length > 0) {
+          castawayEvents[castawayId] = data.events;
+        }
+      }
 
-      // Calculate flat scores from events for cascading
-      const flatScores: Record<string, number> = {};
-      Object.entries(episodes).forEach(([castawayId, _data]) => {
-        flatScores[castawayId] = getTotalForCastaway(castawayId);
+      await saveEpisodeScores(
+        CURRENT_SEASON.number,
+        episodeNumber,
+        castawayEvents,
+        allLeagueIds,
+      );
+
+      // Invalidate castaways cache to pick up new scores
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.castaways.season(CURRENT_SEASON.number),
       });
 
-      // Save to all target leagues
-      await Promise.all(
-        targetLeagueIds.map(async (leagueId) => {
-          // Save episode events
-          const eventsRef = doc(
-            db,
-            "leagues",
-            leagueId,
-            "seasons",
-            CURRENT_SEASON.number.toString(),
-            "episodes",
-            `episode-${episodeNumber}`
-          );
-          await setDoc(eventsRef, episodeEventsData);
-
-          // Cascade scores to league
-          await cascadeScoresToLeague(leagueId, flatScores);
-        })
-      );
+      const leagueMsg = allLeagueIds.length > 0
+        ? ` Scores updated for ${allLeagueIds.length} league(s).`
+        : "";
 
       setSuccess(
-        `Episode ${episodeNumber} events saved successfully to ${targetLeagueIds.length} league(s)!`
+        `Episode ${episodeNumber} events saved to castaway profiles.${leagueMsg}`
       );
 
-      // Reset form
-      const resetEvents: Record<string, { events: ScoringEvent[] }> = {};
-      castaways.forEach((c) => {
-        resetEvents[c.id] = { events: [] };
-      });
-      setEpisodes(resetEvents);
       setEpisodeNumber(episodeNumber + 1);
-      setAirDate("");
     } catch (err) {
       console.error("Error saving events:", err);
       setError("Failed to save events. Please try again.");
@@ -325,76 +248,7 @@ export default function AdminScoresPage() {
     }
   };
 
-  const cascadeScoresToLeague = async (
-    leagueId: string,
-    episodeScores: Record<string, number>
-  ) => {
-    try {
-      const leagueRef = doc(db, "leagues", leagueId);
-      const leagueDoc = await getDoc(leagueRef);
-
-      if (!leagueDoc.exists()) {
-        throw new Error("League not found");
-      }
-
-      const league = leagueDoc.data() as any;
-      const memberDetails = league.memberDetails || [];
-
-      // Load ALL episodes from database to calculate cumulative points
-      const episodesRef = collection(
-        db,
-        "leagues",
-        leagueId,
-        "seasons",
-        CURRENT_SEASON.number.toString(),
-        "episodes"
-      );
-      const episodesSnapshot = await getDocs(episodesRef);
-
-      const allEpisodeScores: Record<number, Record<string, number>> = {};
-      
-      // Aggregate scores from all existing episodes
-      episodesSnapshot.forEach((doc) => {
-        const episode = doc.data() as EpisodeEvents;
-        const epNum = episode.episodeNumber;
-        allEpisodeScores[epNum] = {};
-        
-        Object.entries(episode.events).forEach(([castawayId, events]) => {
-          const points = calculatePointsFromEvents(events);
-          allEpisodeScores[epNum][castawayId] = points;
-        });
-      });
-
-      // Add/update the current episode being saved
-      allEpisodeScores[episodeNumber] = episodeScores;
-
-      const updatedMembers = memberDetails.map((member: any) => {
-        const newTotalPoints = calculateTribeTotalPoints(
-          member,
-          allEpisodeScores
-        );
-
-        return {
-          ...member,
-          points: newTotalPoints,
-        };
-      });
-
-      await setDoc(
-        leagueRef,
-        {
-          memberDetails: updatedMembers,
-          updatedAt: Timestamp.now(),
-        },
-        { merge: true }
-      );
-    } catch (err) {
-      console.error("Error cascading scores:", err);
-      throw err;
-    }
-  };
-
-  if (loading) {
+  if (loading || castawaysLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
         <CircularProgress />
@@ -406,88 +260,68 @@ export default function AdminScoresPage() {
     return null;
   }
 
-  if (ownedLeagues.length === 0) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          You don&apos;t own any leagues. Only league owners can record episode
-          events.
-        </Alert>
-        <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
-          To record episode events and manage scoring, you need to create your
-          own league. Players who join via invite link cannot access admin
-          functions.
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={() => router.push("/dashboard/admin")}
-          sx={{ mt: 2 }}
-        >
-          Create a League
-        </Button>
-      </Container>
-    );
-  }
-
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
-          Record Episode Events
+          Admin: Scoring & Rosters
         </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", mb: 3 }}>
-          Record events for each castaway this episode. Points are calculated
-          automatically and applied to the selected league only.
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+          Record global episode events and manage roster locks.
+          Scores are saved to castaway profiles and automatically propagated to
+          all {ownedLeagues.length} league(s) you own.
         </Typography>
       </Box>
 
+      {ownedLeagues.length === 0 && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          You don&apos;t own any leagues yet. Episode events can still be recorded
+          globally. League score propagation will apply once you create a league.
+        </Alert>
+      )}
+
+      {/* Lock Rosters Section */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ mb: 3 }}>
-          <FormControl fullWidth sx={{ maxWidth: 400, mb: 2 }}>
-            <InputLabel>Select League(s)</InputLabel>
-            <Select<string[]>
-              multiple
-              value={selectedLeagueIds}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSelectedLeagueIds(typeof value === 'string' ? value.split(',') : value);
-                setApplyToAll(false);
-              }}
-              input={<OutlinedInput label="Select League(s)" />}
-              renderValue={(selected: string[]) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value: string) => {
-                    const league = ownedLeagues.find(l => l.id === value);
-                    return <Chip key={value} label={league?.name || value} size="small" />;
-                  })}
-                </Box>
-              )}
-              disabled={applyToAll}
-            >
-              {ownedLeagues.map((league) => (
-                <MenuItem key={league.id} value={league.id}>
-                  <Checkbox checked={selectedLeagueIds.indexOf(league.id) > -1} />
-                  {league.name} ({league.currentPlayers}/{league.maxPlayers}{" "}
-                  players)
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={applyToAll}
-                onChange={(e) => {
-                  setApplyToAll(e.target.checked);
-                  if (e.target.checked) {
-                    setSelectedLeagueIds(ownedLeagues.map(l => l.id));
-                  }
-                }}
-              />
-            }
-            label={`Apply to all my leagues (${ownedLeagues.length})`}
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+          Lock Rosters
+        </Typography>
+        <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
+          Snapshot each team&apos;s current roster for a given week. Do this every
+          Wednesday at 8:00 PM ET before the episode airs.
+          Applies to all {ownedLeagues.length} league(s) you own.
+        </Typography>
+
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+          <TextField
+            label="Week Number"
+            type="number"
+            value={lockWeek}
+            onChange={(e) => setLockWeek(parseInt(e.target.value) || 1)}
+            inputProps={{ min: 1, max: 20 }}
+            sx={{ width: 150 }}
           />
+          <Button
+            variant="contained"
+            onClick={handleLockRosters}
+            disabled={locking || allLeagueIds.length === 0}
+            sx={{ bgcolor: "#20B2AA", "&:hover": { bgcolor: "#1A8A7F" } }}
+          >
+            {locking ? <CircularProgress size={24} /> : `Lock Rosters for Week ${lockWeek}`}
+          </Button>
         </Box>
+
+        {lockResult && (
+          <Alert severity="success" sx={{ mt: 2 }}>
+            {lockResult}
+          </Alert>
+        )}
+      </Paper>
+
+      {/* Episode Scoring Section */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+          Record Episode Events
+        </Typography>
 
         <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
           <TextField
@@ -497,14 +331,6 @@ export default function AdminScoresPage() {
             onChange={(e) => setEpisodeNumber(parseInt(e.target.value) || 1)}
             inputProps={{ min: 1, max: 14 }}
             sx={{ width: 150 }}
-          />
-          <TextField
-            label="Air Date"
-            type="date"
-            value={airDate}
-            onChange={(e) => setAirDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 200 }}
           />
         </Box>
 
@@ -552,6 +378,9 @@ export default function AdminScoresPage() {
                 <TableRow key={castaway.id}>
                   <TableCell sx={{ fontWeight: 500 }}>
                     {castaway.name}
+                    {castaway.eliminated && (
+                      <Chip label="Out" size="small" sx={{ ml: 1, bgcolor: "#d32f2f", color: "white", fontSize: "0.65rem", height: 18 }} />
+                    )}
                   </TableCell>
                   {ALL_EVENT_TYPES.map((eventType) => {
                     const events = episodes[castaway.id]?.events || [];
@@ -622,22 +451,13 @@ export default function AdminScoresPage() {
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Typography>
-              Episode {episodeNumber} - Air Date: {airDate}
+              Episode {episodeNumber}
             </Typography>
             <Typography sx={{ mt: 2, fontSize: "0.9em", color: "#666" }}>
-              These events will be saved for{" "}
-              <strong>
-                {applyToAll 
-                  ? `all ${ownedLeagues.length} league(s)` 
-                  : selectedLeagueIds.length === 1 
-                    ? ownedLeagues.find((l) => l.id === selectedLeagueIds[0])?.name
-                    : `${selectedLeagueIds.length} selected league(s)`}
-              </strong>{" "}
-              . Points will only count for teams that had each castaway at
-              the time of scoring.
-            </Typography>
-            <Typography sx={{ mt: 1, fontSize: "0.9em", color: "#666" }}>
-              This action cannot be undone.
+              Events will be saved globally to each castaway&apos;s profile.
+              {allLeagueIds.length > 0
+                ? ` Team scores will be updated for all ${allLeagueIds.length} league(s) you own.`
+                : " No leagues to update scores for."}
             </Typography>
           </Box>
         </DialogContent>

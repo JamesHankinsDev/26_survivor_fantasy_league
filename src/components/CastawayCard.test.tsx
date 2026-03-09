@@ -10,6 +10,9 @@ describe("CastawayCard", () => {
     image: "https://example.com/castaway.jpg",
     bio: "A test castaway from previous seasons.",
     seasonNumber: 48,
+    totalPoints: 0,
+    eliminated: false,
+    weeklyEvents: {},
   };
 
   it("should render castaway name", () => {
@@ -100,6 +103,9 @@ describe("CastawayCard", () => {
     const minimalCastaway: Castaway = {
       id: "minimal",
       name: "Minimal Castaway",
+      totalPoints: 0,
+      eliminated: false,
+      weeklyEvents: {},
     };
 
     render(<CastawayCard castaway={minimalCastaway} />);

@@ -11,16 +11,39 @@ import {
   updateDoc,
   Timestamp,
 } from "firebase/firestore";
-import { League } from "@/types/league";
+import { League, TribeMember } from "@/types/league";
+
+/**
+ * Normalize a TribeMember's roster from old RosterEntry[] format to string[].
+ * Old format: roster was an array of objects with { castawayId, status, ... }
+ * New format: roster is a plain string[] of castaway IDs.
+ * Also ensures weeklyRosters defaults to [].
+ */
+export function normalizeMember(member: any): TribeMember {
+  let roster = member.roster || [];
+  // Detect old RosterEntry[] format (array of objects with castawayId)
+  if (roster.length > 0 && typeof roster[0] === "object" && roster[0].castawayId) {
+    roster = roster
+      .filter((r: any) => r.status === "active")
+      .map((r: any) => r.castawayId);
+  }
+  return {
+    ...member,
+    roster,
+    weeklyRosters: member.weeklyRosters || [],
+  };
+}
 
 /**
  * Normalize Firestore data to League type
  */
 function normalizeLeague(snap: any): League {
   const raw = snap.data();
+  const memberDetails = (raw.memberDetails || []).map(normalizeMember);
   return {
     id: snap.id,
     ...raw,
+    memberDetails,
     createdAt: raw.createdAt?.toDate?.() || raw.createdAt || new Date(),
     updatedAt: raw.updatedAt?.toDate?.() || raw.updatedAt || new Date(),
   } as League;

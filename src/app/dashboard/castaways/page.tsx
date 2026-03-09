@@ -1,11 +1,17 @@
 "use client";
 
-import { Container, Box, Typography } from "@mui/material";
-import CASTAWAYS from "@/data/castaways";
-import CURRENT_SEASON from "@/data/seasons";
+import { Container, Box, Typography, CircularProgress } from "@mui/material";
+import { CURRENT_SEASON } from "@/data/seasons";
+import { useSeasonCastaways, useEliminatedCastaways } from "@/hooks/useCastaways";
+import { useEpisodeScores, useEpisodeEventsByCastaway } from "@/hooks/useEpisodes";
 import CastawayCard from "@/components/CastawayCard";
 
 export default function CastawaysPage() {
+  const { data: castaways = [], isLoading } = useSeasonCastaways(CURRENT_SEASON.number);
+  const { data: castawayScores = {} } = useEpisodeScores(CURRENT_SEASON.number);
+  const { data: castawayEvents = {} } = useEpisodeEventsByCastaway(CURRENT_SEASON.number);
+  const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(CURRENT_SEASON.number);
+
   const premiereDate = new Date(CURRENT_SEASON.premiereDate);
   const formattedDate = premiereDate.toLocaleDateString("en-US", {
     year: "numeric",
@@ -13,10 +19,15 @@ export default function CastawaysPage() {
     day: "numeric",
   });
 
-  // This page shows global castaway information (not league-specific)
-  // Scores and elimination status are shown at the league level
-  const castawayScores: Record<string, number> = {};
-  const eliminatedCastawayIds: string[] = [];
+  const eliminatedSet = new Set(eliminatedCastawayIds);
+
+  if (isLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -35,7 +46,7 @@ export default function CastawaysPage() {
           variant="body2"
           sx={{ color: "text.secondary", maxWidth: 600 }}
         >
-          {CASTAWAYS.length} all-star returning players compete in the ultimate
+          {castaways.length} all-star returning players compete in the ultimate
           fan-voted season. Click on any castaway to see their previous Survivor
           experience.
         </Typography>
@@ -54,12 +65,13 @@ export default function CastawaysPage() {
           },
         }}
       >
-        {CASTAWAYS.map((c) => (
+        {castaways.map((c) => (
           <Box key={c.id} sx={{ width: "100%" }}>
             <CastawayCard
               castaway={c}
               seasonScore={castawayScores[c.id] || 0}
-              isEliminated={eliminatedCastawayIds.includes(c.id)}
+              isEliminated={eliminatedSet.has(c.id)}
+              eventSummary={castawayEvents[c.id] || []}
             />
           </Box>
         ))}

@@ -22,7 +22,9 @@ interface TribeCardProps {
   onAddDrop?: () => void;
   allMembers: TribeMember[];
   allCastaways?: Castaway[];
-  eliminatedCastawayIds?: string[]; // IDs of castaways eliminated this season
+  eliminatedCastawayIds?: string[];
+  castawayPoints?: Record<string, number>; // Points earned while on this team's roster
+  castawaySeasonScores?: Record<string, number>; // Cumulative season scores per castaway
 }
 
 export default function TribeCard({
@@ -34,6 +36,8 @@ export default function TribeCard({
   allMembers: _allMembers,
   allCastaways = [],
   eliminatedCastawayIds = [],
+  castawayPoints = {},
+  castawaySeasonScores = {},
 }: TribeCardProps) {
   const getRankColor = (rankNum: number) => {
     if (rankNum === 1) return "#FFD700"; // Gold
@@ -53,6 +57,8 @@ export default function TribeCard({
             : "th";
     return `${rankNum}${suffix}`;
   };
+
+  const roster = member.roster || [];
 
   return (
     <Card
@@ -143,13 +149,13 @@ export default function TribeCard({
                 variant="h6"
                 sx={{ fontWeight: 700, color: "#E85D2A" }}
               >
-                {member.points}
+                {member.totalPoints}
               </Typography>
             </Box>
           </Stack>
 
           {/* Roster */}
-          {member.roster && member.roster.length > 0 && (
+          {roster.length > 0 && (
             <Box>
               <Typography
                 variant="caption"
@@ -161,7 +167,7 @@ export default function TribeCard({
                 }}
               >
                 Roster (
-                {member.roster.filter((r) => r.status !== "dropped").length})
+                {roster.filter((id) => !eliminatedCastawayIds.includes(id)).length})
               </Typography>
               <Box
                 sx={{
@@ -173,71 +179,75 @@ export default function TribeCard({
                   gap: { xs: 1.5, sm: 1 },
                 }}
               >
-                {member.roster
-                  .filter((entry) => entry.status !== "dropped")
-                  .map((entry) => {
-                    const castaway = allCastaways.find(
-                      (c) => c.id === entry.castawayId,
-                    );
-                    const isEliminated = eliminatedCastawayIds.includes(
-                      entry.castawayId,
-                    );
-                    const statusColor = isEliminated
-                      ? "#999"
-                      : entry.status === "dropped"
-                        ? "#E85D2A"
-                        : "#20B2AA";
-                    return (
-                      <Box
-                        key={entry.castawayId}
+                {roster.map((castawayId) => {
+                  const castaway = allCastaways.find(
+                    (c) => c.id === castawayId,
+                  );
+                  const isEliminated = eliminatedCastawayIds.includes(castawayId);
+                  const statusColor = isEliminated ? "#999" : "#20B2AA";
+                  const rosteredPts = castawayPoints[castawayId] || 0;
+                  const seasonPts = castawaySeasonScores[castawayId] || 0;
+                  return (
+                    <Box
+                      key={castawayId}
+                      sx={{
+                        p: 1,
+                        borderRadius: 1,
+                        border: `1px solid ${statusColor}`,
+                        bgcolor: `${statusColor}11`,
+                        textAlign: "center",
+                        opacity: isEliminated ? 0.5 : 1,
+                        filter: isEliminated ? "grayscale(100%)" : "none",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
                         sx={{
-                          p: 1,
-                          borderRadius: 1,
-                          border: `1px solid ${statusColor}`,
-                          bgcolor: `${statusColor}11`,
-                          textAlign: "center",
-                          opacity: isEliminated ? 0.5 : 1,
-                          filter: isEliminated ? "grayscale(100%)" : "none",
+                          fontWeight: 500,
+                          fontSize: { xs: "0.8rem", sm: "0.75rem" },
+                          display: "block",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                         }}
                       >
+                        {castaway?.name?.split(" ")[0] || "Unknown"}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: { xs: "0.75rem", sm: "0.7rem" },
+                          color: statusColor,
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        {rosteredPts} pts
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: { xs: "0.65rem", sm: "0.6rem" },
+                          color: "text.secondary",
+                          display: "block",
+                        }}
+                      >
+                        {seasonPts} season
+                      </Typography>
+                      {isEliminated && (
                         <Typography
                           variant="caption"
                           sx={{
-                            fontWeight: 500,
-                            fontSize: { xs: "0.8rem", sm: "0.75rem" },
-                            display: "block",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {castaway?.name?.split(" ")[0] || "Unknown"}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: { xs: "0.75rem", sm: "0.7rem" },
+                            fontSize: { xs: "0.7rem", sm: "0.65rem" },
                             color: statusColor,
-                            fontWeight: 600,
-                            display: "block",
+                            textTransform: "uppercase",
                           }}
                         >
-                          {entry.accumulatedPoints} pts
+                          eliminated
                         </Typography>
-                        {entry.status !== "active" && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              fontSize: { xs: "0.7rem", sm: "0.65rem" },
-                              color: statusColor,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            {isEliminated ? "eliminated" : entry.status}
-                          </Typography>
-                        )}
-                      </Box>
-                    );
-                  })}
+                      )}
+                    </Box>
+                  );
+                })}
               </Box>
             </Box>
           )}
@@ -264,7 +274,7 @@ export default function TribeCard({
                   Edit Tribe
                 </Button>
               )}
-              {onAddDrop && member.roster && member.roster.length > 0 && (
+              {onAddDrop && roster.length > 0 && (
                 <Button
                   onClick={onAddDrop}
                   variant="outlined"
