@@ -121,13 +121,13 @@ export default function ManageLeagueDialog({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth aria-labelledby="manage-league-dialog-title">
+        <DialogTitle id="manage-league-dialog-title" sx={{ fontWeight: 600 }}>
           Manage League: {league.name}
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Stack spacing={3}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {error && <Alert severity="error" role="alert">{error}</Alert>}
 
             {/* Add/Drop Restriction Toggle */}
             <Card sx={{ bgcolor: "rgba(232, 93, 42, 0.05)" }}>
@@ -167,6 +167,7 @@ export default function ManageLeagueDialog({
                   <input
                     type="date"
                     value={leagueStartDate}
+                    aria-label="League start date"
                     onChange={async (e) => {
                       setLeagueStartDate(e.target.value);
                       try {
@@ -273,7 +274,7 @@ export default function ManageLeagueDialog({
                               color: "#E85D2A",
                               "&:hover": { bgcolor: "rgba(232, 93, 42, 0.1)" },
                             }}
-                            title={`Remove ${member.displayName}`}
+                            aria-label={`Remove ${member.displayName} from league`}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -364,8 +365,9 @@ export default function ManageLeagueDialog({
         <Dialog
           open={!!memberToRemove}
           onClose={() => !loading && setMemberToRemove(null)}
+          aria-labelledby="remove-member-dialog-title"
         >
-          <DialogTitle>Remove Member?</DialogTitle>
+          <DialogTitle id="remove-member-dialog-title">Remove Member?</DialogTitle>
           <DialogContent>
             <Typography variant="body2" sx={{ mt: 2 }}>
               Are you sure you want to remove{" "}
@@ -405,9 +407,10 @@ export default function ManageLeagueDialog({
       <Dialog
         open={confirmDeleteOpen}
         onClose={() => !loading && setConfirmDeleteOpen(false)}
+        aria-labelledby="delete-league-dialog-title"
       >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningIcon sx={{ color: "#E85D2A" }} />
+        <DialogTitle id="delete-league-dialog-title" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningIcon aria-hidden="true" sx={{ color: "#E85D2A" }} />
           Delete League?
         </DialogTitle>
         <DialogContent>

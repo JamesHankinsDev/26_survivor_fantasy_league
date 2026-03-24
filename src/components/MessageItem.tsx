@@ -292,6 +292,8 @@ export default function MessageItem({
   return (
     <>
       <Paper
+        component="article"
+        aria-label={`Message from ${message.authorName}`}
         elevation={1}
         sx={{
           p: 2,
@@ -325,7 +327,7 @@ export default function MessageItem({
               </Box>
             </Box>
             {(canEdit || canDelete) && (
-              <IconButton size="small" onClick={handleMenuOpen}>
+              <IconButton size="small" onClick={handleMenuOpen} aria-label="Message options">
                 <MoreVertIcon />
               </IconButton>
             )}
@@ -337,9 +339,11 @@ export default function MessageItem({
                 fullWidth
                 multiline
                 rows={3}
+                label="Edit message"
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
                 disabled={saving}
+                slotProps={{ inputLabel: { shrink: true } }}
               />
               <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                 <Button
@@ -378,6 +382,7 @@ export default function MessageItem({
                     <Chip
                       size="small"
                       label={`${emoji} ${reactions.length}`}
+                      aria-label={`${reactions.length} ${reactions.map((r) => r.userName).join(", ")} reacted with ${emoji}. Click to toggle your reaction`}
                       onClick={() => handleAddReaction(emoji)}
                       sx={{
                         cursor: "pointer",
@@ -457,6 +462,7 @@ export default function MessageItem({
             <Tooltip key={emoji} title={label}>
               <IconButton
                 size="large"
+                aria-label={`React with ${label}`}
                 onClick={() => handleAddReaction(emoji)}
                 sx={{
                   fontSize: "1.5rem",
@@ -476,8 +482,9 @@ export default function MessageItem({
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="delete-msg-dialog-title"
       >
-        <DialogTitle>Delete Message</DialogTitle>
+        <DialogTitle id="delete-msg-dialog-title">Delete Message</DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to delete this message? This action cannot be

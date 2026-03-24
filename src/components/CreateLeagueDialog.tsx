@@ -161,11 +161,11 @@ export default function CreateLeagueDialog({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 600 }}>Create New League</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth aria-labelledby="create-league-dialog-title">
+      <DialogTitle id="create-league-dialog-title" sx={{ fontWeight: 600 }}>Create New League</DialogTitle>
       <DialogContent sx={{ pt: 2 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" role="alert" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
@@ -207,7 +207,7 @@ export default function CreateLeagueDialog({
             },
           }}
         >
-          {loading ? <CircularProgress size={24} /> : "Create League"}
+          {loading ? <CircularProgress size={24} aria-label="Creating league" /> : "Create League"}
         </Button>
       </DialogActions>
     </Dialog>

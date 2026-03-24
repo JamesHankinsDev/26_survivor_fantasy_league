@@ -87,8 +87,11 @@ export default function LeaderboardPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
-        <CircularProgress />
+      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }} aria-busy="true">
+        <CircularProgress aria-label="Loading leaderboard" />
+        <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>
+          Loading leaderboard...
+        </Typography>
       </Container>
     );
   }
@@ -123,6 +126,7 @@ export default function LeaderboardPage() {
     >
       <Container maxWidth="lg">
         <Typography
+          component="h1"
           variant="h4"
           sx={{ mb: 3, fontWeight: "bold", color: "text.primary" }}
         >
@@ -212,7 +216,7 @@ export default function LeaderboardPage() {
 
         {/* Leaderboard Table - Desktop */}
         <TableContainer component={Paper} sx={{ display: { xs: "none", md: "block" } }}>
-          <Table>
+          <Table aria-label={`${selectedLeague.name} leaderboard standings`}>
             <TableHead
               sx={{
                 backgroundColor: (theme) =>
@@ -273,7 +277,7 @@ export default function LeaderboardPage() {
                             : "inherit",
                       }}
                     >
-                      {member.rank === 1 && "🏆"} {member.rank}
+                      {member.rank === 1 && <span role="img" aria-label="1st place trophy">🏆</span>} {member.rank}
                     </TableCell>
                     <TableCell>
                       {member.displayName || member.userId}
@@ -369,7 +373,7 @@ export default function LeaderboardPage() {
                             : "text.primary",
                       }}
                     >
-                      {member.rank === 1 && "🏆 "}
+                      {member.rank === 1 && <><span role="img" aria-label="1st place trophy">🏆</span>{" "}</>}
                       #{member.rank}
                     </Typography>
                     <Chip
@@ -454,9 +458,9 @@ export default function LeaderboardPage() {
                       mb: 1,
                     }}
                   >
-                    {member.rank === 1 && "🏆"}
-                    {member.rank === 2 && "🥈"}
-                    {member.rank === 3 && "🥉"}
+                    {member.rank === 1 && <span role="img" aria-label="1st place">🏆</span>}
+                    {member.rank === 2 && <span role="img" aria-label="2nd place">🥈</span>}
+                    {member.rank === 3 && <span role="img" aria-label="3rd place">🥉</span>}
                   </Typography>
                   <Typography
                     variant="h6"

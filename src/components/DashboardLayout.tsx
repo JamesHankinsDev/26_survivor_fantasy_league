@@ -183,6 +183,7 @@ export default function DashboardLayout({
           <Tooltip title="Toggle light/dark mode">
             <IconButton
               onClick={toggleTheme}
+              aria-label={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
               sx={{
                 width: "100%",
                 color: "text.primary",

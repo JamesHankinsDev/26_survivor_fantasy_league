@@ -68,6 +68,7 @@ export default function TribeCard({
 
   return (
     <Card
+      aria-label={`${member.displayName}'s tribe, ${getRankTitle(rank)}, ${member.totalPoints} points`}
       sx={{
         borderLeft: `6px solid ${member.tribeColor}`,
         boxShadow: isCurrentUser ? "0 0 0 3px rgba(232, 93, 42, 0.2)" : 1,

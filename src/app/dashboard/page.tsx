@@ -107,6 +107,7 @@ export default function DashboardHome() {
   if (loadingLeagues) {
     return (
       <Box
+        aria-busy="true"
         sx={{
           flex: 1,
           bgcolor: "background.default",
@@ -116,7 +117,10 @@ export default function DashboardHome() {
       >
         <Container maxWidth="lg">
           <Box sx={{ textAlign: "center", py: 8 }}>
-            <CircularProgress sx={{ color: "#E85D2A" }} />
+            <CircularProgress sx={{ color: "#E85D2A" }} aria-label="Loading leagues" />
+            <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>
+              Loading your leagues...
+            </Typography>
           </Box>
         </Container>
       </Box>
@@ -245,6 +249,7 @@ export default function DashboardHome() {
       <Container maxWidth="lg">
         <Box sx={{ mb: { xs: 3, md: 4 }, display: "flex", alignItems: "center", gap: 2 }}>
           <Typography
+            component="h1"
             variant="h4"
             sx={{
               fontWeight: 700,
@@ -380,6 +385,7 @@ export default function DashboardHome() {
             }}
           >
             <Typography
+              component="h2"
               variant="h6"
               sx={{
                 fontWeight: 700,
@@ -402,7 +408,7 @@ export default function DashboardHome() {
 
           {/* Desktop Table View */}
           <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
-            <Table>
+            <Table aria-label={`${selectedLeague.name} league standings`}>
               <TableHead>
                 <TableRow
                   sx={{

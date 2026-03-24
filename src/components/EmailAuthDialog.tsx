@@ -147,8 +147,8 @@ export default function EmailAuthDialog({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Sign In to Survivor Fantasy League</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth aria-labelledby="auth-dialog-title">
+      <DialogTitle id="auth-dialog-title">Sign In to Survivor Fantasy League</DialogTitle>
       <DialogContent>
         <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
           <Tabs
@@ -166,13 +166,13 @@ export default function EmailAuthDialog({
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" role="alert" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" role="status" sx={{ mb: 2 }}>
             {success}
           </Alert>
         )}
