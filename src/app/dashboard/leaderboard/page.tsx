@@ -69,6 +69,12 @@ export default function LeaderboardPage() {
   // Sort members by points and assign tie-aware ranks with trends
   const rankedMembers = withRankTrends(assignRanks(computedMembers));
 
+  /** Resolve player name: use auth user name for current user, ownerName for others */
+  const getPlayerName = (member: { userId: string; ownerName?: string; displayName: string }) =>
+    user && member.userId === user.uid
+      ? user.displayName || user.email || member.displayName
+      : member.ownerName || member.displayName;
+
   // Early returns AFTER all hooks to satisfy Rules of Hooks
   if (!user) {
     return null;
@@ -270,7 +276,7 @@ export default function LeaderboardPage() {
                       <RankTrendIndicator trend={member.trend} delta={member.trendDelta} />
                     </TableCell>
                     <TableCell>
-                      {member.displayName || member.userId}
+                      {getPlayerName(member)}
                       {isCurrentUser && (
                         <Chip
                           label="You"
@@ -377,7 +383,7 @@ export default function LeaderboardPage() {
 
                   {/* Tribe Owner */}
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    {member.displayName || member.userId}
+                    {getPlayerName(member)}
                     {isCurrentUser && (
                       <Chip
                         label="You"
@@ -457,7 +463,7 @@ export default function LeaderboardPage() {
                     variant="h6"
                     sx={{ fontWeight: "bold", mb: 1, color: "text.primary" }}
                   >
-                    {member.displayName || "Tribe Member"}
+                    {getPlayerName(member)}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5, mb: 2 }}>
                     <Typography

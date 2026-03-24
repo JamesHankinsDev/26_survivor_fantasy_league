@@ -227,6 +227,12 @@ export default function DashboardHome() {
   const userIsTied = currentUserRanked?.isTied || false;
   const totalLeagues = leagues.length;
 
+  /** Resolve player name: use auth user name for current user, ownerName for others */
+  const getPlayerName = (member: { userId: string; ownerName?: string; displayName: string }) =>
+    member.userId === user.uid
+      ? user.displayName || user.email || member.displayName
+      : member.ownerName || member.displayName;
+
   return (
     <Box
       sx={{
@@ -493,7 +499,7 @@ export default function DashboardHome() {
                         <Typography
                           sx={{ fontWeight: isCurrentUser ? 600 : 400 }}
                         >
-                          {member.displayName}
+                          {getPlayerName(member)}
                           {isCurrentUser && (
                             <Chip
                               label="You"
@@ -621,7 +627,7 @@ export default function DashboardHome() {
                             fontSize: "0.95rem",
                           }}
                         >
-                          {member.displayName}
+                          {getPlayerName(member)}
                         </Typography>
                         {isCurrentUser && (
                           <Chip

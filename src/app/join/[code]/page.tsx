@@ -151,6 +151,7 @@ export default function JoinLeaguePage() {
       const newMember = {
         userId: user.uid,
         displayName: sanitizedDisplayName,
+        ownerName: sanitizedDisplayName,
         avatar: sanitizedAvatar,
         tribeColor: "#20B2AA",
         totalPoints: 0,

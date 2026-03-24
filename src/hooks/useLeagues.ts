@@ -34,11 +34,15 @@ export function normalizeMember(member: any): TribeMember {
   // exclusively by useComputedScores so every view uses the same number.
   const totalPoints = member.totalPoints ?? member.points ?? 0;
 
+  // For existing data that predates ownerName, fall back to displayName
+  const ownerName = member.ownerName || member.displayName || "";
+
   return {
     ...member,
     roster,
     weeklyRosters,
     totalPoints,
+    ownerName,
   };
 }
 

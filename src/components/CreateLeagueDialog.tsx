@@ -90,6 +90,7 @@ export default function CreateLeagueDialog({
           {
             userId: user.uid,
             displayName: sanitizedDisplayName,
+            ownerName: sanitizedDisplayName,
             avatar: sanitizedAvatar,
             tribeColor: "#20B2AA",
             totalPoints: 0,
@@ -115,6 +116,7 @@ export default function CreateLeagueDialog({
         newLeague.memberDetails.push({
           userId: user.uid,
           displayName: user.displayName || "Unknown",
+          ownerName: user.displayName || "Unknown",
           avatar: user.photoURL || "",
           tribeColor: "#20B2AA",
           totalPoints: 0,

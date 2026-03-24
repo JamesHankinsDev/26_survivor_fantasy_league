@@ -9,7 +9,8 @@ export interface WeeklyRoster {
 // Member/Tribe data
 export interface TribeMember {
   userId: string;
-  displayName: string;
+  displayName: string; // Editable tribe/display name
+  ownerName?: string; // Original auth user name (immutable after join)
   avatar: string; // URL to avatar image
   tribeColor: string; // Hex color for tribe
   totalPoints: number; // Sum of all weeklyRoster weekScores

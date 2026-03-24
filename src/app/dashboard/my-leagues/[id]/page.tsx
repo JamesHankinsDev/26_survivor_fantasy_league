@@ -92,6 +92,30 @@ export default function LeagueDetailPage() {
     }
   }, [user, authLoading, league, router]);
 
+  // One-time backfill: write ownerName for the current user if missing.
+  // This ensures other users see the real name, not the edited tribe name.
+  useEffect(() => {
+    if (!league || !user) return;
+    const currentMember = league.memberDetails?.find((m) => m.userId === user.uid);
+    if (!currentMember) return;
+
+    const authName = user.displayName || user.email || "";
+    // Skip if ownerName is already set and differs from displayName (was set intentionally)
+    if (currentMember.ownerName && currentMember.ownerName !== currentMember.displayName) return;
+    // Skip if nothing to backfill
+    if (!authName || currentMember.ownerName === authName) return;
+
+    const updatedMembers = league.memberDetails.map((m) =>
+      m.userId === user.uid ? { ...m, ownerName: authName } : m,
+    );
+    const leagueRef = doc(db, "leagues", league.id);
+    updateDoc(leagueRef, { memberDetails: updatedMembers }).then(() => {
+      invalidateLeagueData();
+    }).catch(() => {
+      // Non-critical — silently ignore backfill failures
+    });
+  }, [league?.id, user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Get current user's tribe
   const currentUserTribe = useMemo(
     () => computedMembers.find((m) => m.userId === user?.uid),
