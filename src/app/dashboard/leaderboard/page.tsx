@@ -20,7 +20,7 @@ import {
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { TribeMember } from "@/types/league";
+import { assignRanks } from "@/types/league";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useEliminatedCastaways } from "@/hooks/useCastaways";
@@ -28,10 +28,6 @@ import { useComputedScores } from "@/hooks/useScores";
 
 // Prevent static generation for this page
 export const dynamic = "force-dynamic";
-
-interface LeagueMember extends TribeMember {
-  rank: number;
-}
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
@@ -69,16 +65,8 @@ export default function LeaderboardPage() {
   );
 
   // Sort members by points (descending) and assign ranks
-  const rankedMembers: LeagueMember[] = computedMembers
-    .map((member, idx) => ({
-      ...member,
-      rank: idx + 1, // Will be updated after sort
-    }))
-    .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
-    .map((member, idx) => ({
-      ...member,
-      rank: idx + 1,
-    }));
+  // Sort members by points and assign tie-aware ranks
+  const rankedMembers = assignRanks(computedMembers);
 
   // Early returns AFTER all hooks to satisfy Rules of Hooks
   if (!user) {
@@ -277,7 +265,7 @@ export default function LeaderboardPage() {
                             : "inherit",
                       }}
                     >
-                      {member.rank === 1 && <span role="img" aria-label="1st place trophy">🏆</span>} {member.rank}
+                      {member.rank === 1 && <span role="img" aria-label="1st place trophy">🏆</span>} {member.isTied ? "T-" : ""}{member.rank}
                     </TableCell>
                     <TableCell>
                       {member.displayName || member.userId}
@@ -374,7 +362,7 @@ export default function LeaderboardPage() {
                       }}
                     >
                       {member.rank === 1 && <><span role="img" aria-label="1st place trophy">🏆</span>{" "}</>}
-                      #{member.rank}
+                      {member.isTied ? "T-" : "#"}{member.rank}
                     </Typography>
                     <Chip
                       label={`${activeCastaways}/5 Active`}
@@ -472,7 +460,7 @@ export default function LeaderboardPage() {
                     variant="body2"
                     sx={{ color: "text.secondary", mb: 2 }}
                   >
-                    #{member.rank}
+                    {member.isTied ? "T-" : "#"}{member.rank}
                   </Typography>
                   <Typography
                     variant="h5"

@@ -17,6 +17,7 @@ import { Castaway } from "@/types/castaway";
 interface TribeCardProps {
   member: TribeMember;
   rank: number;
+  isTied?: boolean;
   isCurrentUser?: boolean;
   onEdit?: () => void;
   onAddDrop?: () => void;
@@ -30,6 +31,7 @@ interface TribeCardProps {
 export default function TribeCard({
   member,
   rank,
+  isTied = false,
   isCurrentUser,
   onEdit,
   onAddDrop,
@@ -45,7 +47,7 @@ export default function TribeCard({
     return "#20B2AA"; // Default aqua
   };
 
-  const getRankLabel = (rankNum: number) => {
+  const getRankLabel = (rankNum: number, tied: boolean = false) => {
     const suffix =
       rankNum % 10 === 1 && rankNum !== 11
         ? "st"
@@ -54,21 +56,18 @@ export default function TribeCard({
           : rankNum % 10 === 3 && rankNum !== 13
             ? "rd"
             : "th";
-    return `${rankNum}${suffix}`;
+    return `${tied ? "T-" : ""}${rankNum}${suffix}`;
   };
 
-  const getRankTitle = (rankNum: number) => {
-    if (rankNum === 1) return "1st place";
-    if (rankNum === 2) return "2nd place";
-    if (rankNum === 3) return "3rd place";
-    return `${getRankLabel(rankNum)} place`;
+  const getRankTitle = (rankNum: number, tied: boolean = false) => {
+    return `${getRankLabel(rankNum, tied)} place`;
   };
 
   const roster = member.roster || [];
 
   return (
     <Card
-      aria-label={`${member.displayName}'s tribe, ${getRankTitle(rank)}, ${member.totalPoints} points`}
+      aria-label={`${member.displayName}'s tribe, ${getRankTitle(rank, isTied)}, ${member.totalPoints} points`}
       sx={{
         borderLeft: `6px solid ${member.tribeColor}`,
         boxShadow: isCurrentUser ? "0 0 0 3px rgba(232, 93, 42, 0.2)" : 1,
@@ -106,7 +105,7 @@ export default function TribeCard({
                 </Typography>
                 {rank <= 3 && (
                   <EmojiEventsIcon
-                    aria-label={getRankTitle(rank)}
+                    aria-label={getRankTitle(rank, isTied)}
                     sx={{ color: getRankColor(rank), fontSize: "20px" }}
                   />
                 )}
@@ -141,13 +140,13 @@ export default function TribeCard({
               </Typography>
               <Typography
                 variant="h6"
-                aria-label={getRankTitle(rank)}
+                aria-label={getRankTitle(rank, isTied)}
                 sx={{
                   color: getRankColor(rank),
                   fontWeight: 700,
                 }}
               >
-                {getRankLabel(rank)}
+                {getRankLabel(rank, isTied)}
               </Typography>
             </Box>
             <Box>

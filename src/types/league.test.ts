@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   getMemberRank,
+  assignRanks,
   generateJoinCode,
   generateLeagueId,
   getLeagueJoinUrl,
@@ -62,7 +63,7 @@ describe("league type helpers", () => {
       expect(rank).toBe(0);
     });
 
-    it("should handle tied scores correctly", () => {
+    it("should handle tied scores correctly — both get same rank", () => {
       const membersWithTie: TribeMember[] = [
         {
           userId: "user1",
@@ -86,17 +87,91 @@ describe("league type helpers", () => {
         },
       ];
 
-      // Both should get a rank (order may vary but both should be ranked)
+      // Both should get rank 1 (tied for 1st)
       const rank1 = getMemberRank(membersWithTie, "user1");
       const rank2 = getMemberRank(membersWithTie, "user2");
 
-      expect(rank1).toBeGreaterThan(0);
-      expect(rank2).toBeGreaterThan(0);
+      expect(rank1).toBe(1);
+      expect(rank2).toBe(1);
     });
 
     it("should handle empty members array", () => {
       const rank = getMemberRank([], "user1");
       expect(rank).toBe(0);
+    });
+  });
+
+  describe("assignRanks", () => {
+    const makeMember = (id: string, name: string, points: number): TribeMember => ({
+      userId: id,
+      displayName: name,
+      avatar: "",
+      tribeColor: "#000",
+      totalPoints: points,
+      joinedAt: new Date(),
+      roster: [],
+      weeklyRosters: [],
+    });
+
+    it("should assign sequential ranks with no ties", () => {
+      const members = [makeMember("a", "A", 300), makeMember("b", "B", 200), makeMember("c", "C", 100)];
+      const ranked = assignRanks(members);
+
+      expect(ranked[0].rank).toBe(1);
+      expect(ranked[0].isTied).toBe(false);
+      expect(ranked[1].rank).toBe(2);
+      expect(ranked[1].isTied).toBe(false);
+      expect(ranked[2].rank).toBe(3);
+      expect(ranked[2].isTied).toBe(false);
+    });
+
+    it("should give same rank to tied members", () => {
+      const members = [makeMember("a", "A", 200), makeMember("b", "B", 200), makeMember("c", "C", 100)];
+      const ranked = assignRanks(members);
+
+      expect(ranked[0].rank).toBe(1);
+      expect(ranked[0].isTied).toBe(true);
+      expect(ranked[1].rank).toBe(1);
+      expect(ranked[1].isTied).toBe(true);
+      // Next rank skips to 3
+      expect(ranked[2].rank).toBe(3);
+      expect(ranked[2].isTied).toBe(false);
+    });
+
+    it("should handle three-way tie", () => {
+      const members = [makeMember("a", "A", 100), makeMember("b", "B", 100), makeMember("c", "C", 100)];
+      const ranked = assignRanks(members);
+
+      expect(ranked[0].rank).toBe(1);
+      expect(ranked[1].rank).toBe(1);
+      expect(ranked[2].rank).toBe(1);
+      expect(ranked.every((m) => m.isTied)).toBe(true);
+    });
+
+    it("should handle tie in the middle", () => {
+      const members = [
+        makeMember("a", "A", 300),
+        makeMember("b", "B", 200),
+        makeMember("c", "C", 200),
+        makeMember("d", "D", 100),
+      ];
+      const ranked = assignRanks(members);
+
+      expect(ranked.map((m) => m.rank)).toEqual([1, 2, 2, 4]);
+      expect(ranked.map((m) => m.isTied)).toEqual([false, true, true, false]);
+    });
+
+    it("should handle empty array", () => {
+      expect(assignRanks([])).toEqual([]);
+    });
+
+    it("should sort members by points descending", () => {
+      const members = [makeMember("c", "C", 100), makeMember("a", "A", 300), makeMember("b", "B", 200)];
+      const ranked = assignRanks(members);
+
+      expect(ranked[0].displayName).toBe("A");
+      expect(ranked[1].displayName).toBe("B");
+      expect(ranked[2].displayName).toBe("C");
     });
   });
 

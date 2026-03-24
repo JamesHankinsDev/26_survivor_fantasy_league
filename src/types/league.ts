@@ -95,13 +95,57 @@ export interface MessageEdit {
   previousContent: string;
 }
 
+/**
+ * Assign ranks to a sorted-by-points array of members, handling ties.
+ * Members with the same totalPoints receive the same rank number.
+ * The next rank after a tie skips ahead (e.g. 1, T-2, T-2, 4).
+ *
+ * Generic over T so extra properties (e.g. castawayPoints from ComputedMember)
+ * are preserved on the returned objects.
+ */
+export type RankedMember<T extends TribeMember = TribeMember> = T & {
+  rank: number;
+  isTied: boolean;
+};
+
+export const assignRanks = <T extends TribeMember>(members: T[]): RankedMember<T>[] => {
+  const sorted = [...members].sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+
+  // First pass: assign ranks (tied members share the same rank)
+  const ranked: RankedMember<T>[] = sorted.map((member, idx) => {
+    const rank =
+      idx === 0 || (sorted[idx - 1].totalPoints || 0) !== (member.totalPoints || 0)
+        ? idx + 1
+        : (undefined as unknown as number); // placeholder, filled below
+    return { ...member, rank, isTied: false };
+  });
+
+  // Fill in tied ranks from the previous non-tied entry
+  for (let i = 1; i < ranked.length; i++) {
+    if (ranked[i].rank === undefined || isNaN(ranked[i].rank)) {
+      ranked[i].rank = ranked[i - 1].rank;
+    }
+  }
+
+  // Second pass: mark ties (any rank that appears more than once)
+  const rankCounts = new Map<number, number>();
+  for (const m of ranked) {
+    rankCounts.set(m.rank, (rankCounts.get(m.rank) || 0) + 1);
+  }
+  for (const m of ranked) {
+    m.isTied = (rankCounts.get(m.rank) || 0) > 1;
+  }
+
+  return ranked;
+};
+
 // Helper to get member rank in league (1st place, 2nd place, etc)
 export const getMemberRank = (
   members: TribeMember[],
   userId: string,
 ): number => {
-  const sorted = [...members].sort((a, b) => b.totalPoints - a.totalPoints);
-  return sorted.findIndex((m) => m.userId === userId) + 1;
+  const ranked = assignRanks(members);
+  return ranked.find((m) => m.userId === userId)?.rank || 0;
 };
 
 // Generate a unique join code (6-character alphanumeric)

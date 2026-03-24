@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { TribeMember } from "@/types/league";
+import { assignRanks } from "@/types/league";
 import Link from "next/link";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { CURRENT_SEASON } from "@/data/seasons";
@@ -31,10 +31,6 @@ import AppTutorial from "@/components/AppTutorial";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import { useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useComputedScores } from "@/hooks/useScores";
-
-interface LeagueMember extends TribeMember {
-  rank: number;
-}
 
 export default function DashboardHome() {
   const { user } = useAuth();
@@ -220,21 +216,14 @@ export default function DashboardHome() {
     );
   }
 
-  // Sort members by points (descending) and assign ranks
-  const rankedMembers: LeagueMember[] = computedMembers
-    .map((member, idx) => ({
-      ...member,
-      rank: idx + 1,
-    }))
-    .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
-    .map((member, idx) => ({
-      ...member,
-      rank: idx + 1,
-    }));
+  // Sort members by points (descending) and assign tie-aware ranks
+  const rankedMembers = assignRanks(computedMembers);
 
   // Calculate user's stats
-  const userRank = rankedMembers.find((m) => m.userId === user.uid)?.rank || 0;
-  const userPoints = rankedMembers.find((m) => m.userId === user.uid)?.totalPoints || 0;
+  const currentUserRanked = rankedMembers.find((m) => m.userId === user.uid);
+  const userRank = currentUserRanked?.rank || 0;
+  const userPoints = currentUserRanked?.totalPoints || 0;
+  const userIsTied = currentUserRanked?.isTied || false;
   const totalLeagues = leagues.length;
 
   return (
@@ -299,7 +288,7 @@ export default function DashboardHome() {
                   variant="h5"
                   sx={{ color: "#20B2AA", fontWeight: 700 }}
                 >
-                  {userRank > 0 ? `#${userRank}` : "—"}
+                  {userRank > 0 ? `${userIsTied ? "T-" : "#"}${userRank}` : "—"}
                 </Typography>
                 {userRank === 1 && (
                   <EmojiEventsIcon sx={{ color: "#FFD700", fontSize: 28 }} />
@@ -467,7 +456,7 @@ export default function DashboardHome() {
                                       : "inherit",
                             }}
                           >
-                            {member.rank}
+                            {member.isTied ? "T-" : ""}{member.rank}
                           </Typography>
                           {member.rank === 1 && (
                             <EmojiEventsIcon
@@ -587,7 +576,7 @@ export default function DashboardHome() {
                                     : "text.primary",
                           }}
                         >
-                          #{member.rank}
+                          {member.isTied ? "T-" : "#"}{member.rank}
                         </Typography>
                         {member.rank === 1 && (
                           <EmojiEventsIcon

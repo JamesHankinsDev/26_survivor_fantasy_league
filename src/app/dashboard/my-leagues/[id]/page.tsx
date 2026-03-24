@@ -20,7 +20,7 @@ import { useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useComputedScores } from "@/hooks/useScores";
 import {
   TribeMember,
-  getMemberRank,
+  assignRanks,
 } from "@/types/league";
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
@@ -255,9 +255,9 @@ export default function LeagueDetailPage() {
     [league, user, currentUserTribe, invalidateLeagueData],
   );
 
-  // Sorted members and counts
+  // Sorted members with tie-aware ranks
   const sortedMembers = useMemo(
-    () => [...computedMembers].sort((a, b) => b.totalPoints - a.totalPoints),
+    () => assignRanks(computedMembers),
     [computedMembers],
   );
   const totalMembers =
@@ -417,7 +417,8 @@ export default function LeagueDetailPage() {
           ) : (
             <TribeCard
               member={currentUserTribe}
-              rank={getMemberRank(sortedMembers, user!.uid)}
+              rank={sortedMembers.find((m) => m.userId === user!.uid)?.rank || 0}
+              isTied={sortedMembers.find((m) => m.userId === user!.uid)?.isTied}
               isCurrentUser
               onEdit={() => setEditDialogOpen(true)}
               onAddDrop={() => setAddDropDialogOpen(true)}
@@ -469,7 +470,8 @@ export default function LeagueDetailPage() {
               <TribeCard
                 key={member.userId}
                 member={member}
-                rank={getMemberRank(sortedMembers, member.userId)}
+                rank={member.rank}
+                isTied={member.isTied}
                 allMembers={sortedMembers}
                 allCastaways={castaways}
                 eliminatedCastawayIds={eliminatedCastawayIds}
