@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="flame-outer" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#D94E23"/>
+      <stop offset="50%" stop-color="#E85D2A"/>
+      <stop offset="80%" stop-color="#FF8C42"/>
+      <stop offset="100%" stop-color="#FFD700"/>
+    </linearGradient>
+    <linearGradient id="flame-inner" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#FF8C42"/>
+      <stop offset="60%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#FFFDE7"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer flame -->
+  <path d="
+    M256 20
+    C280 80 330 130 340 190
+    C348 240 350 270 340 310
+    C355 280 380 250 390 210
+    C405 270 410 340 390 390
+    C370 440 320 480 256 492
+    C192 480 142 440 122 390
+    C102 340 107 270 122 210
+    C132 250 157 280 172 310
+    C162 270 164 240 172 190
+    C182 130 232 80 256 20Z
+  " fill="url(#flame-outer)"/>
+  <!-- Inner flame -->
+  <path d="
+    M256 160
+    C272 200 300 230 305 270
+    C310 300 305 340 290 370
+    C278 400 268 420 256 428
+    C244 420 234 400 222 370
+    C207 340 202 300 207 270
+    C212 230 240 200 256 160Z
+  " fill="url(#flame-inner)"/>
+  <!-- Core glow -->
+  <path d="
+    M256 260
+    C264 280 272 300 270 325
+    C268 345 262 365 256 375
+    C250 365 244 345 242 325
+    C240 300 248 280 256 260Z
+  " fill="#FFFFFF" opacity="0.7"/>
+</svg>

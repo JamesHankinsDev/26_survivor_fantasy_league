@@ -15,6 +15,13 @@ export const metadata: Metadata = {
   description:
     "Compete with friends in the ultimate Survivor Fantasy League experience. Draft teams, track scores, and dominate the leaderboard!",
   applicationName: "Survivor Fantasy League",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
