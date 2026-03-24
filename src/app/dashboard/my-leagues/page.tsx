@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Container,
   Box,
@@ -14,77 +14,26 @@ import {
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { League } from "@/types/league";
-
-interface LeaguePreview {
-  id: string;
-  name: string;
-  ownerName: string;
-  currentPlayers: number;
-  maxPlayers: number;
-}
+import { useUserLeagues } from "@/hooks/useLeagues";
 
 export default function MyLeaguesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [leagues, setLeagues] = useState<LeaguePreview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  // Use the same React Query hook as Home and Leaderboard — single cache
+  const {
+    data: leagues = [],
+    isLoading,
+    error: queryError,
+  } = useUserLeagues(user?.uid || null);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
-      return undefined;
-    }
-
-    if (!user) return undefined;
-
-    try {
-      // Listen for leagues where user is a member
-      const leaguesRef = collection(db, "leagues");
-      const q = query(leaguesRef, where("members", "array-contains", user.uid));
-
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const leagueList: LeaguePreview[] = [];
-          snapshot.forEach((doc) => {
-            const data = doc.data() as League;
-            leagueList.push({
-              id: doc.id,
-              name: data.name,
-              ownerName: data.ownerName,
-              currentPlayers: data.currentPlayers,
-              maxPlayers: data.maxPlayers,
-            });
-          });
-          setLeagues(leagueList);
-          setLoading(false);
-        },
-        (err) => {
-          console.error("Error fetching leagues:", err);
-          setError("Failed to load your leagues");
-          setLoading(false);
-        }
-      );
-
-      return () => unsubscribe();
-    } catch (err) {
-      console.error("Error setting up league listener:", err);
-      setError("Failed to load your leagues");
-      setLoading(false);
-      return undefined;
     }
   }, [user, authLoading, router]);
 
-  if (authLoading || loading) {
+  if (authLoading || isLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box
@@ -115,9 +64,9 @@ export default function MyLeaguesPage() {
         </Typography>
       </Box>
 
-      {error && (
+      {queryError && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          Failed to load your leagues
         </Alert>
       )}
 

@@ -27,20 +27,13 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
 import {
   ScoringEvent,
   ScoringEventType,
-  League,
 } from "@/types/league";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
+import { useOwnedLeagues } from "@/hooks/useLeagues";
 import {
   SCORING_CONFIG,
   calculatePointsFromEvents,
@@ -56,47 +49,18 @@ export default function AdminScoresPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: castaways = [], isLoading: castawaysLoading } = useSeasonCastaways(CURRENT_SEASON.number);
-  const [ownedLeagues, setOwnedLeagues] = useState<League[]>([]);
+  const { data: ownedLeagues = [], isLoading: leaguesLoading } = useOwnedLeagues(user?.uid || null);
   const [episodes, setEpisodes] = useState<
     Record<string, { events: ScoringEvent[] }>
   >({});
   const [episodeNumber, setEpisodeNumber] = useState(1);
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [lockWeek, setLockWeek] = useState(2);
   const [locking, setLocking] = useState(false);
   const [lockResult, setLockResult] = useState("");
-
-  // Load leagues owned by the user (for roster lock + score propagation)
-  useEffect(() => {
-    const loadOwnedLeagues = async () => {
-      if (!user) return;
-
-      try {
-        const leaguesRef = collection(db, "leagues");
-        const q = query(leaguesRef, where("ownerId", "==", user.uid));
-        const snapshot = await getDocs(q);
-        const leagues = snapshot.docs.map(
-          (doc) =>
-            ({
-              id: doc.id,
-              ...doc.data(),
-            } as League)
-        );
-        setOwnedLeagues(leagues);
-      } catch (err) {
-        console.error("Failed to load owned leagues:", err);
-        setError("Failed to load your leagues");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadOwnedLeagues();
-  }, [user]);
 
   // Initialize empty events when castaways load
   useEffect(() => {
@@ -248,7 +212,7 @@ export default function AdminScoresPage() {
     }
   };
 
-  if (loading || castawaysLoading) {
+  if (leaguesLoading || castawaysLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
         <CircularProgress />

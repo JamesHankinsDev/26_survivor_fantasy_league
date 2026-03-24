@@ -136,6 +136,29 @@ export function useUpdateLeague() {
 }
 
 /**
+ * Fetch leagues owned by a specific user
+ * Cached for 5 minutes, used by admin pages
+ */
+export function useOwnedLeagues(userId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.leagues.owned(userId || ""),
+    queryFn: async () => {
+      if (!userId) return [];
+
+      const q = query(
+        collection(db, "leagues"),
+        where("ownerId", "==", userId)
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(normalizeLeague);
+    },
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
  * Usage Examples:
  *
  * // In a component:

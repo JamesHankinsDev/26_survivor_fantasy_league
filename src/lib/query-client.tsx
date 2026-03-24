@@ -78,6 +78,7 @@ export const queryKeys = {
   leagues: {
     all: ["leagues"] as const,
     user: (userId: string) => ["leagues", "user", userId] as const,
+    owned: (userId: string) => ["leagues", "owned", userId] as const,
     detail: (id: string) => ["leagues", id] as const,
     members: (id: string) => ["leagues", id, "members"] as const,
   },
