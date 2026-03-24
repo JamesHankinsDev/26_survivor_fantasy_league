@@ -86,14 +86,14 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth aria-labelledby="draft-dialog-title">
+      <DialogTitle id="draft-dialog-title">
         Draft Your Team ({selected.size}/{DRAFT_SIZE})
       </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 2 }}>
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" role="alert" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
@@ -120,7 +120,17 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
               return (
                 <Card
                   key={castaway.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  aria-label={`${castaway.name}, ${seasonScore} points${isSelected ? ", selected" : ""}. ${selected.size >= DRAFT_SIZE && !isSelected ? "Draft full" : "Click to toggle"}.`}
                   onClick={() => toggleCastaway(castaway.id)}
+                  onKeyDown={(e: React.KeyboardEvent) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleCastaway(castaway.id);
+                    }
+                  }}
                   sx={{
                     cursor: "pointer",
                     height: "100%",
@@ -129,9 +139,13 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
                       : "2px solid transparent",
                     backgroundColor: isSelected ? "#e3f2fd" : "transparent",
                     transition: "all 0.2s ease",
-                    "&:hover": {
+                    "&:hover, &:focus-visible": {
                       boxShadow: 3,
                       borderColor: "#1976d2",
+                    },
+                    "&:focus-visible": {
+                      outline: "2px solid #1976d2",
+                      outlineOffset: 2,
                     },
                     position: "relative",
                   }}
@@ -181,6 +195,7 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
                       </Box>
                       {isSelected && (
                         <CheckCircleIcon
+                          aria-hidden="true"
                           sx={{
                             color: "#1976d2",
                             fontSize: "1.3rem",
@@ -231,8 +246,9 @@ export const DraftTeamModal: React.FC<DraftTeamModalProps> = ({
           onClick={handleSubmit}
           variant="contained"
           disabled={loading || selected.size !== DRAFT_SIZE}
+          aria-label={loading ? "Submitting draft" : `Submit draft, ${selected.size} of ${DRAFT_SIZE} selected`}
         >
-          {loading ? <CircularProgress size={24} /> : "Submit Draft"}
+          {loading ? <CircularProgress size={24} aria-label="Submitting" /> : "Submit Draft"}
         </Button>
       </DialogActions>
     </Dialog>

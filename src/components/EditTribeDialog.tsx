@@ -72,11 +72,11 @@ export default function EditTribeDialog({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Your Tribe</DialogTitle>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth aria-labelledby="edit-tribe-dialog-title">
+      <DialogTitle id="edit-tribe-dialog-title">Edit Your Tribe</DialogTitle>
       <DialogContent sx={{ pt: 2 }}>
         <Stack spacing={2}>
-          {error && <Alert severity="error">{error}</Alert>}
+          {error && <Alert severity="error" role="alert">{error}</Alert>}
 
           <TextField
             label="Display Name"
@@ -96,7 +96,7 @@ export default function EditTribeDialog({
           />
 
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }} id="tribe-color-label">
               Tribe Color
             </Typography>
             <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
@@ -104,6 +104,7 @@ export default function EditTribeDialog({
                 type="color"
                 value={tribeColor}
                 onChange={(e) => setTribeColor(e.target.value)}
+                aria-labelledby="tribe-color-label"
                 style={{
                   width: "60px",
                   height: "40px",

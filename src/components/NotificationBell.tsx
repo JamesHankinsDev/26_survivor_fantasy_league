@@ -140,6 +140,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         <IconButton
           onClick={handleOpen}
           color="inherit"
+          aria-label={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}` : "No new notifications"}
           sx={{
             bgcolor: "background.paper",
             boxShadow: 3,
@@ -153,9 +154,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         >
           <Badge badgeContent={unreadCount} color="error">
             {unreadCount > 0 ? (
-              <NotificationsIcon />
+              <NotificationsIcon aria-hidden="true" />
             ) : (
-              <NotificationsNoneIcon />
+              <NotificationsNoneIcon aria-hidden="true" />
             )}
           </Badge>
         </IconButton>

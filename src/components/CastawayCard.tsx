@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -21,17 +22,40 @@ export default function CastawayCard({
   isEliminated?: boolean;
   eventSummary?: CastawayEventSummary[];
 }) {
+  const [flipped, setFlipped] = useState(false);
+
+  const handleFlip = () => setFlipped((prev) => !prev);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleFlip();
+    }
+  };
+
   return (
     <Box
+      role="button"
+      tabIndex={0}
+      aria-label={`${castaway.name}${isEliminated ? " (eliminated)" : ""}. ${seasonScore} season points. Press Enter to ${flipped ? "show photo" : "show stats"}.`}
+      onClick={handleFlip}
+      onKeyDown={handleKeyDown}
       sx={{
         perspective: 1000,
         cursor: "pointer",
         height: "100%",
-        "&:hover .flip-inner": { transform: "rotateY(180deg)" },
+        "&:hover .flip-inner, &:focus .flip-inner": {
+          transform: flipped ? "rotateY(180deg)" : undefined,
+        },
+        "&:focus-visible": {
+          outline: "2px solid #E85D2A",
+          outlineOffset: 2,
+          borderRadius: 1,
+        },
       }}
     >
       <Box
         className="flip-inner"
+        aria-hidden="true"
         sx={{
           position: "relative",
           width: "100%",
@@ -39,6 +63,7 @@ export default function CastawayCard({
           minHeight: { xs: 320, sm: 360 },
           transformStyle: "preserve-3d",
           transition: "transform 0.6s",
+          transform: flipped ? "rotateY(180deg)" : "none",
         }}
       >
         {/* Front */}

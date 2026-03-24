@@ -193,6 +193,7 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
       maxWidth="md"
       fullWidth
       fullScreen={isMobile}
+      aria-labelledby="tutorial-dialog-title"
       PaperProps={{
         sx: {
           borderRadius: isMobile ? 0 : 2,
@@ -201,6 +202,7 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
       }}
     >
       <DialogTitle
+        id="tutorial-dialog-title"
         sx={{
           display: "flex",
           alignItems: "center",
@@ -213,7 +215,7 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
         <Typography variant="h5" fontWeight="bold" color="#E85D2A">
           App Tutorial
         </Typography>
-        <IconButton onClick={handleSkip} size="small">
+        <IconButton onClick={handleSkip} size="small" aria-label="Close tutorial">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -223,7 +225,11 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
           <Stepper activeStep={activeStep} alternativeLabel={!isMobile}>
             {tutorialSteps.map((step, index) => (
               <Step key={index}>
-                <StepLabel>{!isMobile && step.title}</StepLabel>
+                <StepLabel>
+                  {!isMobile ? step.title : (
+                    <span className="sr-only">{step.title}</span>
+                  )}
+                </StepLabel>
               </Step>
             ))}
           </Stepper>
@@ -266,7 +272,7 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
               }}
             >
               <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                💡 Quick Tips:
+                <span role="img" aria-hidden="true">💡</span> Quick Tips:
               </Typography>
               {currentStep.tips.map((tip, index) => (
                 <Typography
@@ -310,6 +316,7 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
             disabled={activeStep === 0}
             startIcon={<BackIcon />}
             variant="outlined"
+            aria-label={`Back to step ${activeStep}`}
           >
             Back
           </Button>
@@ -317,6 +324,7 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
             onClick={handleNext}
             variant="contained"
             endIcon={isLastStep ? null : <NextIcon />}
+            aria-label={isLastStep ? "Finish tutorial and get started" : `Next: ${tutorialSteps[activeStep + 1]?.title || ""}`}
             sx={{
               bgcolor: "#E85D2A",
               "&:hover": {

@@ -57,6 +57,13 @@ export default function TribeCard({
     return `${rankNum}${suffix}`;
   };
 
+  const getRankTitle = (rankNum: number) => {
+    if (rankNum === 1) return "1st place";
+    if (rankNum === 2) return "2nd place";
+    if (rankNum === 3) return "3rd place";
+    return `${getRankLabel(rankNum)} place`;
+  };
+
   const roster = member.roster || [];
 
   return (
@@ -98,6 +105,7 @@ export default function TribeCard({
                 </Typography>
                 {rank <= 3 && (
                   <EmojiEventsIcon
+                    aria-label={getRankTitle(rank)}
                     sx={{ color: getRankColor(rank), fontSize: "20px" }}
                   />
                 )}
@@ -132,6 +140,7 @@ export default function TribeCard({
               </Typography>
               <Typography
                 variant="h6"
+                aria-label={getRankTitle(rank)}
                 sx={{
                   color: getRankColor(rank),
                   fontWeight: 700,

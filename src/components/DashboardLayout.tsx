@@ -225,6 +225,40 @@ export default function DashboardLayout({
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      {/* Skip to main content link for keyboard/screen reader users */}
+      <Box
+        component="a"
+        href="#main-content"
+        sx={{
+          position: "absolute",
+          left: -9999,
+          top: "auto",
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+          zIndex: 9999,
+          "&:focus": {
+            position: "fixed",
+            top: 8,
+            left: 8,
+            width: "auto",
+            height: "auto",
+            overflow: "visible",
+            bgcolor: "#E85D2A",
+            color: "white",
+            px: 2,
+            py: 1,
+            borderRadius: 1,
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            textDecoration: "none",
+            boxShadow: 3,
+          },
+        }}
+      >
+        Skip to main content
+      </Box>
+
       {/* Fixed Notification Bell in Top Right */}
       {user && (
         <Box
@@ -252,7 +286,7 @@ export default function DashboardLayout({
         <Toolbar>
           <IconButton
             color="inherit"
-            aria-label="toggle drawer"
+            aria-label={drawerOpen ? "Close navigation menu" : "Open navigation menu"}
             onClick={handleToggleDrawer}
             edge="start"
             sx={{ mr: 2 }}
@@ -266,7 +300,11 @@ export default function DashboardLayout({
             Survivor League
           </Typography>
           <Tooltip title="Toggle light/dark mode">
-            <IconButton onClick={toggleTheme} sx={{ color: "text.primary" }}>
+            <IconButton
+              onClick={toggleTheme}
+              aria-label={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
+              sx={{ color: "text.primary" }}
+            >
               {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
           </Tooltip>
@@ -281,6 +319,7 @@ export default function DashboardLayout({
         variant="temporary"
         open={drawerOpen}
         onClose={handleToggleDrawer}
+        aria-label="Navigation menu"
         sx={{
           display: { xs: "block", md: "none" },
           "& .MuiDrawer-paper": {
@@ -294,6 +333,8 @@ export default function DashboardLayout({
 
       {/* Desktop Sidebar */}
       <Box
+        component="nav"
+        aria-label="Main navigation"
         sx={{
           display: { xs: "none", md: "block" },
           width: DRAWER_WIDTH,
@@ -309,6 +350,7 @@ export default function DashboardLayout({
       {/* Main Content */}
       <Box
         component="main"
+        id="main-content"
         sx={{
           flex: 1,
           display: "flex",

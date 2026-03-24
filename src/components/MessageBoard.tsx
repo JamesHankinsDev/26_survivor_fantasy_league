@@ -288,7 +288,7 @@ export default function MessageBoard({
   return (
     <Box>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" role="alert" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
@@ -301,11 +301,13 @@ export default function MessageBoard({
             multiline
             rows={3}
             fullWidth
+            label="Message"
             placeholder="Write a message... (Use @ to mention users or tribes)"
             value={messageContent}
             onChange={handleMessageChange}
             onKeyPress={handleKeyPress}
             disabled={sending}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
           {mentions.length > 0 && (
             <Box>
@@ -334,8 +336,9 @@ export default function MessageBoard({
               variant="contained"
               onClick={handleSendMessage}
               disabled={!messageContent.trim() || sending}
+              aria-label={sending ? "Sending message" : "Send message"}
             >
-              {sending ? <CircularProgress size={24} /> : "Send"}
+              {sending ? <CircularProgress size={24} aria-label="Sending" /> : "Send"}
             </Button>
           </Box>
         </Stack>
@@ -369,7 +372,7 @@ export default function MessageBoard({
       </Menu>
 
       {/* Messages List */}
-      <Stack spacing={2}>
+      <Stack spacing={2} aria-live="polite" aria-label="League messages">
         {messages.length === 0 ? (
           <Paper elevation={1} sx={{ p: 4, textAlign: "center" }}>
             <Typography color="text.secondary">

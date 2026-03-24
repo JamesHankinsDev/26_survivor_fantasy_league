@@ -94,12 +94,35 @@ function DraggableCastawayCard({
           ? "#999"
           : "transparent";
 
+  const statusText = isPendingDrop
+    ? "Pending drop"
+    : isPendingAdd
+      ? "Pending add"
+      : isEliminated
+        ? "Eliminated"
+        : "";
+
+  const actionHint = isMobile
+    ? "Tap to select"
+    : isDraggable
+      ? "Drag to move"
+      : "";
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
       {...(isMobile ? {} : { ...attributes, ...listeners })}
       onClick={isMobile && isDraggable ? onTap : undefined}
+      role={isMobile && isDraggable ? "button" : undefined}
+      tabIndex={isMobile && isDraggable ? 0 : undefined}
+      aria-label={`${name}, ${seasonScore} season points${statusText ? `, ${statusText}` : ""}${actionHint ? `. ${actionHint}` : ""}`}
+      onKeyDown={isMobile && isDraggable ? (e: React.KeyboardEvent) => {
+        if ((e.key === "Enter" || e.key === " ") && onTap) {
+          e.preventDefault();
+          onTap();
+        }
+      } : undefined}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -113,6 +136,10 @@ function DraggableCastawayCard({
           : "default",
         opacity: isDragging ? 0.3 : isEliminated ? 0.5 : 1,
         border: `2px solid ${borderColor}`,
+        "&:focus-visible": {
+          outline: "2px solid #E85D2A",
+          outlineOffset: 2,
+        },
         bgcolor: isPendingDrop
           ? "rgba(211, 47, 47, 0.05)"
           : isPendingAdd
@@ -244,6 +271,8 @@ function DroppableColumn({
   return (
     <Box
       ref={setNodeRef}
+      role="region"
+      aria-label={`${title} column, ${count}${maxCount ? ` of ${maxCount}` : ""} castaways`}
       sx={{
         flex: 1,
         minWidth: 0,
@@ -1133,9 +1162,10 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
         open={open}
         onClose={onClose}
         fullScreen
+        aria-labelledby="adddrop-mobile-title"
         PaperProps={{ sx: { bgcolor: "#fafafa" } }}
       >
-        <DialogTitle sx={{ fontWeight: 700, textAlign: "center", pb: 0 }}>
+        <DialogTitle id="adddrop-mobile-title" sx={{ fontWeight: 700, textAlign: "center", pb: 0 }}>
           Add/Drop Castaway
           <Typography variant="caption" sx={{ display: "block", color: "text.secondary", mt: 0.5 }}>
             Swipe right to keep/add, left to drop/skip
@@ -1248,9 +1278,10 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      aria-labelledby="adddrop-desktop-title"
       PaperProps={{ sx: { maxHeight: "90vh" } }}
     >
-      <DialogTitle sx={{ fontWeight: 700 }}>
+      <DialogTitle id="adddrop-desktop-title" sx={{ fontWeight: 700 }}>
         Add/Drop Castaway
         <Typography variant="caption" sx={{ display: "block", color: "text.secondary", mt: 0.5 }}>
           Drag castaways between columns, or click to select
@@ -1288,7 +1319,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
 
           {/* Pending changes summary */}
           {(dropName || addName) && (
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            <Box aria-live="polite" sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
               {dropName && (
                 <Chip
                   label={`Dropping: ${dropName}`}
