@@ -81,8 +81,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null);
       setLoading(true);
       await signInWithPopup(auth, googleProvider);
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to sign in with Google";
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign in with Google";
       setError(errorMessage);
       authLogger.error("Google Sign-In Error:", err);
       throw err;
@@ -100,8 +100,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null);
       setLoading(true);
       await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to create account";
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to create account";
       setError(errorMessage);
       authLogger.error("Email Sign-Up Error:", err);
       throw err;
@@ -119,8 +119,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null);
       setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to sign in";
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign in";
       setError(errorMessage);
       authLogger.error("Email Sign-In Error:", err);
       throw err;
@@ -144,8 +144,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       // Save email locally to complete sign-in after redirect
       window.localStorage.setItem("emailForSignIn", email);
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to send magic link";
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to send magic link";
       setError(errorMessage);
       authLogger.error("Magic Link Error:", err);
       throw err;
@@ -167,8 +167,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         throw new Error("Invalid sign-in link");
       }
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to complete sign-in";
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to complete sign-in";
       setError(errorMessage);
       authLogger.error("Magic Link Verification Error:", err);
       throw err;
@@ -186,8 +186,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null);
       await signOut(auth);
       setUser(null);
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to sign out";
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign out";
       setError(errorMessage);
       authLogger.error("Sign-Out Error:", err);
       throw err;

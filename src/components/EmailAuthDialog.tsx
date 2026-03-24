@@ -67,8 +67,8 @@ export default function EmailAuthDialog({
     try {
       await signInWithEmail(email, password);
       onClose();
-    } catch (err: any) {
-      setError(err?.message || "Failed to sign in");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to sign in");
     } finally {
       setLoading(false);
     }
@@ -103,8 +103,8 @@ export default function EmailAuthDialog({
     try {
       await signUpWithEmail(email, password);
       onClose();
-    } catch (err: any) {
-      setError(err?.message || "Failed to create account");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {
       setLoading(false);
     }
@@ -129,8 +129,8 @@ export default function EmailAuthDialog({
     try {
       await sendMagicLink(email);
       setSuccess("Check your email for a magic link to sign in!");
-    } catch (err: any) {
-      setError(err?.message || "Failed to send magic link");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send magic link");
     } finally {
       setLoading(false);
     }

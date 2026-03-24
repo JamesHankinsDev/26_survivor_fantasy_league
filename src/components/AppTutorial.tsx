@@ -177,7 +177,7 @@ export default function AppTutorial({ userId, open, onClose }: AppTutorialProps)
         { merge: true }
       );
     } catch (error) {
-      console.error("Error saving tutorial completion:", error);
+      // Non-critical — silently ignore tutorial save failures
     }
     onClose();
   };

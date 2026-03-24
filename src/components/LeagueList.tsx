@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Card,
@@ -17,80 +17,24 @@ import {
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useAuth } from "@/lib/auth-context";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { League, getLeagueJoinUrl } from "@/types/league";
+import { useOwnedLeagues } from "@/hooks/useLeagues";
 import ManageLeagueDialog from "./ManageLeagueDialog";
 
 interface LeagueListProps {
   refreshTrigger?: number;
 }
 
-export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
+export default function LeagueList({ refreshTrigger: _refreshTrigger = 0 }: LeagueListProps) {
   const { user } = useAuth();
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: leagues = [],
+    isLoading: loading,
+    error: queryError,
+  } = useOwnedLeagues(user?.uid || null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
-
-  useEffect(() => {
-    if (!user || !db) {
-      setLoading(false);
-      return undefined;
-    }
-
-    try {
-      // Query leagues where user is the owner
-      const leaguesRef = collection(db, "leagues");
-      const q = query(leaguesRef, where("ownerId", "==", user.uid));
-
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const leaguesList: League[] = [];
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            leaguesList.push({
-              id: doc.id,
-              name: data.name,
-              ownerId: data.ownerId,
-              ownerName: data.ownerName,
-              maxPlayers: data.maxPlayers,
-              currentPlayers: data.currentPlayers || 1,
-              joinCode: data.joinCode,
-              members: data.members || [],
-              memberDetails: data.memberDetails || [],
-              createdAt: data.createdAt?.toDate() || new Date(),
-              updatedAt: data.updatedAt?.toDate() || new Date(),
-              status: data.status || "active",
-              addDropRestrictionEnabled:
-                typeof data.addDropRestrictionEnabled !== "undefined"
-                  ? data.addDropRestrictionEnabled
-                  : false,
-              leagueStartDate: data.leagueStartDate || undefined,
-            });
-          });
-          setLeagues(leaguesList);
-          setLoading(false);
-          setError(null);
-        },
-        (err) => {
-          console.error("Error fetching leagues:", err);
-          setError("Failed to load leagues");
-          setLoading(false);
-        },
-      );
-
-      return () => unsubscribe();
-    } catch (err: any) {
-      console.error("Error setting up listener:", err);
-      setError(err.message || "An error occurred");
-      setLoading(false);
-      return undefined;
-    }
-  }, [user, db, refreshTrigger]);
 
   const handleCopyJoinLink = (joinCode: string) => {
     const joinUrl = getLeagueJoinUrl(joinCode);
@@ -110,7 +54,6 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
   };
 
   const handleLeagueDeleted = () => {
-    // The onSnapshot listener will automatically update the list
     handleCloseManageDialog();
   };
 
@@ -122,8 +65,8 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
     );
   }
 
-  if (error) {
-    return <Alert severity="error">{error}</Alert>;
+  if (queryError) {
+    return <Alert severity="error">Failed to load leagues</Alert>;
   }
 
   if (leagues.length === 0) {
@@ -169,7 +112,7 @@ export default function LeagueList({ refreshTrigger = 0 }: LeagueListProps) {
                   </Typography>
                 </Box>
                 <Chip
-                  label={league.status.toUpperCase()}
+                  label={(league.status || "active").toUpperCase()}
                   size="small"
                   sx={{
                     backgroundColor:

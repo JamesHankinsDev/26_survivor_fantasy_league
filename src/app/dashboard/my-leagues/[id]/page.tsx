@@ -71,7 +71,7 @@ export default function LeagueDetailPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
-  const [_isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
 
   // Check membership and redirect if not a member
   useEffect(() => {

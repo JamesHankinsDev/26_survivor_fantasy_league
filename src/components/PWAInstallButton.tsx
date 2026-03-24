@@ -7,6 +7,11 @@ import {
   Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
+import { logger } from "@/lib/logger";
+
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -28,7 +33,7 @@ export default function PWAInstallButton() {
     }
 
     // Check iOS standalone mode
-    if ((window.navigator as any).standalone === true) {
+    if ((window.navigator as NavigatorWithStandalone).standalone === true) {
       setIsInstalled(true);
       return;
     }
@@ -57,7 +62,7 @@ export default function PWAInstallButton() {
       setShowPrompt(false);
 
       // Track installation (optional - for analytics)
-      console.log("PWA was installed successfully");
+      logger.log("PWA was installed successfully");
     });
 
     return () => {
@@ -80,9 +85,9 @@ export default function PWAInstallButton() {
     const { outcome } = await deferredPrompt.userChoice;
 
     if (outcome === "accepted") {
-      console.log("User accepted the install prompt");
+      logger.log("User accepted the install prompt");
     } else {
-      console.log("User dismissed the install prompt");
+      logger.log("User dismissed the install prompt");
     }
 
     // Clear the deferredPrompt

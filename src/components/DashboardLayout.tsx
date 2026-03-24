@@ -35,6 +35,7 @@ import ForumIcon from "@mui/icons-material/Forum";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import { authLogger } from "@/lib/logger";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import NotificationBell from "@/components/NotificationBell";
 import PWAInstallButton from "@/components/PWAInstallButton";
@@ -110,7 +111,7 @@ export default function DashboardLayout({
       await logout();
       router.push("/");
     } catch (error) {
-      console.error("Logout error:", error);
+      authLogger.error("Logout failed:", error);
     }
   };
 

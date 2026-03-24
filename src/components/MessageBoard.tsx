@@ -30,6 +30,7 @@ import MessageItem from "./MessageItem";
 import PersonIcon from "@mui/icons-material/Person";
 import GroupIcon from "@mui/icons-material/Group";
 import { notifyMention } from "@/utils/notifications";
+import { dbLogger } from "@/lib/logger";
 import {
   sanitizeMessageContent,
   isValidMessageLength,
@@ -96,7 +97,7 @@ export default function MessageBoard({
         setLoading(false);
       },
       (err) => {
-        console.error("Error fetching messages:", err);
+        dbLogger.error("Error fetching messages:", err);
         setError("Failed to load messages");
         setLoading(false);
       },
@@ -263,7 +264,7 @@ export default function MessageBoard({
       setMessageContent("");
       setMentions([]);
     } catch (err) {
-      console.error("Error sending message:", err);
+      dbLogger.error("Error sending message:", err);
       setError("Failed to send message");
     } finally {
       setSending(false);

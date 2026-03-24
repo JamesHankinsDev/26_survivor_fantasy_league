@@ -29,6 +29,7 @@ import {
 import { League } from "@/types/league";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
+import { dbLogger } from "@/lib/logger";
 import {
   sanitizeDisplayName,
   sanitizeAvatarURL,
@@ -122,11 +123,11 @@ export default function JoinLeaguePage() {
 
         setStatus("success");
         setMessage("Ready to join!");
-      } catch (err: any) {
-        console.error("Error finding league:", err);
+      } catch (err) {
+        dbLogger.error("Error finding league:", err);
         setStatus("error");
         setMessage(
-          err.message || "An error occurred while looking up the league.",
+          err instanceof Error ? err.message : "An error occurred while looking up the league.",
         );
       }
     };
@@ -178,10 +179,10 @@ export default function JoinLeaguePage() {
       setTimeout(() => {
         router.push("/dashboard");
       }, 2000);
-    } catch (err: any) {
-      console.error("Error joining league:", err);
+    } catch (err) {
+      dbLogger.error("Error joining league:", err);
       setStatus("error");
-      setMessage(err.message || "Failed to join league.");
+      setMessage(err instanceof Error ? err.message : "Failed to join league.");
       setIsProcessing(false);
     }
   };

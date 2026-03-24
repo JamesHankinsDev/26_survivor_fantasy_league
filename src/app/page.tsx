@@ -19,6 +19,7 @@ import EmailIcon from "@mui/icons-material/Email";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { useAuth } from "@/lib/auth-context";
+import { authLogger } from "@/lib/logger";
 import EmailAuthDialog from "@/components/EmailAuthDialog";
 
 const theme = createTheme({
@@ -75,7 +76,7 @@ export default function LandingPage() {
       setIsLoading(true);
       await signInWithGoogle();
     } catch (error) {
-      console.error("Sign-in error:", error);
+      authLogger.error("Sign-in error:", error);
     } finally {
       setIsLoading(false);
     }

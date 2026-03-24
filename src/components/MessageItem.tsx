@@ -21,6 +21,7 @@ import {
   ListItemText,
   Tooltip,
   Popover,
+  Alert,
 } from "@mui/material";
 import {
   MoreVert as MoreVertIcon,
@@ -52,6 +53,7 @@ import {
   sanitizeMessageContent,
   isValidMessageLength,
 } from "@/utils/inputValidation";
+import { dbLogger } from "@/lib/logger";
 
 interface MessageItemProps {
   message: LeagueMessage;
@@ -80,6 +82,7 @@ export default function MessageItem({
   const [reactionAnchorEl, setReactionAnchorEl] = useState<null | HTMLElement>(
     null,
   );
+  const [editError, setEditError] = useState("");
 
   const isAuthor = message.authorId === currentUserId;
   const canEdit = isAuthor;
@@ -113,11 +116,12 @@ export default function MessageItem({
     }
 
     if (!isValidMessageLength(sanitizedContent)) {
-      alert("Message is too long or empty");
+      setEditError("Message is too long or empty");
       return;
     }
 
     setSaving(true);
+    setEditError("");
     try {
       const messageRef = doc(db, "leagues", leagueId, "messages", message.id);
 
@@ -135,8 +139,8 @@ export default function MessageItem({
 
       setIsEditing(false);
     } catch (err) {
-      console.error("Error updating message:", err);
-      alert("Failed to update message");
+      dbLogger.error("Error updating message:", err);
+      setEditError("Failed to update message");
     } finally {
       setSaving(false);
     }
@@ -154,8 +158,7 @@ export default function MessageItem({
       await deleteDoc(messageRef);
       setDeleteDialogOpen(false);
     } catch (err) {
-      console.error("Error deleting message:", err);
-      alert("Failed to delete message");
+      dbLogger.error("Error deleting message:", err);
     } finally {
       setSaving(false);
     }
@@ -207,7 +210,7 @@ export default function MessageItem({
 
       handleReactionClose();
     } catch (err) {
-      console.error("Error updating reaction:", err);
+      dbLogger.error("Error updating reaction:", err);
     }
   };
 
@@ -335,6 +338,11 @@ export default function MessageItem({
 
           {isEditing ? (
             <Box>
+              {editError && (
+                <Alert severity="error" role="alert" sx={{ mb: 1 }}>
+                  {editError}
+                </Alert>
+              )}
               <TextField
                 fullWidth
                 multiline

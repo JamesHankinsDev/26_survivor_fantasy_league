@@ -1,6 +1,7 @@
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { NotificationType } from "@/types/league";
+import { dbLogger } from "@/lib/logger";
 
 export interface CreateNotificationParams {
   userId: string;
@@ -8,7 +9,7 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   link: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string>;
 }
 
 export async function createNotification(params: CreateNotificationParams) {
@@ -27,7 +28,7 @@ export async function createNotification(params: CreateNotificationParams) {
       metadata: metadata || {},
     });
   } catch (error) {
-    console.error("Error creating notification:", error);
+    dbLogger.error("Error creating notification:", error);
   }
 }
 
@@ -43,7 +44,7 @@ export async function notifyMention(
     type: "mention",
     title: "You were mentioned!",
     message: `${mentionedBy} mentioned you in ${leagueName}`,
-    link: `/dashboard/my-leagues/${leagueId}/messages`,
+    link: `/dashboard/my-leagues/${leagueId}`,
     metadata: {
       leagueId,
       leagueName,
@@ -66,7 +67,7 @@ export async function notifyReaction(
     type: "new_message",
     title: "New reaction to your message!",
     message: `${reactedBy} reacted ${emoji} to your message in ${leagueName}`,
-    link: `/dashboard/my-leagues/${leagueId}/messages`,
+    link: `/dashboard/my-leagues/${leagueId}`,
     metadata: {
       leagueId,
       leagueName,

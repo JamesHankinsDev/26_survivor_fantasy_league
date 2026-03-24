@@ -43,6 +43,7 @@ import {
   ALL_EVENT_TYPES,
 } from "@/utils/eventScoringConfig";
 import { lockRostersForLeague, saveEpisodeScores } from "@/utils/scoring";
+import { dbLogger } from "@/lib/logger";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 
@@ -258,7 +259,7 @@ export default function AdminScoresPage() {
         `Rosters locked for Week ${effectiveLockWeek} across ${allLeagueIds.length} league(s) (${totalMembers} teams).`
       );
     } catch (err) {
-      console.error("Error locking rosters:", err);
+      dbLogger.error("Error locking rosters:", err);
       setError("Failed to lock rosters. Please try again.");
     } finally {
       setLocking(false);
@@ -301,7 +302,7 @@ export default function AdminScoresPage() {
 
       setEpisodeNumber(effectiveEpisodeNumber + 1);
     } catch (err) {
-      console.error("Error saving events:", err);
+      dbLogger.error("Error saving events:", err);
       setError("Failed to save events. Please try again.");
     } finally {
       setSaving(false);

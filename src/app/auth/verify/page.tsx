@@ -41,9 +41,9 @@ export default function VerifyEmailPage() {
         setTimeout(() => {
           router.push("/dashboard");
         }, 2000);
-      } catch (err: any) {
+      } catch (err) {
         setStatus("error");
-        setError(err?.message || "Failed to verify sign-in link");
+        setError(err instanceof Error ? err.message : "Failed to verify sign-in link");
       }
     };
 

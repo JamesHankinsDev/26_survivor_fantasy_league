@@ -143,9 +143,8 @@ export default function CreateLeagueDialog({
       onLeagueCreated(createdLeague);
       resetForm();
       onClose();
-    } catch (err: any) {
-      console.error("Error creating league:", err);
-      setError(err.message || "Failed to create league");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create league");
     } finally {
       setLoading(false);
     }

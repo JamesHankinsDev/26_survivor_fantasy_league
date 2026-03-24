@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
   Container,
@@ -19,42 +19,16 @@ import LeagueList from "@/components/LeagueList";
 import { League } from "@/types/league";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { useOwnedLeagues } from "@/hooks/useLeagues";
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [isOwner, setIsOwner] = useState(false);
-  const [checkingOwnership, setCheckingOwnership] = useState(true);
 
-  // Check if user owns any leagues
-  useEffect(() => {
-    const checkOwnership = async () => {
-      if (!user) {
-        setIsOwner(false);
-        setCheckingOwnership(false);
-        return;
-      }
-
-      try {
-        const leaguesRef = collection(db, "leagues");
-        const q = query(leaguesRef, where("ownerId", "==", user.uid));
-        const snapshot = await getDocs(q);
-        setIsOwner(!snapshot.empty);
-      } catch (err) {
-        console.error("Error checking league ownership:", err);
-        setIsOwner(false);
-      } finally {
-        setCheckingOwnership(false);
-      }
-    };
-
-    if (!authLoading) {
-      checkOwnership();
-    }
-  }, [user, authLoading, refreshTrigger]);
+  // Use cached React Query hook instead of raw Firestore query
+  const { data: ownedLeagues = [], isLoading: checkingOwnership } = useOwnedLeagues(user?.uid || null);
+  const isOwner = ownedLeagues.length > 0;
 
   const handleLeagueCreated = (_league: League) => {
     // Trigger a refresh of the league list and ownership check

@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { toggleCastawayEliminated } from "@/utils/scoring";
+import { dbLogger } from "@/lib/logger";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 
@@ -62,7 +63,7 @@ export default function AdminCastawaysPage() {
       );
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      console.error("Error toggling elimination:", err);
+      dbLogger.error("Error toggling elimination:", err);
       setError(
         err instanceof Error
           ? err.message

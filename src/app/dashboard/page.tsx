@@ -23,6 +23,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { dbLogger } from "@/lib/logger";
 import { assignRanks, withRankTrends } from "@/types/league";
 import RankTrendIndicator from "@/components/RankTrendIndicator";
 import Link from "next/link";
@@ -66,8 +67,8 @@ export default function DashboardHome() {
         if (!userData?.tutorialCompleted) {
           setShowTutorial(true);
         }
-      } catch (error) {
-        console.error("Error checking tutorial status:", error);
+      } catch (err) {
+        dbLogger.error("Error checking tutorial status:", err);
       }
     };
 
