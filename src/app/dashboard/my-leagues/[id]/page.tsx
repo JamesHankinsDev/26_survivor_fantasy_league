@@ -28,7 +28,6 @@ import EditTribeDialog from "@/components/EditTribeDialog";
 import { DraftTeamModal } from "@/components/DraftTeamModal";
 import { AddDropModal } from "@/components/AddDropModal";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import ForumIcon from "@mui/icons-material/Forum";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
@@ -344,16 +343,6 @@ export default function LeagueDetailPage() {
           >
             Back to My Leagues
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<ForumIcon />}
-            onClick={() =>
-              router.push(`/dashboard/my-leagues/${leagueId}/messages`)
-            }
-            sx={{ bgcolor: "#E85D2A", "&:hover": { bgcolor: "#d14d1a" } }}
-          >
-            Message Board
-          </Button>
         </Box>
         <Typography
           variant="h4"
@@ -553,6 +542,7 @@ export default function LeagueDetailPage() {
           addDropRestrictionEnabled={league?.addDropRestrictionEnabled ?? false}
         />
       )}
+
     </Container>
   );
 }

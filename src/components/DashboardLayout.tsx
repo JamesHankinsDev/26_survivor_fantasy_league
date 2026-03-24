@@ -3,7 +3,9 @@
 import { useState } from "react";
 import {
   Box,
+  Button,
   Drawer,
+  Fab,
   IconButton,
   List,
   ListItem,
@@ -15,7 +17,9 @@ import {
   Toolbar,
   Typography,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import HomeIcon from "@mui/icons-material/Home";
@@ -27,11 +31,14 @@ import LeaderboardIcon from "@mui/icons-material/Leaderboard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import ForumIcon from "@mui/icons-material/Forum";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import { useUserLeagues } from "@/hooks/useLeagues";
 import NotificationBell from "@/components/NotificationBell";
 import PWAInstallButton from "@/components/PWAInstallButton";
+import MessageBoard from "@/components/MessageBoard";
 
 const DRAWER_WIDTH = 280;
 
@@ -71,10 +78,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { logout, user } = useAuth();
   const { mode, toggleTheme } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("md"));
+
+  // Fetch the user's first active league for the global message board
+  const { data: userLeagues = [] } = useUserLeagues(user?.uid || null);
+  const activeLeague = userLeagues[0] || null;
+  const currentMember = activeLeague?.memberDetails?.find(
+    (m) => m.userId === user?.uid,
+  );
 
   // Build navigation items - Admin is now available to all users
   const navItems = [...baseNavItems, adminNavItem, aboutNavItem];
@@ -361,6 +378,143 @@ export default function DashboardLayout({
       >
         {children}
       </Box>
+
+      {/* Global Message Board Drawer */}
+      {user && activeLeague && (
+        <>
+          {/* Desktop: Fixed button in bottom-right */}
+          {!isMobile && !messageDrawerOpen && (
+            <Button
+              variant="contained"
+              startIcon={<ForumIcon />}
+              onClick={() => setMessageDrawerOpen(true)}
+              aria-label="Open message board"
+              sx={{
+                position: "fixed",
+                bottom: 24,
+                right: 24,
+                zIndex: 1200,
+                bgcolor: "#E85D2A",
+                "&:hover": { bgcolor: "#d14d1a" },
+                borderRadius: 6,
+                px: 3,
+                py: 1.25,
+                boxShadow: 4,
+                textTransform: "none",
+                fontWeight: 600,
+              }}
+            >
+              Message Board
+            </Button>
+          )}
+
+          {/* Mobile: FAB in bottom-right */}
+          {isMobile && !messageDrawerOpen && (
+            <Fab
+              color="primary"
+              aria-label="Open message board"
+              onClick={() => setMessageDrawerOpen(true)}
+              sx={{
+                position: "fixed",
+                bottom: 24,
+                right: 24,
+                bgcolor: "#E85D2A",
+                "&:hover": { bgcolor: "#d14d1a" },
+                zIndex: 1200,
+              }}
+            >
+              <ForumIcon />
+            </Fab>
+          )}
+
+          <Drawer
+            anchor={isMobile ? "bottom" : "right"}
+            open={messageDrawerOpen}
+            onClose={() => setMessageDrawerOpen(false)}
+            variant="temporary"
+            aria-label="League message board"
+            ModalProps={{ keepMounted: true }}
+            PaperProps={{
+              sx: isMobile
+                ? {
+                    height: "85vh",
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                  }
+                : {
+                    width: { md: 420, lg: 480 },
+                    maxWidth: "100vw",
+                  },
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+              }}
+            >
+              {/* Drawer Header */}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  px: 2,
+                  py: 1.5,
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "rgba(232, 93, 42, 0.05)",
+                  ...(isMobile && {
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                  }),
+                }}
+              >
+                {isMobile && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 36,
+                      height: 4,
+                      borderRadius: 2,
+                      bgcolor: "divider",
+                    }}
+                  />
+                )}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <ForumIcon sx={{ color: "#E85D2A", fontSize: 20 }} />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {activeLeague.name} Chat
+                  </Typography>
+                </Box>
+                <IconButton
+                  onClick={() => setMessageDrawerOpen(false)}
+                  size="small"
+                  aria-label="Close message board"
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+
+              {/* Drawer Body */}
+              <Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
+                <MessageBoard
+                  league={activeLeague}
+                  currentUserId={user.uid}
+                  currentUserName={
+                    currentMember?.displayName || user.displayName || user.email || "Anonymous"
+                  }
+                  currentUserAvatar={currentMember?.avatar}
+                />
+              </Box>
+            </Box>
+          </Drawer>
+        </>
+      )}
     </Box>
   );
 }

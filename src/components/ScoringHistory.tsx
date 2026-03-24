@@ -60,9 +60,13 @@ export default function ScoringHistory({
           };
         });
 
+        // Compute weekScore live from castaway episode points — the stored
+        // weekScore may be stale if the admin hasn't re-run propagation.
+        const liveWeekScore = castaways.reduce((sum, c) => sum + c.episodePoints, 0);
+
         return {
           week: roster.week,
-          weekScore: roster.weekScore || 0,
+          weekScore: liveWeekScore,
           castaways,
         };
       });
