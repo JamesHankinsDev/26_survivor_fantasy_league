@@ -61,8 +61,13 @@ service cloud.firestore {
         allow read: if isLeagueMember(leagueId);
         allow create: if isLeagueMember(leagueId) &&
                          request.auth.uid == request.resource.data.authorId;
-        allow update: if isLeagueMember(leagueId) &&
-                         request.auth.uid == resource.data.authorId;
+        // Author can edit any field (content, isEdited, editHistory, reactions)
+        // Other members can only modify the reactions array (add/remove reactions)
+        allow update: if isLeagueMember(leagueId) && (
+                         request.auth.uid == resource.data.authorId
+                         || request.resource.data.diff(resource.data).affectedKeys()
+                              .hasOnly(['reactions'])
+                       );
         allow delete: if isLeagueMember(leagueId) &&
                          (request.auth.uid == resource.data.authorId ||
                           isLeagueOwner(leagueId));
