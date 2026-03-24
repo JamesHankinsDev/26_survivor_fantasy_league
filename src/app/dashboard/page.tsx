@@ -30,6 +30,7 @@ import { CURRENT_SEASON } from "@/data/seasons";
 import AppTutorial from "@/components/AppTutorial";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import { useEliminatedCastaways } from "@/hooks/useCastaways";
+import { useComputedScores } from "@/hooks/useScores";
 
 interface LeagueMember extends TribeMember {
   rank: number;
@@ -89,6 +90,15 @@ export default function DashboardHome() {
       router.push("/");
     }
   }, [user, router]);
+
+  const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
+
+  // Recompute scores from episode data — single source of truth shared with
+  // Leaderboard and League Detail pages via the React Query cache.
+  const { computedMembers } = useComputedScores(
+    CURRENT_SEASON.number,
+    selectedLeague?.memberDetails || [],
+  );
 
   if (!user) {
     return null;
@@ -189,8 +199,6 @@ export default function DashboardHome() {
     );
   }
 
-  const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
-
   if (!selectedLeague) {
     return (
       <Box
@@ -208,16 +216,11 @@ export default function DashboardHome() {
     );
   }
 
-  // Get current user's tribe info
-  const currentUserTribe = selectedLeague.memberDetails?.find(
-    (m) => m.userId === user.uid,
-  );
-
   // Sort members by points (descending) and assign ranks
-  const rankedMembers: LeagueMember[] = (selectedLeague.memberDetails || [])
+  const rankedMembers: LeagueMember[] = computedMembers
     .map((member, idx) => ({
       ...member,
-      rank: idx + 1, // Will be updated after sort
+      rank: idx + 1,
     }))
     .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
     .map((member, idx) => ({
@@ -227,7 +230,7 @@ export default function DashboardHome() {
 
   // Calculate user's stats
   const userRank = rankedMembers.find((m) => m.userId === user.uid)?.rank || 0;
-  const userPoints = currentUserTribe?.totalPoints || 0;
+  const userPoints = rankedMembers.find((m) => m.userId === user.uid)?.totalPoints || 0;
   const totalLeagues = leagues.length;
 
   return (

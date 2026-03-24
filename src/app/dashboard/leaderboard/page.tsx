@@ -20,16 +20,8 @@ import {
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  QueryConstraint,
-} from "firebase/firestore";
-import { League, TribeMember } from "@/types/league";
-import { normalizeMember } from "@/hooks/useLeagues";
+import { TribeMember } from "@/types/league";
+import { useUserLeagues } from "@/hooks/useLeagues";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useComputedScores } from "@/hooks/useScores";
@@ -44,54 +36,26 @@ interface LeagueMember extends TribeMember {
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
+
+  // Use the same React Query hook as Home page — single cache for league data
+  const {
+    data: leagues = [],
+    isLoading: loading,
+  } = useUserLeagues(user?.uid || null);
 
   useEffect(() => {
     if (!user) {
       router.push("/");
-      return;
     }
+  }, [user, router]);
 
-    // Subscribe to leagues where user is a member
-    const leaguesRef = collection(db, "leagues");
-    const constraints: QueryConstraint[] = [
-      where("members", "array-contains", user.uid),
-    ];
-
-    const unsubscribe = onSnapshot(
-      query(leaguesRef, ...constraints),
-      (snapshot) => {
-        const loadedLeagues = snapshot.docs.map((doc) => {
-          const rawData = doc.data() as any;
-          const memberDetails = (rawData.memberDetails || []).map(normalizeMember);
-          return {
-            id: doc.id,
-            ...rawData,
-            memberDetails,
-            createdAt: rawData.createdAt?.toDate?.() || rawData.createdAt,
-            updatedAt: rawData.updatedAt?.toDate?.() || rawData.updatedAt,
-          } as League;
-        });
-
-        setLeagues(loadedLeagues);
-
-        // Auto-select first league
-        if (loadedLeagues.length > 0 && !selectedLeagueId) {
-          setSelectedLeagueId(loadedLeagues[0].id);
-        }
-
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error loading leagues:", error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user, router, selectedLeagueId]);
+  // Auto-select first league
+  useEffect(() => {
+    if (leagues.length > 0 && !selectedLeagueId) {
+      setSelectedLeagueId(leagues[0].id);
+    }
+  }, [leagues, selectedLeagueId]);
 
   const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(CURRENT_SEASON.number);
   const eliminatedIds = new Set(eliminatedCastawayIds);

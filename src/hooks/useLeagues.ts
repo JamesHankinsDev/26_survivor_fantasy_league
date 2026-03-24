@@ -30,15 +30,9 @@ export function normalizeMember(member: any): TribeMember {
 
   const weeklyRosters = member.weeklyRosters || [];
 
-  // Migrate old "points" field → "totalPoints", then recompute from weekScores if available
-  let totalPoints = member.totalPoints ?? member.points ?? 0;
-  const weekScoreSum = weeklyRosters.reduce(
-    (sum: number, r: any) => sum + (r.weekScore || 0),
-    0,
-  );
-  if (weekScoreSum > 0) {
-    totalPoints = weekScoreSum;
-  }
+  // Preserve the stored totalPoints as-is; live recomputation is handled
+  // exclusively by useComputedScores so every view uses the same number.
+  const totalPoints = member.totalPoints ?? member.points ?? 0;
 
   return {
     ...member,
