@@ -21,6 +21,7 @@ import { useComputedScores } from "@/hooks/useScores";
 import {
   TribeMember,
   assignRanks,
+  withRankTrends,
 } from "@/types/league";
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
@@ -255,9 +256,9 @@ export default function LeagueDetailPage() {
     [league, user, currentUserTribe, invalidateLeagueData],
   );
 
-  // Sorted members with tie-aware ranks
+  // Sorted members with tie-aware ranks and week-over-week trends
   const sortedMembers = useMemo(
-    () => assignRanks(computedMembers),
+    () => withRankTrends(assignRanks(computedMembers)),
     [computedMembers],
   );
   const totalMembers =
@@ -415,19 +416,26 @@ export default function LeagueDetailPage() {
               started!
             </Alert>
           ) : (
-            <TribeCard
-              member={currentUserTribe}
-              rank={sortedMembers.find((m) => m.userId === user!.uid)?.rank || 0}
-              isTied={sortedMembers.find((m) => m.userId === user!.uid)?.isTied}
-              isCurrentUser
-              onEdit={() => setEditDialogOpen(true)}
-              onAddDrop={() => setAddDropDialogOpen(true)}
-              allMembers={sortedMembers}
-              allCastaways={castaways}
-              eliminatedCastawayIds={eliminatedCastawayIds}
-              castawayPoints={currentUserTribe.castawayPoints}
-              castawaySeasonScores={castawaySeasonScores}
-            />
+            (() => {
+              const userRanked = sortedMembers.find((m) => m.userId === user!.uid);
+              return (
+                <TribeCard
+                  member={currentUserTribe}
+                  rank={userRanked?.rank || 0}
+                  isTied={userRanked?.isTied}
+                  trend={userRanked?.trend}
+                  trendDelta={userRanked?.trendDelta}
+                  isCurrentUser
+                  onEdit={() => setEditDialogOpen(true)}
+                  onAddDrop={() => setAddDropDialogOpen(true)}
+                  allMembers={sortedMembers}
+                  allCastaways={castaways}
+                  eliminatedCastawayIds={eliminatedCastawayIds}
+                  castawayPoints={currentUserTribe.castawayPoints}
+                  castawaySeasonScores={castawaySeasonScores}
+                />
+              );
+            })()
           )}
 
           {/* Scoring History */}
@@ -472,6 +480,8 @@ export default function LeagueDetailPage() {
                 member={member}
                 rank={member.rank}
                 isTied={member.isTied}
+                trend={member.trend}
+                trendDelta={member.trendDelta}
                 allMembers={sortedMembers}
                 allCastaways={castaways}
                 eliminatedCastawayIds={eliminatedCastawayIds}

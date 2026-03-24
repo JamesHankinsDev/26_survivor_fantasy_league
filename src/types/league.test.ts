@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getMemberRank,
   assignRanks,
+  withRankTrends,
   generateJoinCode,
   generateLeagueId,
   getLeagueJoinUrl,
@@ -172,6 +173,77 @@ describe("league type helpers", () => {
       expect(ranked[0].displayName).toBe("A");
       expect(ranked[1].displayName).toBe("B");
       expect(ranked[2].displayName).toBe("C");
+    });
+  });
+
+  describe("withRankTrends", () => {
+    const makeMember = (
+      id: string,
+      points: number,
+      weeklyRosters: { week: number; weekScore: number }[] = [],
+    ): TribeMember => ({
+      userId: id,
+      displayName: id,
+      avatar: "",
+      tribeColor: "#000",
+      totalPoints: points,
+      joinedAt: new Date(),
+      roster: [],
+      weeklyRosters: weeklyRosters.map((wr) => ({
+        ...wr,
+        castawayIds: [],
+        lockedAt: new Date(),
+      })),
+    });
+
+    it("should return 'new' when members have no weekly rosters", () => {
+      const members = [makeMember("a", 100), makeMember("b", 50)];
+      const ranked = withRankTrends(assignRanks(members));
+
+      expect(ranked[0].trend).toBe("new");
+      expect(ranked[1].trend).toBe("new");
+    });
+
+    it("should return 'new' when only one week of data exists", () => {
+      const members = [
+        makeMember("a", 100, [{ week: 1, weekScore: 100 }]),
+        makeMember("b", 50, [{ week: 1, weekScore: 50 }]),
+      ];
+      const ranked = withRankTrends(assignRanks(members));
+
+      expect(ranked[0].trend).toBe("new");
+      expect(ranked[1].trend).toBe("new");
+    });
+
+    it("should detect 'up' trend when rank improved", () => {
+      // Week 2: A=60, B=90. Previous (week 2 only): A was behind B.
+      // Week 3: A gets 50, B gets 10. New totals: A=110, B=100. A moves up.
+      const members = [
+        makeMember("a", 110, [{ week: 2, weekScore: 60 }, { week: 3, weekScore: 50 }]),
+        makeMember("b", 100, [{ week: 2, weekScore: 90 }, { week: 3, weekScore: 10 }]),
+      ];
+      const ranked = withRankTrends(assignRanks(members));
+
+      // A is now rank 1 (was rank 2 based on week 2 alone)
+      expect(ranked[0].userId).toBe("a");
+      expect(ranked[0].trend).toBe("up");
+      expect(ranked[0].trendDelta).toBe(1);
+
+      // B dropped from rank 1 to rank 2
+      expect(ranked[1].userId).toBe("b");
+      expect(ranked[1].trend).toBe("down");
+      expect(ranked[1].trendDelta).toBe(-1);
+    });
+
+    it("should detect 'same' trend when rank unchanged", () => {
+      const members = [
+        makeMember("a", 200, [{ week: 2, weekScore: 100 }, { week: 3, weekScore: 100 }]),
+        makeMember("b", 100, [{ week: 2, weekScore: 50 }, { week: 3, weekScore: 50 }]),
+      ];
+      const ranked = withRankTrends(assignRanks(members));
+
+      expect(ranked[0].trend).toBe("same");
+      expect(ranked[1].trend).toBe("same");
     });
   });
 

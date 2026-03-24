@@ -20,11 +20,12 @@ import {
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { assignRanks } from "@/types/league";
+import { assignRanks, withRankTrends } from "@/types/league";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useComputedScores } from "@/hooks/useScores";
+import RankTrendIndicator from "@/components/RankTrendIndicator";
 
 // Prevent static generation for this page
 export const dynamic = "force-dynamic";
@@ -65,8 +66,8 @@ export default function LeaderboardPage() {
   );
 
   // Sort members by points (descending) and assign ranks
-  // Sort members by points and assign tie-aware ranks
-  const rankedMembers = assignRanks(computedMembers);
+  // Sort members by points and assign tie-aware ranks with trends
+  const rankedMembers = withRankTrends(assignRanks(computedMembers));
 
   // Early returns AFTER all hooks to satisfy Rules of Hooks
   if (!user) {
@@ -266,6 +267,7 @@ export default function LeaderboardPage() {
                       }}
                     >
                       {member.rank === 1 && <span role="img" aria-label="1st place trophy">🏆</span>} {member.isTied ? "T-" : ""}{member.rank}
+                      <RankTrendIndicator trend={member.trend} delta={member.trendDelta} />
                     </TableCell>
                     <TableCell>
                       {member.displayName || member.userId}
@@ -363,6 +365,7 @@ export default function LeaderboardPage() {
                     >
                       {member.rank === 1 && <><span role="img" aria-label="1st place trophy">🏆</span>{" "}</>}
                       {member.isTied ? "T-" : "#"}{member.rank}
+                      <RankTrendIndicator trend={member.trend} delta={member.trendDelta} size="medium" />
                     </Typography>
                     <Chip
                       label={`${activeCastaways}/5 Active`}
@@ -456,12 +459,15 @@ export default function LeaderboardPage() {
                   >
                     {member.displayName || "Tribe Member"}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: "text.secondary", mb: 2 }}
-                  >
-                    {member.isTied ? "T-" : "#"}{member.rank}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5, mb: 2 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "text.secondary" }}
+                    >
+                      {member.isTied ? "T-" : "#"}{member.rank}
+                    </Typography>
+                    <RankTrendIndicator trend={member.trend} delta={member.trendDelta} />
+                  </Box>
                   <Typography
                     variant="h5"
                     sx={{

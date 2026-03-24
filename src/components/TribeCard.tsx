@@ -11,13 +11,16 @@ import {
   Avatar,
 } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import { TribeMember } from "@/types/league";
+import { TribeMember, RankTrend } from "@/types/league";
 import { Castaway } from "@/types/castaway";
+import RankTrendIndicator from "@/components/RankTrendIndicator";
 
 interface TribeCardProps {
   member: TribeMember;
   rank: number;
   isTied?: boolean;
+  trend?: RankTrend;
+  trendDelta?: number;
   isCurrentUser?: boolean;
   onEdit?: () => void;
   onAddDrop?: () => void;
@@ -32,6 +35,8 @@ export default function TribeCard({
   member,
   rank,
   isTied = false,
+  trend,
+  trendDelta = 0,
   isCurrentUser,
   onEdit,
   onAddDrop,
@@ -138,16 +143,19 @@ export default function TribeCard({
               <Typography variant="caption" sx={{ color: "text.secondary" }}>
                 Rank
               </Typography>
-              <Typography
-                variant="h6"
-                aria-label={getRankTitle(rank, isTied)}
-                sx={{
-                  color: getRankColor(rank),
-                  fontWeight: 700,
-                }}
-              >
-                {getRankLabel(rank, isTied)}
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Typography
+                  variant="h6"
+                  aria-label={getRankTitle(rank, isTied)}
+                  sx={{
+                    color: getRankColor(rank),
+                    fontWeight: 700,
+                  }}
+                >
+                  {getRankLabel(rank, isTied)}
+                </Typography>
+                {trend && <RankTrendIndicator trend={trend} delta={trendDelta} />}
+              </Box>
             </Box>
             <Box>
               <Typography variant="caption" sx={{ color: "text.secondary" }}>

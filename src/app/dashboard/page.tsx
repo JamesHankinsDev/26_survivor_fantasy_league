@@ -23,7 +23,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { assignRanks } from "@/types/league";
+import { assignRanks, withRankTrends } from "@/types/league";
+import RankTrendIndicator from "@/components/RankTrendIndicator";
 import Link from "next/link";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { CURRENT_SEASON } from "@/data/seasons";
@@ -216,8 +217,8 @@ export default function DashboardHome() {
     );
   }
 
-  // Sort members by points (descending) and assign tie-aware ranks
-  const rankedMembers = assignRanks(computedMembers);
+  // Sort members by points (descending) and assign tie-aware ranks with trends
+  const rankedMembers = withRankTrends(assignRanks(computedMembers));
 
   // Calculate user's stats
   const currentUserRanked = rankedMembers.find((m) => m.userId === user.uid);
@@ -467,6 +468,7 @@ export default function DashboardHome() {
                               }}
                             />
                           )}
+                          <RankTrendIndicator trend={member.trend} delta={member.trendDelta} />
                         </Box>
                       </TableCell>
                       <TableCell>
@@ -583,6 +585,7 @@ export default function DashboardHome() {
                             sx={{ color: "#FFD700", fontSize: 20 }}
                           />
                         )}
+                        <RankTrendIndicator trend={member.trend} delta={member.trendDelta} />
                       </Box>
                       <Typography
                         sx={{
