@@ -11,6 +11,10 @@ import {
   Alert,
   CircularProgress,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
@@ -28,6 +32,12 @@ export default function AdminCastawaysPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState<{
+    castawayId: string;
+    name: string;
+    currentlyEliminated: boolean;
+    totalPoints: number;
+  } | null>(null);
 
   const handleToggleEliminated = async (castawayId: string, currentlyEliminated: boolean) => {
     setSaving(castawayId);
@@ -118,7 +128,12 @@ export default function AdminCastawaysPage() {
           return (
             <Card
               key={castaway.id}
-              onClick={() => !isSaving && handleToggleEliminated(castaway.id, isEliminated)}
+              onClick={() => !isSaving && setConfirmTarget({
+                castawayId: castaway.id,
+                name: castaway.name,
+                currentlyEliminated: isEliminated,
+                totalPoints: castaway.totalPoints,
+              })}
               sx={{
                 cursor: isSaving ? "wait" : "pointer",
                 height: "100%",
@@ -218,6 +233,58 @@ export default function AdminCastawaysPage() {
       <Button variant="outlined" onClick={() => router.back()}>
         Back
       </Button>
+
+      {/* Elimination Confirmation Dialog */}
+      <Dialog
+        open={!!confirmTarget}
+        onClose={() => setConfirmTarget(null)}
+        aria-labelledby="confirm-elimination-title"
+      >
+        <DialogTitle id="confirm-elimination-title">
+          {confirmTarget?.currentlyEliminated
+            ? `Restore ${confirmTarget?.name}?`
+            : `Eliminate ${confirmTarget?.name}?`}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            {confirmTarget?.currentlyEliminated ? (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <strong>{confirmTarget.name}</strong> is currently marked as eliminated.
+                Restoring them will make them available for roster selection again across all leagues.
+              </Alert>
+            ) : (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <strong>{confirmTarget?.name}</strong> has{" "}
+                <strong>{confirmTarget?.totalPoints || 0} points</strong> this season.
+                Eliminating them will:
+                <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
+                  <li>Mark them as eliminated across all leagues</li>
+                  <li>Prevent them from being added to any roster</li>
+                  <li>Keep them on existing rosters (but grayed out)</li>
+                </Box>
+              </Alert>
+            )}
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              This change takes effect immediately and is visible to all users.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmTarget(null)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (confirmTarget) {
+                handleToggleEliminated(confirmTarget.castawayId, confirmTarget.currentlyEliminated);
+              }
+              setConfirmTarget(null);
+            }}
+            variant="contained"
+            color={confirmTarget?.currentlyEliminated ? "primary" : "error"}
+          >
+            {confirmTarget?.currentlyEliminated ? "Restore" : "Eliminate"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
