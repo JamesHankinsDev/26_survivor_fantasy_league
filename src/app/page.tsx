@@ -51,6 +51,7 @@ export default function LandingPage() {
     loading: authLoading,
     error: authError,
     signInWithGoogle,
+    enterDemoMode,
   } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -80,6 +81,12 @@ export default function LandingPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle Demo Mode
+  const handleDemoSignIn = () => {
+    enterDemoMode();
+    router.push("/dashboard");
   };
 
   // Show loading state while auth is initializing
@@ -244,6 +251,30 @@ export default function LandingPage() {
                       }}
                     >
                       {isLoading ? "Signing in..." : "Sign in with Google"}
+                    </Button>
+
+                    <Divider>
+                      <Typography variant="body2" color="text.secondary">
+                        Just browsing?
+                      </Typography>
+                    </Divider>
+
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      fullWidth
+                      onClick={handleDemoSignIn}
+                      sx={{
+                        py: 1.5,
+                        fontWeight: 500,
+                        fontSize: "0.95rem",
+                        textTransform: "none",
+                        borderRadius: 1.5,
+                        color: "text.secondary",
+                        borderColor: "divider",
+                      }}
+                    >
+                      Explore Demo (no sign-up)
                     </Button>
                   </Stack>
                 </CardContent>

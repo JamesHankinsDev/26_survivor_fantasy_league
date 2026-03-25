@@ -35,7 +35,7 @@ import { useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useComputedScores } from "@/hooks/useScores";
 
 export default function DashboardHome() {
-  const { user } = useAuth();
+  const { user, isDemoMode } = useAuth();
   const router = useRouter();
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -56,7 +56,7 @@ export default function DashboardHome() {
   // Check if user has completed tutorial
   useEffect(() => {
     const checkTutorialStatus = async () => {
-      if (!user) return;
+      if (!user || isDemoMode) return;
 
       try {
         const userRef = doc(db, "users", user.uid);

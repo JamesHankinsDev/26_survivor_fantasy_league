@@ -32,6 +32,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import ForumIcon from "@mui/icons-material/Forum";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -82,7 +83,7 @@ export default function DashboardLayout({
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { logout, user } = useAuth();
+  const { logout, user, isDemoMode, exitDemoMode } = useAuth();
   const { mode, toggleTheme } = useTheme();
   const muiTheme = useMuiTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("md"));
@@ -377,6 +378,44 @@ export default function DashboardLayout({
           mt: { xs: 7, md: 0 },
         }}
       >
+        {isDemoMode && (
+          <Box
+            sx={{
+              bgcolor: "#E85D2A",
+              color: "white",
+              py: 0.75,
+              px: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              fontSize: "0.85rem",
+              fontWeight: 500,
+            }}
+          >
+            <InfoOutlinedIcon sx={{ fontSize: 16 }} />
+            You are viewing a demo. Changes won&apos;t be saved.
+            <Button
+              size="small"
+              onClick={() => {
+                exitDemoMode();
+                router.push("/");
+              }}
+              sx={{
+                color: "white",
+                fontWeight: 700,
+                ml: 1,
+                textTransform: "none",
+                py: 0,
+                minHeight: 0,
+                fontSize: "0.85rem",
+                textDecoration: "underline",
+              }}
+            >
+              Exit Demo
+            </Button>
+          </Box>
+        )}
         {children}
       </Box>
 

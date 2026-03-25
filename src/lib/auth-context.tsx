@@ -15,11 +15,15 @@ import {
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { authLogger } from "@/lib/logger";
+import { DEMO_USER_ID } from "@/data/demo-data";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isDemoMode: boolean;
+  enterDemoMode: () => void;
+  exitDemoMode: () => void;
   signInWithGoogle: () => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -28,15 +32,54 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
+const DEMO_USER_OBJECT = {
+  uid: DEMO_USER_ID,
+  displayName: "Demo Player",
+  email: "demo@survivorfantasy.com",
+  photoURL: null,
+  emailVerified: true,
+  isAnonymous: false,
+  providerData: [],
+  metadata: {},
+  tenantId: null,
+  refreshToken: "",
+  getIdToken: async () => "",
+  getIdTokenResult: async () => ({} as any),
+  reload: async () => {},
+  toJSON: () => ({}),
+  delete: async () => {},
+} as unknown as User;
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("survivor_demo_mode") === "true";
+  });
+
+  const enterDemoMode = () => {
+    localStorage.setItem("survivor_demo_mode", "true");
+    setIsDemoMode(true);
+  };
+
+  const exitDemoMode = () => {
+    localStorage.removeItem("survivor_demo_mode");
+    setIsDemoMode(false);
+    setUser(null);
+  };
 
   // Monitor auth state changes
   useEffect(() => {
+    if (isDemoMode) {
+      setUser(DEMO_USER_OBJECT);
+      setLoading(false);
+      return;
+    }
+
     if (!auth) {
       setLoading(false);
       setError(
@@ -70,7 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isDemoMode]);
 
   // Sign in with Google
   const signInWithGoogle = async () => {
@@ -179,6 +222,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Sign out
   const logout = async () => {
+    if (isDemoMode) {
+      exitDemoMode();
+      return;
+    }
     try {
       if (!auth) {
         throw new Error("Firebase is not initialized");
@@ -200,6 +247,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         loading,
         error,
+        isDemoMode,
+        enterDemoMode,
+        exitDemoMode,
         signInWithGoogle,
         signUpWithEmail,
         signInWithEmail,

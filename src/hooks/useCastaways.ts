@@ -4,6 +4,8 @@ import { queryKeys } from "@/lib/query-client";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { Castaway } from "@/types/castaway";
+import { useAuth } from "@/lib/auth-context";
+import { DEMO_CASTAWAYS } from "@/data/demo-data";
 
 /**
  * Fetch castaways for a specific season from global seasons collection
@@ -12,9 +14,15 @@ import { Castaway } from "@/types/castaway";
  * Cached for 2 minutes (updates during episodes)
  */
 export function useSeasonCastaways(seasonNumber: number) {
+  const { isDemoMode } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.castaways.season(seasonNumber),
+    queryKey: isDemoMode
+      ? ["demo", "castaways", seasonNumber]
+      : queryKeys.castaways.season(seasonNumber),
     queryFn: async () => {
+      if (isDemoMode) return DEMO_CASTAWAYS;
+
       const snapshot = await getDocs(
         collection(db, "seasons", seasonNumber.toString(), "castaways")
       );
@@ -26,7 +34,7 @@ export function useSeasonCastaways(seasonNumber: number) {
         ...d.data(),
       })) as Castaway[];
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: isDemoMode ? Infinity : 2 * 60 * 1000,
   });
 }
 
