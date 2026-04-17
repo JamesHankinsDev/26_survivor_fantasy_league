@@ -71,6 +71,7 @@ export default function LeagueDetailPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
+  const [adminAddDropMember, setAdminAddDropMember] = useState<TribeMember | null>(null);
   const [, setIsSaving] = useState(false);
 
   // Check membership and redirect if not a member
@@ -278,6 +279,73 @@ export default function LeagueDetailPage() {
     },
     [league, user, currentUserTribe, invalidateLeagueData],
   );
+
+  // Admin add/drop submit — league owner editing another member's roster
+  const handleAdminSubmitAddDrop = useCallback(
+    async (dropId: string | null, addId: string | null) => {
+      if (!league || !user || !adminAddDropMember)
+        throw new Error("Missing league or user info");
+      setIsSaving(true);
+      try {
+        // Reset to prior week
+        if (dropId === "__RESET_TO_PRIOR_WEEK__") {
+          const previousRoster = getLatestLockedRoster(
+            adminAddDropMember.weeklyRosters || [],
+          );
+          if (previousRoster.length === 0)
+            throw new Error("No prior week roster to reset to.");
+
+          const updatedMembers = league.memberDetails.map((member) =>
+            member.userId === adminAddDropMember.userId
+              ? { ...member, roster: previousRoster }
+              : member,
+          );
+          const leagueRef = doc(db, "leagues", league.id);
+          await updateDoc(leagueRef, {
+            memberDetails: updatedMembers,
+            updatedAt: new Date(),
+          });
+          invalidateLeagueData();
+          setAdminAddDropMember(null);
+          setIsSaving(false);
+          return;
+        }
+
+        // Normal add/drop
+        let newRoster = [...(adminAddDropMember.roster || [])];
+        if (dropId) {
+          newRoster = newRoster.filter((id) => id !== dropId);
+        }
+        if (addId) {
+          newRoster.push(addId);
+        }
+
+        const updatedMembers = league.memberDetails.map((member) =>
+          member.userId === adminAddDropMember.userId
+            ? { ...member, roster: newRoster }
+            : member,
+        );
+        const leagueRef = doc(db, "leagues", league.id);
+        await updateDoc(leagueRef, {
+          memberDetails: updatedMembers,
+          updatedAt: new Date(),
+        });
+        invalidateLeagueData();
+        setAdminAddDropMember(null);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to process add/drop",
+        );
+        setIsSaving(false);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [league, user, adminAddDropMember, invalidateLeagueData],
+  );
+
+  const isLeagueOwner = user?.uid === league?.ownerId;
 
   // Sorted members with tie-aware ranks and week-over-week trends
   const sortedMembers = useMemo(
@@ -500,6 +568,7 @@ export default function LeagueDetailPage() {
                 eliminatedCastawayIds={eliminatedCastawayIds}
                 castawayPoints={member.castawayPoints}
                 castawaySeasonScores={castawaySeasonScores}
+                onAdminAddDrop={isLeagueOwner ? () => setAdminAddDropMember(member) : undefined}
               />
             ))}
         </Box>
@@ -540,6 +609,25 @@ export default function LeagueDetailPage() {
           }
           castawaySeasonScores={castawaySeasonScores}
           addDropRestrictionEnabled={league?.addDropRestrictionEnabled ?? false}
+        />
+      )}
+
+      {/* Admin Add/Drop Modal — league owner editing another member's roster */}
+      {adminAddDropMember && (
+        <AddDropModal
+          open={!!adminAddDropMember}
+          onClose={() => setAdminAddDropMember(null)}
+          onSubmit={handleAdminSubmitAddDrop}
+          tribeMember={adminAddDropMember}
+          allCastaways={castaways}
+          eliminatedCastawayIds={eliminatedCastawayIds}
+          seasonStartDate={
+            league?.leagueStartDate
+              ? new Date(league.leagueStartDate)
+              : new Date()
+          }
+          castawaySeasonScores={castawaySeasonScores}
+          addDropRestrictionEnabled={false}
         />
       )}
 

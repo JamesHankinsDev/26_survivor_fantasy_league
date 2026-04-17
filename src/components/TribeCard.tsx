@@ -24,6 +24,7 @@ interface TribeCardProps {
   isCurrentUser?: boolean;
   onEdit?: () => void;
   onAddDrop?: () => void;
+  onAdminAddDrop?: () => void;
   allMembers: TribeMember[];
   allCastaways?: Castaway[];
   eliminatedCastawayIds?: string[];
@@ -40,6 +41,7 @@ export default function TribeCard({
   isCurrentUser,
   onEdit,
   onAddDrop,
+  onAdminAddDrop,
   allMembers: _allMembers,
   allCastaways = [],
   eliminatedCastawayIds = [],
@@ -300,6 +302,27 @@ export default function TribeCard({
                 </Button>
               )}
             </Stack>
+          )}
+
+          {!isCurrentUser && onAdminAddDrop && roster.length > 0 && (
+            <Button
+              onClick={onAdminAddDrop}
+              variant="outlined"
+              size="small"
+              fullWidth
+              sx={{
+                color: "#E85D2A",
+                borderColor: "#E85D2A",
+                minHeight: { xs: 44, sm: 36 },
+                py: { xs: 1.5, sm: 1 },
+                "&:hover": {
+                  bgcolor: "rgba(232, 93, 42, 0.05)",
+                  borderColor: "#D94E23",
+                },
+              }}
+            >
+              Edit Roster (Owner)
+            </Button>
           )}
         </Stack>
       </CardContent>

@@ -13,32 +13,9 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, collection, getDocs, writeBatch } from "firebase/firestore";
 import { dbLogger } from "@/lib/logger";
 import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
+import { getCurrentWeek } from "@/utils/week";
 
-/**
- * Get the current week based on Wednesday 8pm ET locks.
- * Week 1 = premiere week (scouting), Week 2+ = scoring weeks.
- */
-export const getCurrentWeek = (seasonStartDate: Date): number => {
-  const now = new Date();
-
-  if (now < seasonStartDate) {
-    return 0; // Before season
-  }
-
-  const wednesdayEightPm = new Date(seasonStartDate);
-  wednesdayEightPm.setHours(20, 0, 0, 0);
-
-  let weekOffset = 0;
-  let currentWeekDeadline = new Date(wednesdayEightPm);
-
-  while (now > currentWeekDeadline) {
-    weekOffset++;
-    currentWeekDeadline = new Date(wednesdayEightPm);
-    currentWeekDeadline.setDate(wednesdayEightPm.getDate() + 7 * weekOffset);
-  }
-
-  return weekOffset;
-};
+export { getCurrentWeek };
 
 /**
  * Get available castaways for add/drop (not on current roster, not eliminated)
