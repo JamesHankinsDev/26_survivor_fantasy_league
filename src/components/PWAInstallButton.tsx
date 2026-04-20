@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Snackbar, Alert, IconButton, Tooltip } from "@mui/material";
+import { Button, Snackbar, Alert, IconButton } from "@mui/material";
 import {
   Download as DownloadIcon,
   Close as CloseIcon,
@@ -113,32 +113,12 @@ export default function PWAInstallButton() {
 
   return (
     <>
-      {/* Desktop: Header button */}
-      <Tooltip title="Install app for faster access and offline support">
-        <Button
-          variant="outlined"
-          color="primary"
-          startIcon={<DownloadIcon />}
-          onClick={handleInstallClick}
-          sx={{
-            display: { xs: "none", md: "flex" },
-            borderColor: "#20B2AA",
-            color: "#20B2AA",
-            "&:hover": {
-              borderColor: "#1a9a94",
-              backgroundColor: "rgba(32, 178, 170, 0.1)",
-            },
-          }}
-        >
-          Install App
-        </Button>
-      </Tooltip>
-
-      {/* Mobile: Bottom banner */}
+      {/* Mobile-only: Bottom banner (PWA install is useful on mobile; hidden on desktop to reduce clutter) */}
       <Snackbar
         open={showPrompt}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         sx={{
+          display: { xs: "flex", md: "none" },
           bottom: { xs: 80, sm: 24 },
           "& .MuiSnackbarContent-root": {
             minWidth: "90%",

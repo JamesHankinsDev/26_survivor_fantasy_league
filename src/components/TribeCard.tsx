@@ -14,6 +14,7 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { TribeMember, RankTrend } from "@/types/league";
 import { Castaway } from "@/types/castaway";
 import RankTrendIndicator from "@/components/RankTrendIndicator";
+import TribeHand from "@/components/TribeHand";
 
 interface TribeCardProps {
   member: TribeMember;
@@ -172,7 +173,7 @@ export default function TribeCard({
             </Box>
           </Stack>
 
-          {/* Roster */}
+          {/* Roster — fanned TCG hand */}
           {roster.length > 0 && (
             <Box>
               <Typography
@@ -180,82 +181,21 @@ export default function TribeCard({
                 sx={{
                   fontWeight: 600,
                   color: "text.secondary",
-                  mb: 1,
+                  mb: 0.5,
                   display: "block",
                 }}
               >
-                Roster (
-                {roster.filter((id) => !eliminatedCastawayIds.includes(id)).length})
+                Hand (
+                {roster.filter((id) => !eliminatedCastawayIds.includes(id)).length}
+                /{roster.length})
               </Typography>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "repeat(auto-fill, minmax(110px, 1fr))",
-                    sm: "repeat(auto-fill, minmax(100px, 1fr))",
-                  },
-                  gap: { xs: 1.5, sm: 1 },
-                }}
-              >
-                {roster.map((castawayId) => {
-                  const castaway = allCastaways.find(
-                    (c) => c.id === castawayId,
-                  );
-                  const isEliminated = eliminatedCastawayIds.includes(castawayId);
-                  const statusColor = isEliminated ? "#999" : "#20B2AA";
-                  const rosteredPts = castawayPoints[castawayId] || 0;
-                  return (
-                    <Box
-                      key={castawayId}
-                      sx={{
-                        p: 1,
-                        borderRadius: 1,
-                        border: `1px solid ${statusColor}`,
-                        bgcolor: `${statusColor}11`,
-                        textAlign: "center",
-                        opacity: isEliminated ? 0.5 : 1,
-                        filter: isEliminated ? "grayscale(100%)" : "none",
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontWeight: 500,
-                          fontSize: { xs: "0.8rem", sm: "0.75rem" },
-                          display: "block",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {castaway?.name?.split(" ")[0] || "Unknown"}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: { xs: "0.75rem", sm: "0.7rem" },
-                          color: statusColor,
-                          fontWeight: 600,
-                          display: "block",
-                        }}
-                      >
-                        {rosteredPts} pts
-                      </Typography>
-                      {isEliminated && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: { xs: "0.7rem", sm: "0.65rem" },
-                            color: statusColor,
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          eliminated
-                        </Typography>
-                      )}
-                    </Box>
-                  );
-                })}
-              </Box>
+              <TribeHand
+                roster={roster}
+                allCastaways={allCastaways}
+                eliminatedCastawayIds={eliminatedCastawayIds}
+                castawayPoints={castawayPoints}
+                size={isCurrentUser ? "large" : "compact"}
+              />
             </Box>
           )}
 
