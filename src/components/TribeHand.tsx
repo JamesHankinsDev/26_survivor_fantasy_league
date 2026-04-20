@@ -1,11 +1,12 @@
 "use client";
 
 import { Box, Typography } from "@mui/material";
-import StarIcon from "@mui/icons-material/Star";
 import GavelIcon from "@mui/icons-material/Gavel";
 import { Castaway } from "@/types/castaway";
 import { getRarityFromPoints } from "@/utils/cardRarity";
 import { getCastawayBadges } from "@/utils/castawayStatus";
+import { INVENTORY_ITEMS } from "@/utils/inventoryConfig";
+import { EMPTY_INVENTORY } from "@/types/castaway";
 
 interface TribeHandProps {
   roster: string[];
@@ -37,15 +38,17 @@ function HandCard({
   size,
 }: HandCardProps) {
   const isLarge = size === "large";
-  const cardWidth = isLarge ? { xs: 92, sm: 150 } : { xs: 78, sm: 96 };
-  const cardHeight = isLarge ? { xs: 132, sm: 214 } : { xs: 114, sm: 138 };
-  const nameSize = isLarge ? { xs: "0.68rem", sm: "0.85rem" } : "0.62rem";
-  const pointsSize = isLarge ? { xs: "0.68rem", sm: "0.9rem" } : "0.62rem";
-  const liftPx = isLarge ? 32 : 22;
-  const liftScale = isLarge ? 1.1 : 1.14;
-  const badges = castaway ? getCastawayBadges(castaway) : { jury: false, idol: false };
-  const badgeSize = isLarge ? 20 : 14;
-  const badgeIconSize = isLarge ? 12 : 8;
+  const cardWidth = isLarge ? { xs: 100, sm: 188 } : { xs: 78, sm: 96 };
+  const cardHeight = isLarge ? { xs: 144, sm: 270 } : { xs: 114, sm: 138 };
+  const nameSize = isLarge ? { xs: "0.72rem", sm: "0.95rem" } : "0.62rem";
+  const pointsSize = isLarge ? { xs: "0.72rem", sm: "1rem" } : "0.62rem";
+  const liftPx = isLarge ? 36 : 22;
+  const liftScale = isLarge ? 1.08 : 1.14;
+  const badges = castaway
+    ? getCastawayBadges(castaway)
+    : { jury: false, inventory: EMPTY_INVENTORY };
+  const badgeSize = isLarge ? 24 : 14;
+  const badgeIconSize = isLarge ? 14 : 8;
   const rarity = getRarityFromPoints(points);
   const gradient = isEliminated
     ? `linear-gradient(135deg, ${ELIMINATED_FRAME}, #7a1b1b)`
@@ -135,58 +138,83 @@ function HandCard({
               }}
             />
           )}
-          {(badges.idol || badges.jury) && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: 3,
-                right: 3,
-                display: "flex",
-                flexDirection: "column",
-                gap: "2px",
-                zIndex: 3,
-              }}
-            >
-              {badges.idol && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 3,
+              right: 3,
+              display: "flex",
+              flexDirection: "column",
+              gap: "2px",
+              zIndex: 3,
+            }}
+          >
+            {INVENTORY_ITEMS.map(({ key, label, Icon, gradient, frame }) => {
+              const count = badges.inventory[key];
+              if (count <= 0) return null;
+              return (
                 <Box
-                  aria-label="Has an idol or advantage"
+                  key={key}
+                  aria-label={count > 1 ? `${label}, quantity ${count}` : label}
                   sx={{
+                    position: "relative",
                     width: badgeSize,
                     height: badgeSize,
                     borderRadius: "50%",
-                    background:
-                      "radial-gradient(circle at 30% 30%, #FFE082, #FFB020 60%, #C8871B 100%)",
-                    border: "1.5px solid #7A4E0A",
+                    background: gradient,
+                    border: `1.5px solid ${frame}`,
                     boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <StarIcon sx={{ fontSize: badgeIconSize, color: "#fff" }} />
+                  <Icon sx={{ fontSize: badgeIconSize, color: "#fff" }} />
+                  {count > 1 && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: -3,
+                        right: -3,
+                        minWidth: 11,
+                        height: 11,
+                        px: 0.3,
+                        borderRadius: 6,
+                        background: "#1a1a1a",
+                        color: "#fff",
+                        fontSize: "0.5rem",
+                        fontWeight: 800,
+                        lineHeight: "11px",
+                        textAlign: "center",
+                        border: "1px solid #fff",
+                      }}
+                    >
+                      {count}
+                    </Box>
+                  )}
                 </Box>
-              )}
-              {badges.jury && (
-                <Box
-                  aria-label="Jury member"
-                  sx={{
-                    width: badgeSize,
-                    height: badgeSize,
-                    borderRadius: "50%",
-                    background:
-                      "radial-gradient(circle at 30% 30%, #8A76C4, #4B3A7A 60%, #2A1E4D 100%)",
-                    border: "1.5px solid #1E1436",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <GavelIcon sx={{ fontSize: badgeIconSize, color: "#fff" }} />
-                </Box>
-              )}
-            </Box>
-          )}
+              );
+            })}
+            {badges.jury && (
+              <Box
+                aria-label="Jury member"
+                sx={{
+                  width: badgeSize,
+                  height: badgeSize,
+                  borderRadius: "50%",
+                  background:
+                    "radial-gradient(circle at 30% 30%, #8A76C4, #4B3A7A 60%, #2A1E4D 100%)",
+                  border: "1.5px solid #1E1436",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <GavelIcon sx={{ fontSize: badgeIconSize, color: "#fff" }} />
+              </Box>
+            )}
+          </Box>
           {shimmerOn && (
             <Box
               aria-hidden
@@ -272,7 +300,7 @@ export default function TribeHand({
       sx={{
         position: "relative",
         width: "100%",
-        height: isLarge ? { xs: 160, sm: 250 } : { xs: 140, sm: 168 },
+        height: isLarge ? { xs: 174, sm: 312 } : { xs: 140, sm: 168 },
         mt: 0.5,
         overflow: "visible",
       }}

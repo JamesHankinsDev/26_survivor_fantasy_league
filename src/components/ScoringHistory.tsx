@@ -84,10 +84,6 @@ export default function ScoringHistory({
 
   return (
     <Box>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "text.primary", mb: 1.5 }}>
-        Scoring History
-      </Typography>
-
       {weeks.map((week) => (
         <Accordion
           key={week.week}

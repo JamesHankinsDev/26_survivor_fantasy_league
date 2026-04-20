@@ -244,3 +244,24 @@ export const toggleCastawayEliminated = async (
   }
   await updateDoc(castawayRef, updateData);
 };
+
+/**
+ * Set the count of a specific inventory item (immunity_idol, extra_vote, etc.)
+ * on a castaway's global doc. Counts are clamped to >= 0.
+ */
+export const setCastawayInventoryItem = async (
+  seasonNumber: number,
+  castawayId: string,
+  item: import("@/types/castaway").InventoryItem,
+  count: number,
+): Promise<void> => {
+  const safe = Math.max(0, Math.floor(count));
+  const castawayRef = doc(
+    db,
+    "seasons",
+    seasonNumber.toString(),
+    "castaways",
+    castawayId,
+  );
+  await updateDoc(castawayRef, { [`inventory.${item}`]: safe });
+};

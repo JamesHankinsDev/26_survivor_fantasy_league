@@ -23,7 +23,6 @@ import { useTheme as useMuiTheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import HomeIcon from "@mui/icons-material/Home";
-import GroupIcon from "@mui/icons-material/Group";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import InfoIcon from "@mui/icons-material/Info";
 import SportsBaseballIcon from "@mui/icons-material/SportsBaseball";
@@ -41,13 +40,13 @@ import { useUserLeagues } from "@/hooks/useLeagues";
 import NotificationBell from "@/components/NotificationBell";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import MessageBoard from "@/components/MessageBoard";
+import LeagueSwitcher from "@/components/LeagueSwitcher";
 
 const DRAWER_WIDTH = 280;
 
 // Base navigation items (always shown)
 const baseNavItems = [
   { label: "Home", icon: HomeIcon, path: "/dashboard" },
-  { label: "My Leagues", icon: GroupIcon, path: "/dashboard/my-leagues" },
   {
     label: "Leaderboard",
     icon: LeaderboardIcon,
@@ -129,15 +128,22 @@ export default function DashboardLayout({
         <Typography variant="h6" sx={{ color: "#E85D2A", fontWeight: 700 }}>
           Survivor League
         </Typography>
+        <LeagueSwitcher onNavigate={() => setDrawerOpen(false)} />
       </Box>
 
       {/* Navigation Items */}
       <List sx={{ flex: 1, py: 2 }}>
-        {navItems.map((item) => (
+        {navItems.map((item) => {
+          const isHome = item.path === "/dashboard";
+          const isSelected = isHome
+            ? pathname === "/dashboard" ||
+              pathname?.startsWith("/dashboard/my-leagues") === true
+            : pathname === item.path;
+          return (
           <ListItem key={item.path} disablePadding>
             <ListItemButton
               onClick={() => handleNavClick(item.path)}
-              selected={pathname === item.path}
+              selected={isSelected}
               sx={{
                 "&.Mui-selected": {
                   backgroundColor: "rgba(232, 93, 42, 0.12)",
@@ -154,7 +160,7 @@ export default function DashboardLayout({
             >
               <ListItemIcon
                 sx={{
-                  color: pathname === item.path ? "#E85D2A" : "inherit",
+                  color: isSelected ? "#E85D2A" : "inherit",
                   minWidth: 40,
                 }}
               >
@@ -164,14 +170,15 @@ export default function DashboardLayout({
                 primary={item.label}
                 sx={{
                   "& .MuiTypography-root": {
-                    fontWeight: pathname === item.path ? 600 : 400,
-                    color: pathname === item.path ? "#E85D2A" : "inherit",
+                    fontWeight: isSelected ? 600 : 400,
+                    color: isSelected ? "#E85D2A" : "inherit",
                   },
                 }}
               />
             </ListItemButton>
           </ListItem>
-        ))}
+          );
+        })}
       </List>
 
       <Divider />

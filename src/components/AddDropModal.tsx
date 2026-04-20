@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -13,16 +13,12 @@ import {
   CircularProgress,
   Chip,
   Card,
-  CardMedia,
-  CardContent,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import CheckIcon from "@mui/icons-material/Check";
-import BlockIcon from "@mui/icons-material/Block";
 import {
   DndContext,
   DragEndEvent,
@@ -32,10 +28,7 @@ import {
   useSensor,
   useSensors,
   useDroppable,
-  useDraggable,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
-import { useDrag } from "@use-gesture/react";
 import { TribeMember } from "@/types/league";
 import { Castaway } from "@/types/castaway";
 import {
@@ -43,181 +36,8 @@ import {
   isNetRosterChangeAllowed,
   getLatestLockedRoster,
 } from "@/utils/scoring";
-
-// ─── Draggable castaway card ───────────────────────────────────────
-
-interface CastawayCardItemProps {
-  id: string;
-  name: string;
-  seasonScore: number;
-  isDraggable: boolean;
-  isEliminated?: boolean;
-  isSelected?: boolean;
-  isPendingDrop?: boolean;
-  isPendingAdd?: boolean;
-  origin: "roster" | "available";
-  onTap?: () => void;
-  isMobile: boolean;
-}
-
-function DraggableCastawayCard({
-  id,
-  name,
-  seasonScore,
-  isDraggable,
-  isEliminated,
-  isSelected,
-  isPendingDrop,
-  isPendingAdd,
-  origin,
-  onTap,
-  isMobile,
-}: CastawayCardItemProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `${origin}-${id}`,
-      data: { castawayId: id, origin },
-      disabled: !isDraggable || isMobile,
-    });
-
-  const style = transform
-    ? { transform: CSS.Translate.toString(transform), zIndex: 10 }
-    : undefined;
-
-  const borderColor = isPendingDrop
-    ? "#d32f2f"
-    : isPendingAdd
-      ? "#2e7d32"
-      : isSelected
-        ? "#E85D2A"
-        : isEliminated
-          ? "#999"
-          : "transparent";
-
-  const statusText = isPendingDrop
-    ? "Pending drop"
-    : isPendingAdd
-      ? "Pending add"
-      : isEliminated
-        ? "Eliminated"
-        : "";
-
-  const actionHint = isMobile
-    ? "Tap to select"
-    : isDraggable
-      ? "Drag to move"
-      : "";
-
-  return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      {...(isMobile ? {} : { ...attributes, ...listeners })}
-      onClick={isMobile && isDraggable ? onTap : undefined}
-      role={isMobile && isDraggable ? "button" : undefined}
-      tabIndex={isMobile && isDraggable ? 0 : undefined}
-      aria-label={`${name}, ${seasonScore} season points${statusText ? `, ${statusText}` : ""}${actionHint ? `. ${actionHint}` : ""}`}
-      onKeyDown={isMobile && isDraggable ? (e: React.KeyboardEvent) => {
-        if ((e.key === "Enter" || e.key === " ") && onTap) {
-          e.preventDefault();
-          onTap();
-        }
-      } : undefined}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        px: 1.5,
-        py: 1,
-        mb: 1,
-        cursor: isDraggable
-          ? isMobile
-            ? "pointer"
-            : "grab"
-          : "default",
-        opacity: isDragging ? 0.3 : isEliminated ? 0.5 : 1,
-        border: `2px solid ${borderColor}`,
-        "&:focus-visible": {
-          outline: "2px solid #E85D2A",
-          outlineOffset: 2,
-        },
-        bgcolor: isPendingDrop
-          ? "rgba(211, 47, 47, 0.05)"
-          : isPendingAdd
-            ? "rgba(46, 125, 50, 0.05)"
-            : isSelected
-              ? "rgba(232, 93, 42, 0.08)"
-              : "background.paper",
-        transition: "border-color 0.2s, background-color 0.2s",
-        "&:hover": isDraggable
-          ? { boxShadow: 2 }
-          : {},
-        filter: isEliminated ? "grayscale(100%)" : "none",
-      }}
-    >
-      {!isMobile && isDraggable && (
-        <DragIndicatorIcon
-          sx={{ color: "text.disabled", mr: 1, fontSize: 20 }}
-        />
-      )}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: 600,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            textDecoration: isPendingDrop ? "line-through" : "none",
-          }}
-        >
-          {name}
-        </Typography>
-        <Typography variant="caption" sx={{ color: "text.secondary" }}>
-          {seasonScore} season pts
-        </Typography>
-      </Box>
-      {isEliminated && (
-        <Chip
-          label="Out"
-          size="small"
-          sx={{
-            bgcolor: "#d32f2f",
-            color: "white",
-            fontSize: "0.65rem",
-            height: 20,
-            ml: 1,
-          }}
-        />
-      )}
-      {isPendingDrop && (
-        <Chip
-          label="Dropping"
-          size="small"
-          sx={{
-            bgcolor: "#d32f2f",
-            color: "white",
-            fontSize: "0.65rem",
-            height: 20,
-            ml: 1,
-          }}
-        />
-      )}
-      {isPendingAdd && (
-        <Chip
-          label="Adding"
-          size="small"
-          sx={{
-            bgcolor: "#2e7d32",
-            color: "white",
-            fontSize: "0.65rem",
-            height: 20,
-            ml: 1,
-          }}
-        />
-      )}
-    </Card>
-  );
-}
+import TCGPickCard from "@/components/TCGPickCard";
+import MobileAddDropFlow from "@/components/MobileAddDropFlow";
 
 // ─── Static card for DragOverlay ───────────────────────────────────
 
@@ -304,8 +124,8 @@ function DroppableColumn({
         sx={{
           flex: 1,
           overflowY: "auto",
-          maxHeight: { xs: 200, sm: 350 },
-          minHeight: 100,
+          maxHeight: { xs: 240, sm: 520 },
+          minHeight: 120,
           p: 0.5,
           borderRadius: 1,
           bgcolor: isOver ? `${accentColor}11` : "transparent",
@@ -318,501 +138,6 @@ function DroppableColumn({
   );
 }
 
-// ─── Swipeable castaway card (mobile) ──────────────────────────────
-
-interface SwipeCardProps {
-  castaway: Castaway;
-  seasonScore: number;
-  isEliminated?: boolean;
-  leftLabel: string;
-  rightLabel: string;
-  onSwipeLeft: () => void;
-  onSwipeRight: () => void;
-}
-
-function SwipeCard({
-  castaway,
-  seasonScore,
-  isEliminated,
-  leftLabel,
-  rightLabel,
-  onSwipeLeft,
-  onSwipeRight,
-}: SwipeCardProps) {
-  const [offset, setOffset] = useState(0);
-  const [swiping, setSwiping] = useState(false);
-  const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
-  const THRESHOLD = 100;
-
-  const bind = useDrag(
-    ({ down, movement: [mx], velocity: [vx], direction: [dx] }) => {
-      if (exitDir) return; // already animating out
-
-      if (down) {
-        setOffset(mx);
-        setSwiping(true);
-      } else {
-        setSwiping(false);
-        // Check if swipe exceeded threshold or was fast enough
-        const fast = vx > 0.5;
-        if (mx < -THRESHOLD || (fast && dx < 0)) {
-          setExitDir("left");
-          setOffset(-400);
-          setTimeout(() => onSwipeLeft(), 300);
-        } else if (mx > THRESHOLD || (fast && dx > 0)) {
-          setExitDir("right");
-          setOffset(400);
-          setTimeout(() => onSwipeRight(), 300);
-        } else {
-          setOffset(0);
-        }
-      }
-    },
-    { axis: "x", filterTaps: true },
-  );
-
-  const rotation = offset * 0.05; // slight rotation effect
-  const leftOpacity = Math.min(1, Math.max(0, -offset / THRESHOLD));
-  const rightOpacity = Math.min(1, Math.max(0, offset / THRESHOLD));
-
-  return (
-    <Box sx={{ position: "relative", width: "100%", touchAction: "pan-y" }}>
-      {/* Direction indicators */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          left: 16,
-          transform: "translateY(-50%)",
-          zIndex: 5,
-          opacity: leftOpacity,
-          transition: swiping ? "none" : "opacity 0.2s",
-          pointerEvents: "none",
-        }}
-      >
-        <Box
-          sx={{
-            bgcolor: leftLabel === "Drop" ? "#d32f2f" : "#999",
-            color: "white",
-            borderRadius: 2,
-            px: 2,
-            py: 1,
-            fontWeight: 700,
-            fontSize: "1rem",
-            display: "flex",
-            alignItems: "center",
-            gap: 0.5,
-          }}
-        >
-          <BlockIcon fontSize="small" />
-          {leftLabel}
-        </Box>
-      </Box>
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          right: 16,
-          transform: "translateY(-50%)",
-          zIndex: 5,
-          opacity: rightOpacity,
-          transition: swiping ? "none" : "opacity 0.2s",
-          pointerEvents: "none",
-        }}
-      >
-        <Box
-          sx={{
-            bgcolor: rightLabel === "Keep" ? "#20B2AA" : "#2e7d32",
-            color: "white",
-            borderRadius: 2,
-            px: 2,
-            py: 1,
-            fontWeight: 700,
-            fontSize: "1rem",
-            display: "flex",
-            alignItems: "center",
-            gap: 0.5,
-          }}
-        >
-          <CheckIcon fontSize="small" />
-          {rightLabel}
-        </Box>
-      </Box>
-
-      {/* Card */}
-      <Box
-        {...bind()}
-        style={{
-          transform: `translateX(${offset}px) rotate(${rotation}deg)`,
-          transition: swiping ? "none" : "transform 0.3s ease-out, opacity 0.25s ease-out 0.1s",
-          opacity: exitDir ? 0 : 1,
-        }}
-        sx={{ touchAction: "pan-y" }}
-      >
-        <Card
-          sx={{
-            overflow: "hidden",
-            ...(isEliminated && { border: "2px solid #d32f2f" }),
-          }}
-        >
-          {castaway.image && (
-            <CardMedia
-              component="img"
-              height="240"
-              image={castaway.image}
-              alt={castaway.name}
-              sx={{
-                objectFit: "cover",
-                objectPosition: "top",
-                ...(isEliminated && {
-                  filter: "grayscale(100%)",
-                  opacity: 0.6,
-                }),
-              }}
-            />
-          )}
-          <CardContent sx={{ textAlign: "center", pb: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {castaway.name}
-            </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {seasonScore} season pts
-            </Typography>
-            {isEliminated && (
-              <Chip
-                label="Eliminated"
-                size="small"
-                sx={{
-                  mt: 1,
-                  bgcolor: "#d32f2f",
-                  color: "white",
-                  fontWeight: 600,
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </Box>
-
-      {/* Tappable action buttons */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          mt: 1,
-          px: 1,
-        }}
-      >
-        <Button
-          size="small"
-          onClick={() => {
-            if (exitDir) return;
-            setExitDir("left");
-            setOffset(-400);
-            setTimeout(() => onSwipeLeft(), 300);
-          }}
-          startIcon={<BlockIcon sx={{ fontSize: 16 }} />}
-          sx={{
-            color: leftLabel === "Drop" ? "#d32f2f" : "#777",
-            fontWeight: 600,
-            fontSize: "0.8rem",
-            textTransform: "none",
-            minWidth: 0,
-            px: 1.5,
-            borderRadius: 2,
-            bgcolor: leftLabel === "Drop" ? "rgba(211, 47, 47, 0.08)" : "rgba(0,0,0,0.04)",
-            "&:hover": {
-              bgcolor: leftLabel === "Drop" ? "rgba(211, 47, 47, 0.15)" : "rgba(0,0,0,0.08)",
-            },
-          }}
-        >
-          {leftLabel}
-        </Button>
-        <Button
-          size="small"
-          onClick={() => {
-            if (exitDir) return;
-            setExitDir("right");
-            setOffset(400);
-            setTimeout(() => onSwipeRight(), 300);
-          }}
-          endIcon={<CheckIcon sx={{ fontSize: 16 }} />}
-          sx={{
-            color: rightLabel === "Keep" ? "#20B2AA" : "#2e7d32",
-            fontWeight: 600,
-            fontSize: "0.8rem",
-            textTransform: "none",
-            minWidth: 0,
-            px: 1.5,
-            borderRadius: 2,
-            bgcolor: rightLabel === "Keep" ? "rgba(32, 178, 170, 0.08)" : "rgba(46, 125, 50, 0.08)",
-            "&:hover": {
-              bgcolor: rightLabel === "Keep" ? "rgba(32, 178, 170, 0.15)" : "rgba(46, 125, 50, 0.15)",
-            },
-          }}
-        >
-          {rightLabel}
-        </Button>
-      </Box>
-    </Box>
-  );
-}
-
-// ─── Mobile Swipe Flow ─────────────────────────────────────────────
-
-type SwipePhase = "keep-drop" | "add-skip" | "summary";
-
-interface MobileSwipeFlowProps {
-  rosterCastaways: { castaway: Castaway; isEliminated: boolean; canDrop: boolean }[];
-  availableCastaways: { id: string; name: string }[];
-  allCastaways: Castaway[];
-  castawaySeasonScores: Record<string, number>;
-  maxRosterSize: number;
-  onComplete: (dropId: string | null, addId: string | null) => void;
-  netChangeExceeded: boolean;
-  onlyDroppableId: string | null;
-}
-
-function MobileSwipeFlow({
-  rosterCastaways,
-  availableCastaways,
-  allCastaways,
-  castawaySeasonScores,
-  maxRosterSize,
-  onComplete,
-  netChangeExceeded,
-  onlyDroppableId,
-}: MobileSwipeFlowProps) {
-  const [phase, setPhase] = useState<SwipePhase>("keep-drop");
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [dropId, setDropId] = useState<string | null>(null);
-  const [addId, setAddId] = useState<string | null>(null);
-  const [, setKept] = useState<string[]>([]);
-  const [dropped, setDropped] = useState<string[]>([]);
-  const [, setSkipped] = useState<string[]>([]);
-
-  // Only show swipeable roster castaways (non-eliminated, or restricted to only droppable)
-  const swipeableRoster = useMemo(() => {
-    return rosterCastaways.filter((r) => {
-      if (r.isEliminated) return false;
-      if (netChangeExceeded && onlyDroppableId && r.castaway.id !== onlyDroppableId) return false;
-      return true;
-    });
-  }, [rosterCastaways, netChangeExceeded, onlyDroppableId]);
-
-  // Auto-keep eliminated and non-swipeable castaways
-  const autoKeptCount = rosterCastaways.length - swipeableRoster.length;
-
-  const currentRosterCard = swipeableRoster[currentIndex];
-
-  const handleKeep = useCallback(() => {
-    if (!currentRosterCard) return;
-    setKept((prev) => [...prev, currentRosterCard.castaway.id]);
-    const next = currentIndex + 1;
-    if (next >= swipeableRoster.length) {
-      setCurrentIndex(0);
-      setPhase("check-add" as SwipePhase);
-    } else {
-      setCurrentIndex(next);
-    }
-  }, [currentRosterCard, currentIndex, swipeableRoster.length]);
-
-  const handleDrop = useCallback(() => {
-    if (!currentRosterCard) return;
-    setDropId(currentRosterCard.castaway.id);
-    setDropped([currentRosterCard.castaway.id]);
-    // Only 1 drop allowed per transaction — skip remaining roster, go to add phase
-    setCurrentIndex(0);
-    setPhase("check-add" as SwipePhase);
-  }, [currentRosterCard]);
-
-  // Transition from keep-drop → add-skip or summary
-  useEffect(() => {
-    if (phase !== ("check-add" as SwipePhase)) return;
-
-    const currentRosterSize = rosterCastaways.length - dropped.length;
-    const hasOpenSpot = dropped.length > 0 && currentRosterSize < maxRosterSize;
-
-    if (hasOpenSpot && availableCastaways.length > 0 && !netChangeExceeded) {
-      setCurrentIndex(0);
-      setPhase("add-skip");
-    } else {
-      setPhase("summary");
-    }
-  }, [phase, dropped, rosterCastaways.length, maxRosterSize, availableCastaways.length, netChangeExceeded]);
-
-  // Add/Skip phase
-  const currentAvailable = phase === "add-skip" ? availableCastaways[currentIndex] : null;
-  const currentAvailableCastaway = currentAvailable
-    ? allCastaways.find((c) => c.id === currentAvailable.id)
-    : null;
-
-  const handleAdd = useCallback(() => {
-    if (!currentAvailable) return;
-    setAddId(currentAvailable.id);
-    // After adding, go to summary
-    setPhase("summary");
-  }, [currentAvailable]);
-
-  const handleSkip = useCallback(() => {
-    if (!currentAvailable) return;
-    setSkipped((prev) => [...prev, currentAvailable.id]);
-    const next = currentIndex + 1;
-    if (next >= availableCastaways.length) {
-      // No more available, go to summary
-      setPhase("summary");
-    } else {
-      setCurrentIndex(next);
-    }
-  }, [currentAvailable, currentIndex, availableCastaways.length]);
-
-  // Summary phase
-  if (phase === "summary") {
-    const dropCastaway = dropId ? allCastaways.find((c) => c.id === dropId) : null;
-    const addCastaway = addId ? allCastaways.find((c) => c.id === addId) : null;
-
-    return (
-      <Box sx={{ textAlign: "center", py: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-          Review Changes
-        </Typography>
-
-        {!dropCastaway && !addCastaway && (
-          <Typography sx={{ color: "text.secondary", mb: 2 }}>
-            No changes made. You kept everyone!
-          </Typography>
-        )}
-
-        {dropCastaway && (
-          <Box sx={{ mb: 2 }}>
-            <Chip
-              label={`Dropping: ${dropCastaway.name}`}
-              sx={{
-                bgcolor: "rgba(211, 47, 47, 0.1)",
-                color: "#d32f2f",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                py: 2,
-              }}
-            />
-          </Box>
-        )}
-
-        {addCastaway && (
-          <Box sx={{ mb: 2 }}>
-            <Chip
-              label={`Adding: ${addCastaway.name}`}
-              sx={{
-                bgcolor: "rgba(46, 125, 50, 0.1)",
-                color: "#2e7d32",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                py: 2,
-              }}
-            />
-          </Box>
-        )}
-
-        <Box sx={{ display: "flex", gap: 1, justifyContent: "center", mt: 3 }}>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              // Reset and start over
-              setPhase("keep-drop");
-              setCurrentIndex(0);
-              setDropId(null);
-              setAddId(null);
-              setKept([]);
-              setDropped([]);
-              setSkipped([]);
-            }}
-          >
-            Start Over
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => onComplete(dropId, addId)}
-            disabled={!dropId && !addId}
-            sx={{ bgcolor: "#E85D2A", "&:hover": { bgcolor: "#d14d1a" } }}
-          >
-            Confirm
-          </Button>
-        </Box>
-      </Box>
-    );
-  }
-
-  // Keep/Drop phase
-  if (phase === "keep-drop") {
-    if (swipeableRoster.length === 0) {
-      // All eliminated or restricted — skip to summary
-      return (
-        <Box sx={{ textAlign: "center", py: 2 }}>
-          <Typography sx={{ color: "text.secondary", mb: 2 }}>
-            No roster changes available.
-          </Typography>
-          <Button variant="outlined" onClick={() => onComplete(null, null)}>
-            Done
-          </Button>
-        </Box>
-      );
-    }
-
-    if (!currentRosterCard) return null;
-
-    return (
-      <Box>
-        <Box sx={{ textAlign: "center", mb: 1.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#E85D2A" }}>
-            Keep or Drop? ({currentIndex + 1}/{swipeableRoster.length})
-          </Typography>
-          {autoKeptCount > 0 && (
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              {autoKeptCount} eliminated castaway(s) auto-kept
-            </Typography>
-          )}
-        </Box>
-        <SwipeCard
-          key={currentRosterCard.castaway.id}
-          castaway={currentRosterCard.castaway}
-          seasonScore={castawaySeasonScores[currentRosterCard.castaway.id] || 0}
-          isEliminated={currentRosterCard.isEliminated}
-          leftLabel="Drop"
-          rightLabel="Keep"
-          onSwipeLeft={handleDrop}
-          onSwipeRight={handleKeep}
-        />
-      </Box>
-    );
-  }
-
-  // Add/Skip phase
-  if (phase === "add-skip" && currentAvailableCastaway) {
-    return (
-      <Box>
-        <Box sx={{ textAlign: "center", mb: 1.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#2e7d32" }}>
-            Add or Skip? ({currentIndex + 1}/{availableCastaways.length})
-          </Typography>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>
-            You have an open roster spot!
-          </Typography>
-        </Box>
-        <SwipeCard
-          key={currentAvailableCastaway.id}
-          castaway={currentAvailableCastaway}
-          seasonScore={castawaySeasonScores[currentAvailableCastaway.id] || 0}
-          leftLabel="Skip"
-          rightLabel="Add"
-          onSwipeLeft={handleSkip}
-          onSwipeRight={handleAdd}
-        />
-      </Box>
-    );
-  }
-
-  return null;
-}
 
 // ─── Main modal ────────────────────────────────────────────────────
 
@@ -1110,38 +435,73 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
 
   // ─── Desktop: Render roster column content ──────────────────
 
-  const rosterCards = currentRoster.map((castawayId) => {
-    const castaway = allCastaways.find((c) => c.id === castawayId);
-    const isEliminated = eliminatedCastawayIds.includes(castawayId);
-    const canDrop = droppableSet.has(castawayId);
+  const rosterCardGrid = (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gap: 1.25,
+      }}
+    >
+      {currentRoster.map((castawayId) => {
+        const castaway = allCastaways.find((c) => c.id === castawayId);
+        const isEliminated = eliminatedCastawayIds.includes(castawayId);
+        const canDrop = droppableSet.has(castawayId);
+        return (
+          <TCGPickCard
+            key={castawayId}
+            castawayId={castawayId}
+            castaway={castaway}
+            seasonScore={castawaySeasonScores[castawayId] || 0}
+            isEliminated={isEliminated}
+            isPendingDrop={dropCastawayId === castawayId}
+            canAct={canDrop}
+            action="discard"
+            onAction={() =>
+              setDropCastawayId((prev) =>
+                prev === castawayId ? null : castawayId,
+              )
+            }
+            isMobile={false}
+            origin="roster"
+          />
+        );
+      })}
+    </Box>
+  );
 
-    return (
-      <DraggableCastawayCard
-        key={castawayId}
-        id={castawayId}
-        name={castaway?.name || "Unknown"}
-        seasonScore={castawaySeasonScores[castawayId] || 0}
-        isDraggable={canDrop}
-        isEliminated={isEliminated}
-        isPendingDrop={dropCastawayId === castawayId}
-        origin="roster"
-        isMobile={false}
-      />
-    );
-  });
-
-  const availableCards = availableCastaways.map((castaway) => (
-    <DraggableCastawayCard
-      key={castaway.id}
-      id={castaway.id}
-      name={castaway.name}
-      seasonScore={castawaySeasonScores[castaway.id] || 0}
-      isDraggable={canAdd && !addCastawayId}
-      isPendingAdd={addCastawayId === castaway.id}
-      origin="available"
-      isMobile={false}
-    />
-  ));
+  const availableCardGrid = (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gap: 1.25,
+      }}
+    >
+      {availableCastaways.map((c) => {
+        const fullCastaway = allCastaways.find((x) => x.id === c.id);
+        const isThisPending = addCastawayId === c.id;
+        const canAdd_ =
+          canAdd && (!addCastawayId || isThisPending);
+        return (
+          <TCGPickCard
+            key={c.id}
+            castawayId={c.id}
+            castaway={fullCastaway}
+            seasonScore={castawaySeasonScores[c.id] || 0}
+            isPendingAdd={isThisPending}
+            canAct={canAdd_}
+            action="add"
+            onAction={() =>
+              setAddCastawayId((prev) => (prev === c.id ? null : c.id))
+            }
+            isMobile={false}
+            origin="available"
+          />
+        );
+      })}
+    </Box>
+  );
 
   // ─── Pending selection summary ─────────────────────────────────
 
@@ -1168,7 +528,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
         <DialogTitle id="adddrop-mobile-title" sx={{ fontWeight: 700, textAlign: "center", pb: 0 }}>
           Add/Drop Castaway
           <Typography variant="caption" sx={{ display: "block", color: "text.secondary", mt: 0.5 }}>
-            Swipe right to keep/add, left to drop/skip
+            Scroll cards · Tap to flip · Discard / Add to Hand to act
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
@@ -1197,7 +557,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
               <CircularProgress />
             </Box>
           ) : (
-            <MobileSwipeFlow
+            <MobileAddDropFlow
               rosterCastaways={mobileRosterCastaways}
               availableCastaways={availableCastaways}
               allCastaways={allCastaways}
@@ -1243,12 +603,12 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
     >
       <DroppableColumn
         id="roster"
-        title="Your Roster"
+        title="Your Hand"
         count={currentRoster.length}
         maxCount={maxRosterSize}
         accentColor="#E85D2A"
       >
-        {rosterCards}
+        {rosterCardGrid}
       </DroppableColumn>
 
       <Box
@@ -1267,7 +627,7 @@ export const AddDropModal: React.FC<AddDropModalProps> = ({
         count={availableCastaways.length}
         accentColor="#20B2AA"
       >
-        {availableCards}
+        {availableCardGrid}
       </DroppableColumn>
     </Box>
   );

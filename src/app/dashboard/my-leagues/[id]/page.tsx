@@ -10,7 +10,13 @@ import {
   Alert,
   Divider,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import HistoryIcon from "@mui/icons-material/History";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { doc, updateDoc } from "firebase/firestore";
@@ -27,7 +33,6 @@ import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
 import { DraftTeamModal } from "@/components/DraftTeamModal";
 import { AddDropModal } from "@/components/AddDropModal";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { CURRENT_SEASON } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
@@ -71,6 +76,7 @@ export default function LeagueDetailPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
+  const [scoringHistoryOpen, setScoringHistoryOpen] = useState(false);
   const [adminAddDropMember, setAdminAddDropMember] = useState<TribeMember | null>(null);
   const [, setIsSaving] = useState(false);
 
@@ -87,7 +93,7 @@ export default function LeagueDetailPage() {
         league.memberDetails?.some((m: TribeMember) => m.userId === user.uid);
       if (!isMember) {
         setError("You are not a member of this league");
-        setTimeout(() => router.push("/dashboard/my-leagues"), 2000);
+        setTimeout(() => router.push("/dashboard"), 2000);
       }
     }
   }, [user, authLoading, league, router]);
@@ -381,13 +387,6 @@ export default function LeagueDetailPage() {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error || (leagueError as Error)?.message || "League not found"}
         </Alert>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => router.push("/dashboard/my-leagues")}
-          sx={{ color: "#E85D2A" }}
-        >
-          Back to My Leagues
-        </Button>
       </Container>
     );
   }
@@ -396,22 +395,6 @@ export default function LeagueDetailPage() {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            mb: 2,
-          }}
-        >
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => router.push("/dashboard/my-leagues")}
-            sx={{ color: "#E85D2A" }}
-          >
-            Back to My Leagues
-          </Button>
-        </Box>
         <Typography
           variant="h4"
           sx={{ fontWeight: 700, color: "text.primary", mb: 1 }}
@@ -519,14 +502,24 @@ export default function LeagueDetailPage() {
             })()
           )}
 
-          {/* Scoring History */}
+          {/* Scoring History — opens in a modal on demand */}
           {currentUserTribe.weeklyRosters &&
             currentUserTribe.weeklyRosters.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <ScoringHistory
-                  weeklyRosters={currentUserTribe.weeklyRosters}
-                  allCastaways={castaways}
-                />
+              <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+                <Button
+                  onClick={() => setScoringHistoryOpen(true)}
+                  startIcon={<HistoryIcon />}
+                  variant="text"
+                  size="small"
+                  sx={{
+                    color: "#E85D2A",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    "&:hover": { bgcolor: "rgba(232, 93, 42, 0.08)" },
+                  }}
+                >
+                  View Scoring History
+                </Button>
               </Box>
             )}
         </Box>
@@ -629,6 +622,44 @@ export default function LeagueDetailPage() {
           castawaySeasonScores={castawaySeasonScores}
           addDropRestrictionEnabled={false}
         />
+      )}
+
+      {/* Scoring History Modal */}
+      {currentUserTribe && (
+        <Dialog
+          open={scoringHistoryOpen}
+          onClose={() => setScoringHistoryOpen(false)}
+          maxWidth="md"
+          fullWidth
+          aria-labelledby="scoring-history-title"
+        >
+          <DialogTitle
+            id="scoring-history-title"
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              fontWeight: 700,
+              pr: 6,
+            }}
+          >
+            <HistoryIcon sx={{ color: "#E85D2A" }} />
+            Scoring History
+            <IconButton
+              aria-label="Close"
+              onClick={() => setScoringHistoryOpen(false)}
+              sx={{ position: "absolute", right: 12, top: 12 }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            <ScoringHistory
+              weeklyRosters={currentUserTribe.weeklyRosters || []}
+              allCastaways={castaways}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
     </Container>

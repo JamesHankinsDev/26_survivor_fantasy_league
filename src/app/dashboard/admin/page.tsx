@@ -14,6 +14,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import ScoreboardIcon from "@mui/icons-material/Scoreboard";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
 import CreateLeagueDialog from "@/components/CreateLeagueDialog";
 import LeagueList from "@/components/LeagueList";
 import { League } from "@/types/league";
@@ -168,6 +169,31 @@ export default function AdminPage() {
                   fullWidth
                 >
                   Manage Eliminations
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card sx={{ height: "100%", "&:hover": { boxShadow: 3 } }}>
+              <CardContent sx={{ textAlign: "center", py: 3 }}>
+                <Inventory2Icon
+                  sx={{ fontSize: 40, color: "#C8871B", mb: 1 }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  Inventory
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "text.secondary", mb: 2 }}
+                >
+                  Track idols and advantages held by each castaway
+                </Typography>
+                <Button
+                  component={Link}
+                  href="/dashboard/admin/inventory"
+                  variant="outlined"
+                  fullWidth
+                >
+                  Manage Inventory
                 </Button>
               </CardContent>
             </Card>

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Typography, Box, Chip, Tooltip } from "@mui/material";
-import StarIcon from "@mui/icons-material/Star";
 import GavelIcon from "@mui/icons-material/Gavel";
 import { Castaway } from "@/types/castaway";
 import { CastawayEventSummary } from "@/hooks/useEpisodes";
 import { getEventLabel } from "@/utils/eventScoringConfig";
 import { getRarityFromPoints, RarityConfig } from "@/utils/cardRarity";
 import { getCastawayBadges } from "@/utils/castawayStatus";
+import { INVENTORY_ITEMS } from "@/utils/inventoryConfig";
 
 interface CastawayCardProps {
   castaway: Castaway;
@@ -264,64 +264,94 @@ export default function CastawayCard({
             {!isEliminated && <ShimmerOverlay rarity={rarity} />}
 
             {/* Status badges — top-right corner of art panel */}
-            {(badges.idol || badges.jury) && (
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: 6,
-                  right: 6,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.5,
-                  zIndex: 2,
-                }}
-              >
-                {badges.idol && (
-                  <Tooltip title="Holds an idol or advantage" placement="left">
+            <Box
+              sx={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                display: "flex",
+                flexDirection: "column",
+                gap: 0.5,
+                zIndex: 2,
+              }}
+            >
+              {INVENTORY_ITEMS.map(({ key, label, Icon, gradient, frame }) => {
+                const count = badges.inventory[key];
+                if (count <= 0) return null;
+                return (
+                  <Tooltip
+                    key={key}
+                    title={count > 1 ? `${label} × ${count}` : label}
+                    placement="left"
+                  >
                     <Box
-                      aria-label="Has an idol or advantage"
+                      aria-label={
+                        count > 1 ? `${label}, quantity ${count}` : label
+                      }
                       sx={{
+                        position: "relative",
                         width: 28,
                         height: 28,
                         borderRadius: "50%",
-                        background:
-                          "radial-gradient(circle at 30% 30%, #FFE082, #FFB020 60%, #C8871B 100%)",
-                        border: "2px solid #7A4E0A",
+                        background: gradient,
+                        border: `2px solid ${frame}`,
                         boxShadow:
-                          "0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(255,255,255,0.4)",
+                          "0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(255,255,255,0.35)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <StarIcon sx={{ fontSize: 16, color: "#fff" }} />
+                      <Icon sx={{ fontSize: 16, color: "#fff" }} />
+                      {count > 1 && (
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            bottom: -4,
+                            right: -4,
+                            minWidth: 16,
+                            height: 16,
+                            px: 0.4,
+                            borderRadius: 8,
+                            background: "#1a1a1a",
+                            color: "#fff",
+                            fontSize: "0.65rem",
+                            fontWeight: 800,
+                            lineHeight: "16px",
+                            textAlign: "center",
+                            border: "1.5px solid #fff",
+                          }}
+                        >
+                          {count}
+                        </Box>
+                      )}
                     </Box>
                   </Tooltip>
-                )}
-                {badges.jury && (
-                  <Tooltip title="Jury member" placement="left">
-                    <Box
-                      aria-label="Jury member"
-                      sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background:
-                          "radial-gradient(circle at 30% 30%, #8A76C4, #4B3A7A 60%, #2A1E4D 100%)",
-                        border: "2px solid #1E1436",
-                        boxShadow:
-                          "0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(255,255,255,0.25)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <GavelIcon sx={{ fontSize: 15, color: "#fff" }} />
-                    </Box>
-                  </Tooltip>
-                )}
-              </Box>
-            )}
+                );
+              })}
+              {badges.jury && (
+                <Tooltip title="Jury member" placement="left">
+                  <Box
+                    aria-label="Jury member"
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background:
+                        "radial-gradient(circle at 30% 30%, #8A76C4, #4B3A7A 60%, #2A1E4D 100%)",
+                      border: "2px solid #1E1436",
+                      boxShadow:
+                        "0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(255,255,255,0.25)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <GavelIcon sx={{ fontSize: 15, color: "#fff" }} />
+                  </Box>
+                </Tooltip>
+              )}
+            </Box>
           </Box>
 
           {/* Footer (type line + eliminated state) */}
@@ -471,6 +501,55 @@ export default function CastawayCard({
                 >
                   No scoring events yet
                 </Typography>
+              </Box>
+            )}
+
+            {INVENTORY_ITEMS.some(({ key }) => badges.inventory[key] > 0) && (
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 1.25,
+                  borderRadius: 1,
+                  background: rarity.surface,
+                  border: `1px solid ${rarity.frame}22`,
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: 800,
+                    mb: 1,
+                    color: rarity.accent,
+                    letterSpacing: 0.5,
+                    textTransform: "uppercase",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  Inventory
+                </Typography>
+                {INVENTORY_ITEMS.map(({ key, Icon, accent, statusPhrase }) => {
+                  const count = badges.inventory[key];
+                  if (count <= 0) return null;
+                  return (
+                    <Box
+                      key={key}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.75,
+                        py: 0.25,
+                      }}
+                    >
+                      <Icon sx={{ fontSize: 16, color: accent }} />
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: accent }}
+                      >
+                        {statusPhrase(count)}
+                      </Typography>
+                    </Box>
+                  );
+                })}
               </Box>
             )}
 
