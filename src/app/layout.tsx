@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { QueryProvider } from "@/lib/query-client";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -77,7 +78,10 @@ export default function RootLayout({
         <ErrorBoundary>
           <QueryProvider>
             <ThemeProvider>
-              <AuthProvider>{children}</AuthProvider>
+              <AuthProvider>
+                {children}
+                <FeedbackWidget />
+              </AuthProvider>
             </ThemeProvider>
           </QueryProvider>
         </ErrorBoundary>

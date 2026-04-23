@@ -429,7 +429,7 @@ export default function DashboardLayout({
       {/* Global Message Board Drawer */}
       {user && activeLeague && (
         <>
-          {/* Desktop: Fixed button in bottom-right */}
+          {/* Desktop: Fixed button in bottom-left */}
           {!isMobile && !messageDrawerOpen && (
             <Button
               variant="contained"
@@ -439,7 +439,7 @@ export default function DashboardLayout({
               sx={{
                 position: "fixed",
                 bottom: 24,
-                right: 24,
+                left: 24,
                 zIndex: 1200,
                 bgcolor: "#E85D2A",
                 "&:hover": { bgcolor: "#d14d1a" },
@@ -455,7 +455,7 @@ export default function DashboardLayout({
             </Button>
           )}
 
-          {/* Mobile: FAB in bottom-right */}
+          {/* Mobile: FAB in bottom-left */}
           {isMobile && !messageDrawerOpen && (
             <Fab
               color="primary"
@@ -464,7 +464,7 @@ export default function DashboardLayout({
               sx={{
                 position: "fixed",
                 bottom: 24,
-                right: 24,
+                left: 24,
                 bgcolor: "#E85D2A",
                 "&:hover": { bgcolor: "#d14d1a" },
                 zIndex: 1200,
