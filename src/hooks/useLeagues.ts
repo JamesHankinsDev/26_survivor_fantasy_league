@@ -58,6 +58,8 @@ function normalizeLeague(snap: any): League {
     id: snap.id,
     ...raw,
     memberDetails,
+    // Legacy leagues created before seasonNumber existed all belong to S50.
+    seasonNumber: typeof raw.seasonNumber === "number" ? raw.seasonNumber : 50,
     createdAt: raw.createdAt?.toDate?.() || raw.createdAt || new Date(),
     updatedAt: raw.updatedAt?.toDate?.() || raw.updatedAt || new Date(),
   } as League;

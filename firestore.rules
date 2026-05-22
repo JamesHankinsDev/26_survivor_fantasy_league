@@ -111,5 +111,16 @@ service cloud.firestore {
     match /{path=**}/castaways/{castawayId} {
       allow read: if isAuthenticated();
     }
+
+    // ========================================
+    // SEASON OVERRIDES
+    // ========================================
+    // Admin-edited overlay on top of the static seasons list in src/data/seasons.ts.
+    // Lets the admin update theme / premiereDate / mergeWeek / isActive / concludedAt
+    // without a code deploy.
+    match /seasonOverrides/{seasonNumber} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
   }
 }

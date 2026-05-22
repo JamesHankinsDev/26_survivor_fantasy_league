@@ -15,6 +15,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ScoreboardIcon from "@mui/icons-material/Scoreboard";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import CreateLeagueDialog from "@/components/CreateLeagueDialog";
 import LeagueList from "@/components/LeagueList";
 import { League } from "@/types/league";
@@ -194,6 +195,31 @@ export default function AdminPage() {
                   fullWidth
                 >
                   Manage Inventory
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card sx={{ height: "100%", "&:hover": { boxShadow: 3 } }}>
+              <CardContent sx={{ textAlign: "center", py: 3 }}>
+                <CalendarMonthIcon
+                  sx={{ fontSize: 40, color: "#5C6BC0", mb: 1 }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  Seasons
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "text.secondary", mb: 2 }}
+                >
+                  Edit season details and toggle the active season
+                </Typography>
+                <Button
+                  component={Link}
+                  href="/dashboard/admin/seasons"
+                  variant="outlined"
+                  fullWidth
+                >
+                  Manage Seasons
                 </Button>
               </CardContent>
             </Card>

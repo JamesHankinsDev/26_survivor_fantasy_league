@@ -298,6 +298,7 @@ export const DEMO_LEAGUE: League = {
   joinCode: "DEMO50",
   members: [DEMO_USER_ID, "demo-player-2", "demo-player-3", "demo-player-4"],
   status: "active",
+  seasonNumber: 50,
   createdAt: new Date("2025-09-15"),
   updatedAt: new Date("2025-09-15"),
   memberDetails: [

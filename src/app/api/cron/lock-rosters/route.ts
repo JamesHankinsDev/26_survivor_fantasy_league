@@ -14,7 +14,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
+import {
+  SeasonOverride,
+  applySeasonOverrides,
+  pickCurrentSeason,
+} from "@/data/seasons";
 import { getCurrentWeek } from "@/utils/week";
 
 export const runtime = "nodejs";
@@ -68,33 +72,52 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isSeasonActive()) {
+  const db = getAdminFirestore();
+
+  // Pull season overrides directly so admin lifecycle flips (Launch / Conclude)
+  // take effect on the cron without a redeploy. Falls back to static metadata
+  // for any field the admin hasn't touched.
+  const overridesSnap = await db.collection("seasonOverrides").get();
+  const overridesMap: Record<number, SeasonOverride> = {};
+  overridesSnap.forEach((d) => {
+    const n = parseInt(d.id, 10);
+    if (Number.isNaN(n)) return;
+    overridesMap[n] = d.data() as SeasonOverride;
+  });
+
+  const mergedSeasons = applySeasonOverrides(overridesMap);
+  const activeSeason = mergedSeasons.find((s) => s.isActive);
+
+  if (!activeSeason) {
+    const fallback = pickCurrentSeason(mergedSeasons);
     return NextResponse.json({
       success: true,
-      message: "Season has concluded — roster locks disabled",
-      season: CURRENT_SEASON.number,
-      concludedAt: CURRENT_SEASON.concludedAt,
+      message: "No active season — roster locks disabled",
+      season: fallback?.number ?? null,
+      concludedAt: fallback?.concludedAt ?? null,
       leaguesProcessed: 0,
     });
   }
 
-  const premiereDate = new Date(CURRENT_SEASON.premiereDate);
+  const premiereDate = new Date(activeSeason.premiereDate);
   const currentWeek = getCurrentWeek(premiereDate);
 
   if (currentWeek < 1) {
     return NextResponse.json({
       success: true,
       message: "Season has not started",
-      season: CURRENT_SEASON.number,
+      season: activeSeason.number,
       currentWeek,
       leaguesProcessed: 0,
     });
   }
 
-  const db = getAdminFirestore();
+  // Lock only leagues playing the active season — a concurrent past-season
+  // league shouldn't pick up phantom weekly snapshots.
   const leaguesSnap = await db
     .collection("leagues")
     .where("status", "==", "active")
+    .where("seasonNumber", "==", activeSeason.number)
     .get();
 
   const now = Timestamp.now();
@@ -148,7 +171,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    season: CURRENT_SEASON.number,
+    season: activeSeason.number,
     week: currentWeek,
     leaguesProcessed: results.length,
     totalLocked: results.reduce((s, r) => s + r.locked, 0),

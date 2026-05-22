@@ -96,6 +96,10 @@ export const queryKeys = {
     user: (userId: string) => ["notifications", userId] as const,
     unread: (userId: string) => ["notifications", userId, "unread"] as const,
   },
+  // Season metadata overrides
+  seasons: {
+    overrides: () => ["seasons", "overrides"] as const,
+  },
 } as const;
 
 /**

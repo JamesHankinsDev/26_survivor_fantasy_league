@@ -23,6 +23,7 @@ export interface FirestoreLeagueData {
   status: "active" | "archived";
   addDropRestrictionEnabled?: boolean;
   leagueStartDate?: string;
+  seasonNumber: number;
 }
 
 /**
@@ -39,6 +40,8 @@ export interface FirestoreUserData {
    * Format: `${leagueId}__${seasonNumber}`.
    */
   recapsSeen?: string[];
+  /** Season numbers the user has opted into a launch notification for. */
+  seasonNotifications?: number[];
 }
 
 /**

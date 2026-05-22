@@ -103,6 +103,7 @@ export default function JoinLeaguePage() {
           createdAt: leagueData.createdAt?.toDate() || new Date(),
           updatedAt: leagueData.updatedAt?.toDate() || new Date(),
           status: leagueData.status || "active",
+          seasonNumber: typeof leagueData.seasonNumber === "number" ? leagueData.seasonNumber : 50,
         };
 
         setLeague(foundLeague);

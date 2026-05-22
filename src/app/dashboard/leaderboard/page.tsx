@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Container,
   Box,
@@ -22,7 +22,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { assignRanks, withRankTrends } from "@/types/league";
 import { useUserLeagues } from "@/hooks/useLeagues";
-import { CURRENT_SEASON } from "@/data/seasons";
+import { getSeasonLabel, getSeasonStatus } from "@/data/seasons";
+import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import { useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useComputedScores } from "@/hooks/useScores";
 import RankTrendIndicator from "@/components/RankTrendIndicator";
@@ -40,6 +41,21 @@ export default function LeaderboardPage() {
     data: leagues = [],
     isLoading: loading,
   } = useUserLeagues(user?.uid || null);
+  const { seasons } = useSeasonsWithOverrides();
+
+  // The leaderboard only deals with leagues from currently-active seasons.
+  // Concluded-season leagues live on the home page archive + their detail
+  // page; future-season leagues don't have any data yet.
+  const activeSeasonNumbers = useMemo(() => {
+    const set = new Set<number>();
+    for (const s of seasons) if (getSeasonStatus(s) === "current") set.add(s.number);
+    return set;
+  }, [seasons]);
+
+  const visibleLeagues = useMemo(
+    () => leagues.filter((l) => activeSeasonNumbers.has(l.seasonNumber)),
+    [leagues, activeSeasonNumbers],
+  );
 
   useEffect(() => {
     if (!user) {
@@ -47,21 +63,30 @@ export default function LeaderboardPage() {
     }
   }, [user, router]);
 
-  // Auto-select first league
+  // Auto-select the first visible league, and clear the selection if the
+  // currently selected league dropped out of the active set (e.g. its season
+  // just concluded).
   useEffect(() => {
-    if (leagues.length > 0 && !selectedLeagueId) {
-      setSelectedLeagueId(leagues[0].id);
+    if (visibleLeagues.length === 0) {
+      if (selectedLeagueId !== null) setSelectedLeagueId(null);
+      return;
     }
-  }, [leagues, selectedLeagueId]);
+    if (!selectedLeagueId || !visibleLeagues.some((l) => l.id === selectedLeagueId)) {
+      setSelectedLeagueId(visibleLeagues[0].id);
+    }
+  }, [visibleLeagues, selectedLeagueId]);
 
-  const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(CURRENT_SEASON.number);
+  const selectedLeague = visibleLeagues.find((l) => l.id === selectedLeagueId);
+  // Score against whichever season this specific league is playing — supports
+  // multiple concurrent active seasons cleanly.
+  const seasonForScoring = selectedLeague?.seasonNumber ?? 0;
+
+  const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(seasonForScoring);
   const eliminatedIds = new Set(eliminatedCastawayIds);
-
-  const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
 
   // Recompute team scores from episode data via shared React Query cache.
   const { computedMembers } = useComputedScores(
-    CURRENT_SEASON.number,
+    seasonForScoring,
     selectedLeague?.memberDetails || [],
   );
 
@@ -102,6 +127,18 @@ export default function LeaderboardPage() {
     );
   }
 
+  if (visibleLeagues.length === 0) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="info">
+          No leaderboards to show right now. Leaderboards appear here once a
+          season is active. Your archived league standings stay available from
+          the Home page or the league&apos;s detail page.
+        </Alert>
+      </Container>
+    );
+  }
+
   if (!selectedLeague) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -128,9 +165,9 @@ export default function LeaderboardPage() {
           Leaderboards
         </Typography>
 
-        {/* League Selector */}
+        {/* League Selector — current-season leagues only */}
         <Box sx={{ mb: 4, display: "flex", gap: 1, flexWrap: "wrap" }}>
-          {leagues.map((league) => (
+          {visibleLeagues.map((league) => (
             <Chip
               key={league.id}
               label={league.name}
@@ -191,7 +228,7 @@ export default function LeaderboardPage() {
                 variant="h6"
                 sx={{ fontWeight: "bold", color: "text.primary" }}
               >
-                {CURRENT_SEASON.name}
+                {getSeasonLabel(selectedLeague.seasonNumber)}
               </Typography>
             </Box>
             <Box>

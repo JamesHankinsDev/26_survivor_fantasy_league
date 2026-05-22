@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { generateJoinCode, League } from "@/types/league";
+import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import {
@@ -37,6 +38,7 @@ export default function CreateLeagueDialog({
 }: CreateLeagueDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { currentSeason } = useSeasonsWithOverrides();
   const [leagueName, setLeagueName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState("8");
   const [loading, setLoading] = useState(false);
@@ -102,6 +104,7 @@ export default function CreateLeagueDialog({
         createdAt: new Date(),
         updatedAt: new Date(),
         status: "active",
+        seasonNumber: currentSeason.number,
       };
 
       // Defensive: ensure owner is in members and memberDetails, dedupe arrays

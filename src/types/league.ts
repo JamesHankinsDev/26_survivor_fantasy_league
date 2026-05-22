@@ -36,6 +36,8 @@ export interface League {
   status: "active" | "archived";
   addDropRestrictionEnabled?: boolean; // Admin can toggle add/drop restriction
   leagueStartDate?: string; // ISO string
+  /** Survivor season this league is playing. Legacy leagues default to 50 via normalizer. */
+  seasonNumber: number;
 }
 
 export interface LeagueInvite {
