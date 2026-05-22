@@ -11,6 +11,8 @@ export interface Season {
   theme: string;
   premiereDate: string; // ISO 8601 format: YYYY-MM-DD
   isActive: boolean;
+  /** Set when the season's finale has aired and final scores are entered. */
+  concludedAt?: string; // ISO 8601 format: YYYY-MM-DD
 }
 
 // Current/upcoming season for new leagues
@@ -19,7 +21,8 @@ export const CURRENT_SEASON: Season = {
   name: "Survivor 50",
   theme: "In the Hands of the Fans",
   premiereDate: "2026-02-25",
-  isActive: true,
+  isActive: false,
+  concludedAt: "2026-05-20",
 };
 
 // Past seasons (archived, kept for historical data)
@@ -36,6 +39,16 @@ const ARCHIVED_SEASONS: Season[] = [
 
 // All seasons combined
 export const ALL_SEASONS: Season[] = [CURRENT_SEASON, ...ARCHIVED_SEASONS];
+
+/** Whether the displayed season is still in play. False once the finale has aired. */
+export const isSeasonActive = (season: Season = CURRENT_SEASON): boolean =>
+  season.isActive;
+
+/** Display name for a season number — uses metadata if known, otherwise `Survivor N`. */
+export const getSeasonLabel = (seasonNumber: number): string => {
+  const match = ALL_SEASONS.find((s) => s.number === seasonNumber);
+  return match?.name ?? `Survivor ${seasonNumber}`;
+};
 
 // Get the current active season
 export const getCurrentSeason = (): Season => {

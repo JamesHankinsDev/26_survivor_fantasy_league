@@ -33,7 +33,7 @@ import {
   ScoringEvent,
   ScoringEventType,
 } from "@/types/league";
-import { CURRENT_SEASON } from "@/data/seasons";
+import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { useOwnedLeagues } from "@/hooks/useLeagues";
 import {
@@ -321,6 +321,8 @@ export default function AdminScoresPage() {
     return null;
   }
 
+  const seasonActive = isSeasonActive();
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
@@ -333,6 +335,14 @@ export default function AdminScoresPage() {
           all {ownedLeagues.length} league(s) you own.
         </Typography>
       </Box>
+
+      {!seasonActive && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <strong>{CURRENT_SEASON.name} has concluded.</strong> Scoring and roster
+          locks are disabled. Past episode events and lock history remain visible
+          as an archive.
+        </Alert>
+      )}
 
       {ownedLeagues.length === 0 && (
         <Alert severity="info" sx={{ mb: 3 }}>
@@ -360,11 +370,12 @@ export default function AdminScoresPage() {
             onChange={(e) => setLockWeek(parseInt(e.target.value) || 1)}
             inputProps={{ min: 1, max: 20 }}
             sx={{ width: 150 }}
+            disabled={!seasonActive}
           />
           <Button
             variant="contained"
             onClick={() => setOpenLockDialog(true)}
-            disabled={locking || allLeagueIds.length === 0}
+            disabled={!seasonActive || locking || allLeagueIds.length === 0}
             sx={{ bgcolor: "#20B2AA", "&:hover": { bgcolor: "#1A8A7F" } }}
           >
             {locking ? <CircularProgress size={24} /> : `Lock Rosters for Week ${effectiveLockWeek}`}
@@ -443,6 +454,7 @@ export default function AdminScoresPage() {
             onChange={(e) => setEpisodeNumber(parseInt(e.target.value) || 1)}
             inputProps={{ min: 1, max: 14 }}
             sx={{ width: 150 }}
+            disabled={!seasonActive}
           />
         </Box>
 
@@ -514,6 +526,7 @@ export default function AdminScoresPage() {
                             onClick={() =>
                               handleEventChange(castaway.id, eventType, -1)
                             }
+                            disabled={!seasonActive}
                           >
                             <RemoveIcon fontSize="small" />
                           </IconButton>
@@ -527,6 +540,7 @@ export default function AdminScoresPage() {
                             onClick={() =>
                               handleEventChange(castaway.id, eventType, 1)
                             }
+                            disabled={!seasonActive}
                           >
                             <AddIcon fontSize="small" />
                           </IconButton>
@@ -547,7 +561,7 @@ export default function AdminScoresPage() {
           <Button
             variant="contained"
             onClick={() => setOpenDialog(true)}
-            disabled={saving}
+            disabled={!seasonActive || saving}
           >
             {saving ? <CircularProgress size={24} /> : "Save Episode Events"}
           </Button>

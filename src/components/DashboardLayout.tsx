@@ -32,6 +32,7 @@ import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import ForumIcon from "@mui/icons-material/Forum";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -56,6 +57,11 @@ const baseNavItems = [
     label: "Castaways",
     icon: SportsBaseballIcon,
     path: "/dashboard/castaways",
+  },
+  {
+    label: "Hall of Fame",
+    icon: EmojiEventsIcon,
+    path: "/dashboard/hall-of-fame",
   },
 ];
 

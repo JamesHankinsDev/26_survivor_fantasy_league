@@ -17,7 +17,7 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { CURRENT_SEASON } from "@/data/seasons";
+import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { setCastawayInventoryItem } from "@/utils/scoring";
 import { dbLogger } from "@/lib/logger";
@@ -79,6 +79,8 @@ export default function AdminInventoryPage() {
     return null;
   }
 
+  const seasonActive = isSeasonActive();
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>
@@ -88,6 +90,13 @@ export default function AdminInventoryPage() {
         Track idols and advantages per castaway. Changes save immediately and are
         visible to all leagues.
       </Typography>
+
+      {!seasonActive && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <strong>{CURRENT_SEASON.name} has concluded.</strong> Inventory is
+          locked. This view is read-only.
+        </Alert>
+      )}
 
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
@@ -247,7 +256,7 @@ export default function AdminInventoryPage() {
                         size="small"
                         aria-label={`Decrease ${label}`}
                         onClick={() => handleAdjust(castaway.id, key, count - 1)}
-                        disabled={count <= 0 || isSaving}
+                        disabled={!seasonActive || count <= 0 || isSaving}
                         sx={{ border: "1px solid", borderColor: "divider" }}
                       >
                         <RemoveIcon fontSize="small" />
@@ -266,7 +275,7 @@ export default function AdminInventoryPage() {
                         size="small"
                         aria-label={`Increase ${label}`}
                         onClick={() => handleAdjust(castaway.id, key, count + 1)}
-                        disabled={isSaving}
+                        disabled={!seasonActive || isSaving}
                         sx={{ border: "1px solid", borderColor: "divider" }}
                       >
                         <AddIcon fontSize="small" />

@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import { CURRENT_SEASON } from "@/data/seasons";
+import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { getCurrentWeek } from "@/utils/week";
 
 export const runtime = "nodejs";
@@ -66,6 +66,16 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isSeasonActive()) {
+    return NextResponse.json({
+      success: true,
+      message: "Season has concluded — roster locks disabled",
+      season: CURRENT_SEASON.number,
+      concludedAt: CURRENT_SEASON.concludedAt,
+      leaguesProcessed: 0,
+    });
   }
 
   const premiereDate = new Date(CURRENT_SEASON.premiereDate);

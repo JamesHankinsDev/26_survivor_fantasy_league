@@ -271,6 +271,31 @@ export default function AboutPage() {
         </Box>
       </Paper>
 
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+          When a Season Ends
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
+        >
+          <strong>League Archive:</strong> Once the season's finale airs and
+          final scores are entered, your league becomes a read-only archive.
+          Final standings, scoring history, and the castaway roster stay
+          visible — drafts, add/drops, and tribe edits are disabled.
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{ color: "text.secondary", lineHeight: 1.8 }}
+        >
+          <strong>Hall of Fame:</strong> Castaways who finished a season at{" "}
+          <strong>Legendary</strong> rarity or above (51+ total points) are
+          enshrined in the Hall of Fame, ranked by total points across every
+          season. Check the sidebar for the full list — it grows after each
+          finale.
+        </Typography>
+      </Paper>
+
       {/* Tutorial Dialog */}
       {user && (
         <AppTutorial

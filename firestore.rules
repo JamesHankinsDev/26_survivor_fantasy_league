@@ -104,5 +104,12 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
     }
+
+    // Permit cross-season collection group queries on `castaways`.
+    // Required for the Hall of Fame, which queries every castaway across
+    // every season subcollection in a single call.
+    match /{path=**}/castaways/{castawayId} {
+      allow read: if isAuthenticated();
+    }
   }
 }

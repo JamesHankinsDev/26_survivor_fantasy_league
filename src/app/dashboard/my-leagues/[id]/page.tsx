@@ -33,7 +33,7 @@ import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
 import { DraftTeamModal } from "@/components/DraftTeamModal";
 import { AddDropModal } from "@/components/AddDropModal";
-import { CURRENT_SEASON } from "@/data/seasons";
+import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
 import ScoringHistory from "@/components/ScoringHistory";
@@ -352,6 +352,7 @@ export default function LeagueDetailPage() {
   );
 
   const isLeagueOwner = user?.uid === league?.ownerId;
+  const seasonActive = isSeasonActive();
 
   // Sorted members with tie-aware ranks and week-over-week trends
   const sortedMembers = useMemo(
@@ -391,8 +392,24 @@ export default function LeagueDetailPage() {
     );
   }
 
+  const concludedDate = CURRENT_SEASON.concludedAt
+    ? new Date(CURRENT_SEASON.concludedAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {!seasonActive && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <strong>{CURRENT_SEASON.name} has concluded.</strong>
+          {concludedDate ? ` Finale aired ${concludedDate}.` : ""}
+          {" "}This league is now an archive — final standings and scoring
+          history are preserved below.
+        </Alert>
+      )}
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -463,22 +480,29 @@ export default function LeagueDetailPage() {
             Your Tribe
           </Typography>
           {!currentUserTribe.roster || currentUserTribe.roster.length === 0 ? (
-            <Alert
-              severity="info"
-              action={
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={() => setDraftDialogOpen(true)}
-                >
-                  Draft Now
-                </Button>
-              }
-              sx={{ mb: 2 }}
-            >
-              You haven't drafted your team yet. Select 5 castaways to get
-              started!
-            </Alert>
+            seasonActive ? (
+              <Alert
+                severity="info"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => setDraftDialogOpen(true)}
+                  >
+                    Draft Now
+                  </Button>
+                }
+                sx={{ mb: 2 }}
+              >
+                You haven't drafted your team yet. Select 5 castaways to get
+                started!
+              </Alert>
+            ) : (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                You didn't draft a team for {CURRENT_SEASON.name}. The season
+                has concluded.
+              </Alert>
+            )
           ) : (
             (() => {
               const userRanked = sortedMembers.find((m) => m.userId === user!.uid);
@@ -490,8 +514,8 @@ export default function LeagueDetailPage() {
                   trend={userRanked?.trend}
                   trendDelta={userRanked?.trendDelta}
                   isCurrentUser
-                  onEdit={() => setEditDialogOpen(true)}
-                  onAddDrop={() => setAddDropDialogOpen(true)}
+                  onEdit={seasonActive ? () => setEditDialogOpen(true) : undefined}
+                  onAddDrop={seasonActive ? () => setAddDropDialogOpen(true) : undefined}
                   allMembers={sortedMembers}
                   allCastaways={castaways}
                   eliminatedCastawayIds={eliminatedCastawayIds}
@@ -561,7 +585,7 @@ export default function LeagueDetailPage() {
                 eliminatedCastawayIds={eliminatedCastawayIds}
                 castawayPoints={member.castawayPoints}
                 castawaySeasonScores={castawaySeasonScores}
-                onAdminAddDrop={isLeagueOwner ? () => setAdminAddDropMember(member) : undefined}
+                onAdminAddDrop={isLeagueOwner && seasonActive ? () => setAdminAddDropMember(member) : undefined}
               />
             ))}
         </Box>

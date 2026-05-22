@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { CURRENT_SEASON } from "@/data/seasons";
+import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { toggleCastawayEliminated } from "@/utils/scoring";
 import { dbLogger } from "@/lib/logger";
@@ -87,6 +87,8 @@ export default function AdminCastawaysPage() {
     return null;
   }
 
+  const seasonActive = isSeasonActive();
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: "bold" }}>
@@ -105,10 +107,17 @@ export default function AdminCastawaysPage() {
         </Alert>
       )}
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Click a castaway to toggle their elimination status. Changes are saved
-        immediately and shared across all leagues.
-      </Alert>
+      {seasonActive ? (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Click a castaway to toggle their elimination status. Changes are saved
+          immediately and shared across all leagues.
+        </Alert>
+      ) : (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <strong>{CURRENT_SEASON.name} has concluded.</strong> Eliminations are
+          locked. This view is read-only.
+        </Alert>
+      )}
 
       <Box
         sx={{
@@ -129,24 +138,29 @@ export default function AdminCastawaysPage() {
           return (
             <Card
               key={castaway.id}
-              onClick={() => !isSaving && setConfirmTarget({
-                castawayId: castaway.id,
-                name: castaway.name,
-                currentlyEliminated: isEliminated,
-                totalPoints: castaway.totalPoints,
-              })}
+              onClick={() => {
+                if (!seasonActive || isSaving) return;
+                setConfirmTarget({
+                  castawayId: castaway.id,
+                  name: castaway.name,
+                  currentlyEliminated: isEliminated,
+                  totalPoints: castaway.totalPoints,
+                });
+              }}
               sx={{
-                cursor: isSaving ? "wait" : "pointer",
+                cursor: !seasonActive ? "default" : isSaving ? "wait" : "pointer",
                 height: "100%",
                 border: isEliminated
                   ? "3px solid #d32f2f"
                   : "2px solid transparent",
                 backgroundColor: isEliminated ? "#f5f5f5" : "transparent",
                 transition: "all 0.2s ease",
-                "&:hover": {
-                  boxShadow: 3,
-                  borderColor: isEliminated ? "#d32f2f" : "#E85D2A",
-                },
+                "&:hover": seasonActive
+                  ? {
+                      boxShadow: 3,
+                      borderColor: isEliminated ? "#d32f2f" : "#E85D2A",
+                    }
+                  : undefined,
               }}
             >
               <Box

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Alert,
   Container,
   Box,
   Typography,
@@ -9,7 +10,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import { CURRENT_SEASON } from "@/data/seasons";
+import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways, useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useEpisodeScores, useEpisodeEventsByCastaway } from "@/hooks/useEpisodes";
 import CastawayCard from "@/components/CastawayCard";
@@ -23,12 +24,20 @@ export default function CastawaysPage() {
   const { data: castawayEvents = {} } = useEpisodeEventsByCastaway(CURRENT_SEASON.number);
   const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(CURRENT_SEASON.number);
 
+  const seasonActive = isSeasonActive();
   const premiereDate = new Date(CURRENT_SEASON.premiereDate);
-  const formattedDate = premiereDate.toLocaleDateString("en-US", {
+  const formattedPremiereDate = premiereDate.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  const formattedConcludedDate = CURRENT_SEASON.concludedAt
+    ? new Date(CURRENT_SEASON.concludedAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
 
   const eliminatedSet = new Set(eliminatedCastawayIds);
 
@@ -65,6 +74,13 @@ export default function CastawaysPage() {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Season Header */}
       <Box sx={{ mb: 5 }}>
+        {!seasonActive && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <strong>{CURRENT_SEASON.name} has concluded.</strong>
+            {formattedConcludedDate ? ` Finale aired ${formattedConcludedDate}.` : ""}
+            {" "}This page is an archive of the cast and their final scores.
+          </Alert>
+        )}
         <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
           {CURRENT_SEASON.name}
         </Typography>
@@ -72,13 +88,13 @@ export default function CastawaysPage() {
           {CURRENT_SEASON.theme}
         </Typography>
         <Typography variant="body1" sx={{ color: "text.secondary", mb: 3 }}>
-          Premieres: <strong>{formattedDate}</strong>
+          {seasonActive ? "Premieres" : "Premiered"}: <strong>{formattedPremiereDate}</strong>
         </Typography>
         <Typography
           variant="body2"
           sx={{ color: "text.secondary", maxWidth: 600 }}
         >
-          {castaways.length} all-star returning players compete in the ultimate
+          {castaways.length} all-star returning players {seasonActive ? "compete" : "competed"} in the ultimate
           fan-voted season. Click on any castaway to see their previous Survivor
           experience.
         </Typography>

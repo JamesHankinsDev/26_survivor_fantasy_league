@@ -13,6 +13,8 @@ interface CastawayCardProps {
   seasonScore?: number;
   isEliminated?: boolean;
   eventSummary?: CastawayEventSummary[];
+  /** Short season label shown in the card footer (e.g. "Survivor 50"). Used in the Hall of Fame. */
+  seasonLabel?: string;
 }
 
 const ELIMINATED_FRAME = "#d32f2f";
@@ -122,6 +124,7 @@ export default function CastawayCard({
   seasonScore = 0,
   isEliminated = false,
   eventSummary = [],
+  seasonLabel,
 }: CastawayCardProps) {
   const [flipped, setFlipped] = useState(false);
   const rarity = getRarityFromPoints(seasonScore);
@@ -376,7 +379,11 @@ export default function CastawayCard({
                 color: isEliminated ? ELIMINATED_FRAME : rarity.accent,
               }}
             >
-              {isEliminated ? "— Torch Snuffed —" : `${rarity.label} · Castaway`}
+              {isEliminated
+                ? "— Torch Snuffed —"
+                : seasonLabel
+                  ? `${rarity.label} · ${seasonLabel}`
+                  : `${rarity.label} · Castaway`}
             </Typography>
             {isEliminated && (
               <Chip
