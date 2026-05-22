@@ -34,6 +34,11 @@ export interface FirestoreUserData {
   avatar: string;
   joinedAt: Timestamp;
   tutorialCompleted: boolean;
+  /**
+   * Recap keys the user has already dismissed.
+   * Format: `${leagueId}__${seasonNumber}`.
+   */
+  recapsSeen?: string[];
 }
 
 /**

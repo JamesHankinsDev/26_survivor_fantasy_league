@@ -13,6 +13,8 @@ export interface Season {
   isActive: boolean;
   /** Set when the season's finale has aired and final scores are entered. */
   concludedAt?: string; // ISO 8601 format: YYYY-MM-DD
+  /** Week the merge aired — used by the season recap to gate "biggest climber" math. */
+  mergeWeek?: number;
 }
 
 // Current/upcoming season for new leagues
@@ -23,6 +25,7 @@ export const CURRENT_SEASON: Season = {
   premiereDate: "2026-02-25",
   isActive: false,
   concludedAt: "2026-05-20",
+  mergeWeek: 7,
 };
 
 // Past seasons (archived, kept for historical data)

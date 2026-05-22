@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -42,6 +42,8 @@ import NotificationBell from "@/components/NotificationBell";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import MessageBoard from "@/components/MessageBoard";
 import LeagueSwitcher from "@/components/LeagueSwitcher";
+import SeasonRecapModal from "@/components/SeasonRecapModal";
+import { useSeasonRecap } from "@/hooks/useSeasonRecap";
 
 const DRAWER_WIDTH = 280;
 
@@ -86,6 +88,7 @@ export default function DashboardLayout({
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
+  const [recapOpen, setRecapOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { logout, user, isDemoMode, exitDemoMode } = useAuth();
@@ -99,6 +102,16 @@ export default function DashboardLayout({
   const currentMember = activeLeague?.memberDetails?.find(
     (m) => m.userId === user?.uid,
   );
+
+  // Season recap: auto-open once per concluded league per user.
+  const { recap, shouldAutoOpen, markSeen } = useSeasonRecap(activeLeague);
+  useEffect(() => {
+    if (shouldAutoOpen) setRecapOpen(true);
+  }, [shouldAutoOpen]);
+  const handleRecapClose = () => {
+    setRecapOpen(false);
+    markSeen();
+  };
 
   // Build navigation items - Admin is now available to all users
   const navItems = [...baseNavItems, adminNavItem, aboutNavItem];
@@ -431,6 +444,16 @@ export default function DashboardLayout({
         )}
         {children}
       </Box>
+
+      {/* Season Recap Modal — auto-opens once per concluded league per user */}
+      {activeLeague && (
+        <SeasonRecapModal
+          open={recapOpen}
+          league={activeLeague}
+          recap={recap}
+          onClose={handleRecapClose}
+        />
+      )}
 
       {/* Global Message Board Drawer */}
       {user && activeLeague && (

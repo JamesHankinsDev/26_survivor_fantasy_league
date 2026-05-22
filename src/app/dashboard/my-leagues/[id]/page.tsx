@@ -37,6 +37,9 @@ import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
 import ScoringHistory from "@/components/ScoringHistory";
+import SeasonRecapModal from "@/components/SeasonRecapModal";
+import { useSeasonRecap } from "@/hooks/useSeasonRecap";
+import ReplayIcon from "@mui/icons-material/Replay";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 
@@ -77,6 +80,7 @@ export default function LeagueDetailPage() {
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const [addDropDialogOpen, setAddDropDialogOpen] = useState(false);
   const [scoringHistoryOpen, setScoringHistoryOpen] = useState(false);
+  const [recapReplayOpen, setRecapReplayOpen] = useState(false);
   const [adminAddDropMember, setAdminAddDropMember] = useState<TribeMember | null>(null);
   const [, setIsSaving] = useState(false);
 
@@ -353,6 +357,7 @@ export default function LeagueDetailPage() {
 
   const isLeagueOwner = user?.uid === league?.ownerId;
   const seasonActive = isSeasonActive();
+  const { recap: replayRecap, hasContent: recapHasContent } = useSeasonRecap(league);
 
   // Sorted members with tie-aware ranks and week-over-week trends
   const sortedMembers = useMemo(
@@ -403,7 +408,23 @@ export default function LeagueDetailPage() {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {!seasonActive && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert
+          severity="info"
+          sx={{ mb: 3 }}
+          action={
+            recapHasContent ? (
+              <Button
+                color="inherit"
+                size="small"
+                startIcon={<ReplayIcon />}
+                onClick={() => setRecapReplayOpen(true)}
+                sx={{ fontWeight: 600 }}
+              >
+                Replay Recap
+              </Button>
+            ) : undefined
+          }
+        >
           <strong>{CURRENT_SEASON.name} has concluded.</strong>
           {concludedDate ? ` Finale aired ${concludedDate}.` : ""}
           {" "}This league is now an archive — final standings and scoring
@@ -645,6 +666,16 @@ export default function LeagueDetailPage() {
           }
           castawaySeasonScores={castawaySeasonScores}
           addDropRestrictionEnabled={false}
+        />
+      )}
+
+      {/* Replay Season Recap */}
+      {league && (
+        <SeasonRecapModal
+          open={recapReplayOpen}
+          league={league}
+          recap={replayRecap}
+          onClose={() => setRecapReplayOpen(false)}
         />
       )}
 
