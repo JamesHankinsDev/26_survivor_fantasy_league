@@ -44,6 +44,8 @@ import MessageBoard from "@/components/MessageBoard";
 import LeagueSwitcher from "@/components/LeagueSwitcher";
 import SeasonRecapModal from "@/components/SeasonRecapModal";
 import { useSeasonRecap } from "@/hooks/useSeasonRecap";
+import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
+import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
 
 const DRAWER_WIDTH = 280;
 
@@ -89,6 +91,7 @@ export default function DashboardLayout({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
+  const [proposalOpen, setProposalOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { logout, user, isDemoMode, exitDemoMode } = useAuth();
@@ -111,6 +114,18 @@ export default function DashboardLayout({
   const handleRecapClose = () => {
     setRecapOpen(false);
     markSeen();
+  };
+
+  // S51 rule proposal: auto-open once per user, but defer while the recap is
+  // still on screen so we don't stack two modals on the same sign-in.
+  const proposal = useS51RuleProposal(activeLeague);
+  useEffect(() => {
+    if (recapOpen || shouldAutoOpen) return;
+    if (proposal.shouldAutoOpen) setProposalOpen(true);
+  }, [recapOpen, shouldAutoOpen, proposal.shouldAutoOpen]);
+  const handleProposalClose = () => {
+    setProposalOpen(false);
+    proposal.markSeen();
   };
 
   // Build navigation items - Admin is now available to all users
@@ -452,6 +467,18 @@ export default function DashboardLayout({
           league={activeLeague}
           recap={recap}
           onClose={handleRecapClose}
+        />
+      )}
+
+      {/* S51 Rule Proposal Modal — auto-opens once per user; defers behind recap */}
+      {activeLeague && proposal.proposalRelevant && (
+        <SeasonRuleProposalModal
+          open={proposalOpen}
+          league={activeLeague}
+          backtest={proposal.backtest}
+          sourceSeasonNumber={proposal.sourceSeasonNumber ?? 50}
+          targetSeasonNumber={proposal.targetSeasonNumber}
+          onClose={handleProposalClose}
         />
       )}
 

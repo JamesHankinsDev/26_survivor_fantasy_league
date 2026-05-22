@@ -21,6 +21,9 @@ export interface TribeMember {
 }
 
 // League data model and types
+export type ProposalVote = "yay" | "nay";
+export type ProposalOutcome = "adopted" | "rejected";
+
 export interface League {
   id: string;
   name: string;
@@ -38,6 +41,13 @@ export interface League {
   leagueStartDate?: string; // ISO string
   /** Survivor season this league is playing. Legacy leagues default to 50 via normalizer. */
   seasonNumber: number;
+  /** Per-proposal vote tracking: proposalSlug -> userId -> yay/nay. */
+  proposalVotes?: Record<string, Record<string, ProposalVote>>;
+  /** Per-proposal outcome set by the league owner once voting concludes. */
+  proposalOutcomes?: Record<
+    string,
+    { outcome: ProposalOutcome; decidedAt: Date | any; decidedBy: string }
+  >;
 }
 
 export interface LeagueInvite {
@@ -53,7 +63,9 @@ export type ScoringEventType =
   | "immunity_win"
   | "team_challenge_win"
   | "found_idol"
+  | "found_advantage"
   | "used_idol_successfully"
+  | "used_advantage_successfully"
   | "voted_at_tribal"
   | "survived_episode"
   | "fire_making_win"

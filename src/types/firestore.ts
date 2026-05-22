@@ -24,6 +24,11 @@ export interface FirestoreLeagueData {
   addDropRestrictionEnabled?: boolean;
   leagueStartDate?: string;
   seasonNumber: number;
+  proposalVotes?: Record<string, Record<string, "yay" | "nay">>;
+  proposalOutcomes?: Record<
+    string,
+    { outcome: "adopted" | "rejected"; decidedAt: Timestamp; decidedBy: string }
+  >;
 }
 
 /**
@@ -42,6 +47,11 @@ export interface FirestoreUserData {
   recapsSeen?: string[];
   /** Season numbers the user has opted into a launch notification for. */
   seasonNotifications?: number[];
+  /**
+   * One-off proposal / announcement modals the user has dismissed.
+   * Keyed by proposal slug, e.g. "s51_rules": true.
+   */
+  proposalsSeen?: Record<string, boolean>;
 }
 
 /**

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardActionArea,
   CardContent,
@@ -16,6 +17,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import { doc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
@@ -30,6 +32,8 @@ import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import { League } from "@/types/league";
 import AppTutorial from "@/components/AppTutorial";
 import FutureSeasonCard from "@/components/FutureSeasonCard";
+import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
+import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
 
 /**
  * Home / dashboard landing — now a multi-season hub.
@@ -48,6 +52,9 @@ export default function DashboardHome() {
     user?.uid || null,
   );
   const { seasons } = useSeasonsWithOverrides();
+  const activeLeague = leagues[0] ?? null;
+  const proposal = useS51RuleProposal(activeLeague);
+  const [proposalReplayOpen, setProposalReplayOpen] = useState(false);
 
   useEffect(() => {
     if (!user) router.push("/");
@@ -139,6 +146,26 @@ export default function DashboardHome() {
           </Typography>
         </Box>
 
+        {proposal.proposalRelevant && proposal.hasContent && (
+          <Alert
+            severity="info"
+            icon={<CompareArrowsIcon />}
+            sx={{ mb: 4, alignItems: "center" }}
+            action={
+              <Button
+                size="small"
+                onClick={() => setProposalReplayOpen(true)}
+                sx={{ fontWeight: 700 }}
+              >
+                View Comparison
+              </Button>
+            }
+          >
+            <strong>Survivor 51 rule proposal.</strong> See how the new scoring
+            rules would have shaped Season {proposal.sourceSeasonNumber}.
+          </Alert>
+        )}
+
         {/* CURRENT SEASON */}
         <SectionHeader title="Current Season" />
         {currentSeasons.length === 0 ? (
@@ -225,6 +252,17 @@ export default function DashboardHome() {
           userId={user.uid}
           open={showTutorial}
           onClose={() => setShowTutorial(false)}
+        />
+      )}
+
+      {activeLeague && proposal.proposalRelevant && (
+        <SeasonRuleProposalModal
+          open={proposalReplayOpen}
+          league={activeLeague}
+          backtest={proposal.backtest}
+          sourceSeasonNumber={proposal.sourceSeasonNumber ?? 50}
+          targetSeasonNumber={proposal.targetSeasonNumber}
+          onClose={() => setProposalReplayOpen(false)}
         />
       )}
     </Box>

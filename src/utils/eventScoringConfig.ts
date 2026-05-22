@@ -1,11 +1,15 @@
 import { ScoringEventType } from "@/types/league";
 
-// Scoring configuration: maps event types to point values
+// Scoring configuration: maps event types to point values.
+// This is the S50 / legacy configuration. New per-season configs live in
+// src/utils/seasonScoringConfig.ts.
 export const SCORING_CONFIG: Record<ScoringEventType, number> = {
   immunity_win: 5, // Won an immunity challenge
   team_challenge_win: 3, // Castaway's team won a reward/immunity challenge
-  found_idol: 5, // Found an idol or advantage
-  used_idol_successfully: 3, // Successfully played an idol or advantage
+  found_idol: 5, // Found a hidden immunity idol
+  found_advantage: 0, // S50 didn't split advantages from idols — 0 baseline
+  used_idol_successfully: 3, // Successfully played an idol
+  used_advantage_successfully: 0, // S50 didn't track this — 0 baseline
   voted_at_tribal: 3, // Voted at tribal council
   survived_episode: 1, // Survived the episode (made it past tribal council)
   fire_making_win: 5, // Won a fire-making challenge tiebreaker
@@ -30,8 +34,10 @@ export const getEventLabel = (eventType: ScoringEventType): string => {
   const labels: Record<ScoringEventType, string> = {
     immunity_win: "Immunity Win",
     team_challenge_win: "Team Challenge Win",
-    found_idol: "Found Idol/Advantage",
+    found_idol: "Found Idol",
+    found_advantage: "Found Advantage",
     used_idol_successfully: "Used Idol Successfully",
+    used_advantage_successfully: "Used Advantage Successfully",
     voted_at_tribal: "Voted at Tribal",
     survived_episode: "Survived Episode",
     fire_making_win: "Fire-Making Win",
@@ -62,14 +68,24 @@ export const getEventDescription = (
         "Castaway's team won a reward or immunity challenge. Worth +3 points.",
     },
     found_idol: {
-      title: "Found Idol/Advantage",
+      title: "Found Idol",
       description:
-        "Castaway found a hidden idol or advantage. Worth +5 points.",
+        "Castaway found a hidden immunity idol. Worth +5 points.",
+    },
+    found_advantage: {
+      title: "Found Advantage",
+      description:
+        "Castaway found a non-idol advantage (extra vote, steal-a-vote, etc.). Worth +2 points (Season 51+).",
     },
     used_idol_successfully: {
-      title: "Successfully Used Idol/Advantage",
+      title: "Successfully Used Idol",
       description:
-        "Castaway successfully played an idol or advantage that helped them. Worth +3 points.",
+        "Castaway successfully played an idol that helped them. Worth +3 points.",
+    },
+    used_advantage_successfully: {
+      title: "Successfully Used Advantage",
+      description:
+        "Castaway successfully played a non-idol advantage. Worth +1 point (Season 51+).",
     },
     voted_at_tribal: {
       title: "Voted at Tribal Council",
@@ -114,7 +130,9 @@ export const ALL_EVENT_TYPES: ScoringEventType[] = [
   "immunity_win",
   "team_challenge_win",
   "found_idol",
+  "found_advantage",
   "used_idol_successfully",
+  "used_advantage_successfully",
   "voted_at_tribal",
   "survived_episode",
   "fire_making_win",
