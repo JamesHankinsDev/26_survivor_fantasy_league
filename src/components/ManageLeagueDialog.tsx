@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,9 +19,12 @@ import {
   Divider,
   Switch,
   FormControlLabel,
+  MenuItem,
+  TextField,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
+import EastIcon from "@mui/icons-material/East";
 import { League } from "@/types/league";
 import { db } from "@/lib/firebase";
 import {
@@ -31,6 +34,11 @@ import {
   arrayRemove,
   increment,
 } from "firebase/firestore";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
+import { getSeasonStatus } from "@/data/seasons";
+import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
+import { adoptNewSeason } from "@/utils/adoptNewSeason";
 
 interface ManageLeagueDialogProps {
   open: boolean;
@@ -53,6 +61,13 @@ export default function ManageLeagueDialog({
     league?.addDropRestrictionEnabled ?? false,
   );
   const [leagueStartDate, setLeagueStartDate] = useState<string>(league?.leagueStartDate ? league.leagueStartDate.substring(0, 10) : "");
+  const queryClient = useQueryClient();
+  const { seasons } = useSeasonsWithOverrides();
+
+  // Season carry-over state
+  const [targetSeasonNumber, setTargetSeasonNumber] = useState<number | null>(null);
+  const [adoptConfirmOpen, setAdoptConfirmOpen] = useState(false);
+  const [adoptLoading, setAdoptLoading] = useState(false);
 
   // Sync restrictionEnabled with league prop
   useEffect(() => {
@@ -61,12 +76,74 @@ export default function ManageLeagueDialog({
   }, [league]);
   const [restrictionLoading, setRestrictionLoading] = useState(false);
 
+  // Compute season-carry-over eligibility BEFORE the early return so the hook
+  // count stays stable for the typechecker. Falls through to `null` if league
+  // isn't loaded yet.
+  const currentSeason = useMemo(
+    () => seasons.find((s) => s.number === league?.seasonNumber) ?? null,
+    [seasons, league?.seasonNumber],
+  );
+  const isCurrentConcluded =
+    currentSeason ? getSeasonStatus(currentSeason) === "past" : false;
+  const eligibleTargets = useMemo(
+    () =>
+      seasons
+        .filter(
+          (s) =>
+            s.number !== league?.seasonNumber &&
+            getSeasonStatus(s) !== "past",
+        )
+        .sort((a, b) => a.number - b.number),
+    [seasons, league?.seasonNumber],
+  );
+
+  // Default the target selector to the lowest-numbered eligible season when
+  // it changes (e.g. admin launches a new one).
+  useEffect(() => {
+    if (eligibleTargets.length === 0) {
+      setTargetSeasonNumber(null);
+      return;
+    }
+    setTargetSeasonNumber((prev) =>
+      prev != null && eligibleTargets.some((s) => s.number === prev)
+        ? prev
+        : eligibleTargets[0].number,
+    );
+  }, [eligibleTargets]);
+
   if (!league) return null;
 
   const canDelete = league.currentPlayers === 1; // Only owner remains
   const membersSortedByPoints = [...(league.memberDetails || [])].sort(
     (a, b) => b.totalPoints - a.totalPoints,
   );
+
+  const handleAdoptNewSeason = async () => {
+    if (!league || targetSeasonNumber == null) return;
+    setAdoptLoading(true);
+    setError("");
+    try {
+      const next = adoptNewSeason(league, targetSeasonNumber);
+      const leagueRef = doc(db, "leagues", league.id);
+      await updateDoc(leagueRef, {
+        seasonNumber: next.seasonNumber,
+        memberDetails: next.memberDetails,
+        seasonArchive: next.seasonArchive,
+        updatedAt: new Date(),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
+      setAdoptConfirmOpen(false);
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to adopt new season",
+      );
+    } finally {
+      setAdoptLoading(false);
+    }
+  };
 
   const handleRemoveMember = async (userId: string, _memberName: string) => {
     setLoading(true);
@@ -288,6 +365,89 @@ export default function ManageLeagueDialog({
 
             <Divider />
 
+            {/* Adopt New Season */}
+            <Card
+              sx={{
+                bgcolor: isCurrentConcluded
+                  ? "color-mix(in oklch, var(--flame) 4%, var(--bg-paper))"
+                  : "rgba(0, 0, 0, 0.02)",
+                borderLeft: `4px solid ${isCurrentConcluded ? "var(--flame)" : "#ccc"}`,
+              }}
+            >
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                    <EastIcon
+                      sx={{ color: isCurrentConcluded ? "var(--flame)" : "#999" }}
+                    />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      Carry over to a new season
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                    Keep this league&apos;s members + join code and start fresh
+                    on a new season. Final standings from the current season
+                    are archived to the league so you can look them up later.
+                  </Typography>
+                  {!isCurrentConcluded && (
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      Available once the current season ends.
+                    </Alert>
+                  )}
+                  {isCurrentConcluded && eligibleTargets.length === 0 && (
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      No upcoming or active seasons available to adopt yet.
+                    </Alert>
+                  )}
+                  {isCurrentConcluded && eligibleTargets.length > 0 && (
+                    <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-end", flexWrap: "wrap" }}>
+                      <TextField
+                        select
+                        label="New season"
+                        size="small"
+                        value={
+                          targetSeasonNumber != null
+                            ? String(targetSeasonNumber)
+                            : ""
+                        }
+                        onChange={(e) =>
+                          setTargetSeasonNumber(Number(e.target.value))
+                        }
+                        sx={{ minWidth: 220 }}
+                        disabled={adoptLoading}
+                      >
+                        {eligibleTargets.map((s) => {
+                          const label =
+                            getSeasonStatus(s) === "current"
+                              ? "Active"
+                              : "Upcoming";
+                          return (
+                            <MenuItem key={s.number} value={String(s.number)}>
+                              {s.name} — {label}
+                            </MenuItem>
+                          );
+                        })}
+                      </TextField>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<EastIcon />}
+                        onClick={() => setAdoptConfirmOpen(true)}
+                        disabled={adoptLoading || targetSeasonNumber == null}
+                        sx={{
+                          bgcolor: "var(--flame)",
+                          "&:hover": { bgcolor: "var(--flame-deep)" },
+                          color: "white",
+                        }}
+                      >
+                        Adopt season
+                      </Button>
+                    </Box>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+
             {/* Delete League Section */}
             <Card
               sx={{
@@ -436,6 +596,82 @@ export default function ManageLeagueDialog({
             disabled={loading}
           >
             {loading ? <CircularProgress size={24} /> : "Delete League"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Adopt-new-season confirmation */}
+      <Dialog
+        open={adoptConfirmOpen}
+        onClose={() => !adoptLoading && setAdoptConfirmOpen(false)}
+        aria-labelledby="adopt-season-dialog-title"
+      >
+        <DialogTitle
+          id="adopt-season-dialog-title"
+          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+        >
+          <EastIcon aria-hidden sx={{ color: "var(--flame)" }} />
+          Carry over to{" "}
+          {eligibleTargets.find((s) => s.number === targetSeasonNumber)?.name ??
+            `Season ${targetSeasonNumber}`}
+          ?
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mt: 2, mb: 2 }}>
+            <strong>{league.name}</strong> will be reset for{" "}
+            <strong>
+              {eligibleTargets.find((s) => s.number === targetSeasonNumber)
+                ?.name ?? `Season ${targetSeasonNumber}`}
+            </strong>
+            .
+          </Typography>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 0.5,
+              fontSize: "0.875rem",
+              mb: 2,
+            }}
+          >
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              <strong>Resets:</strong> every member&apos;s roster, weekly
+              snapshots, and total points.
+            </Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              <strong>Preserves:</strong> members, join code{" "}
+              <code>{league.joinCode}</code>, tribe names, colors, league
+              settings.
+            </Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              <strong>Archives:</strong> final {currentSeason?.name ?? "season"}{" "}
+              standings under this league for later viewing.
+            </Typography>
+          </Box>
+          <Alert severity="warning">
+            Members will need to draft a new roster for{" "}
+            {eligibleTargets.find((s) => s.number === targetSeasonNumber)?.name ??
+              `Season ${targetSeasonNumber}`}
+            .
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setAdoptConfirmOpen(false)}
+            disabled={adoptLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAdoptNewSeason}
+            variant="contained"
+            disabled={adoptLoading || targetSeasonNumber == null}
+            sx={{
+              bgcolor: "var(--flame)",
+              "&:hover": { bgcolor: "var(--flame-deep)" },
+              color: "white",
+            }}
+          >
+            {adoptLoading ? <CircularProgress size={24} /> : "Adopt season"}
           </Button>
         </DialogActions>
       </Dialog>

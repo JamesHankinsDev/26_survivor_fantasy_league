@@ -48,6 +48,21 @@ export interface League {
     string,
     { outcome: ProposalOutcome; decidedAt: Date | any; decidedBy: string }
   >;
+  /**
+   * Snapshots of prior seasons this league has played. Written by the
+   * "Adopt new season" carry-over flow before resetting member rosters.
+   * Keyed by the old seasonNumber as a string (Firestore-friendly).
+   */
+  seasonArchive?: Record<string, ArchivedSeason>;
+}
+
+/** A frozen record of one season's final state for a league. */
+export interface ArchivedSeason {
+  seasonNumber: number;
+  archivedAt: Date | any;
+  /** Final standings — every member's totalPoints, weeklyRosters, and roster
+   * at the moment the new season was adopted. */
+  memberDetails: TribeMember[];
 }
 
 export interface LeagueInvite {
