@@ -39,6 +39,10 @@ import { queryKeys } from "@/lib/query-client";
 import { getSeasonStatus } from "@/data/seasons";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import { adoptNewSeason } from "@/utils/adoptNewSeason";
+import SeasonRecapModal from "@/components/SeasonRecapModal";
+import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
+import { useSeasonRecap } from "@/hooks/useSeasonRecap";
+import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
 
 interface ManageLeagueDialogProps {
   open: boolean;
@@ -66,9 +70,24 @@ export default function ManageLeagueDialog({
 
   // Season carry-over state
   const [targetSeasonNumber, setTargetSeasonNumber] = useState<number | null>(null);
-  const [adoptConfirmOpen, setAdoptConfirmOpen] = useState(false);
+  /**
+   * Multi-step carry-over flow:
+   *  - "recap":    show the prior season's recap (read-only)
+   *  - "proposal": show the new season's rule proposal + voting
+   *  - "confirm":  final confirmation; clicking Adopt commits the write
+   *
+   * Steps that have no content for this league get skipped automatically.
+   */
+  const [adoptStep, setAdoptStep] = useState<
+    "idle" | "recap" | "proposal" | "confirm"
+  >("idle");
   const [adoptLoading, setAdoptLoading] = useState(false);
   const [adoptError, setAdoptError] = useState<string | null>(null);
+
+  // Recap + proposal hooks read pre-adopt state (current league.memberDetails
+  // still has S50 totals + weeklyRosters), so they compute correctly.
+  const recapHook = useSeasonRecap(league);
+  const proposalHook = useS51RuleProposal(league);
 
   // Sync restrictionEnabled with league prop
   useEffect(() => {
@@ -119,6 +138,37 @@ export default function ManageLeagueDialog({
     (a, b) => b.totalPoints - a.totalPoints,
   );
 
+  // Pick the first relevant step when the user kicks off the flow. Skip any
+  // step that has no content for this league so the modal chain never opens
+  // an empty modal.
+  const startAdoptFlow = () => {
+    setAdoptError(null);
+    if (recapHook.hasContent) setAdoptStep("recap");
+    else if (proposalHook.proposalRelevant && proposalHook.hasContent)
+      setAdoptStep("proposal");
+    else setAdoptStep("confirm");
+  };
+
+  // Advance from recap → proposal (if relevant) → confirm. Mark recap seen so
+  // the dashboard's auto-open path doesn't re-pop it after the carry-over.
+  const advanceFromRecap = () => {
+    recapHook.markSeen();
+    if (proposalHook.proposalRelevant && proposalHook.hasContent)
+      setAdoptStep("proposal");
+    else setAdoptStep("confirm");
+  };
+
+  const advanceFromProposal = () => {
+    proposalHook.markSeen();
+    setAdoptStep("confirm");
+  };
+
+  const cancelAdoptFlow = () => {
+    if (adoptLoading) return;
+    setAdoptStep("idle");
+    setAdoptError(null);
+  };
+
   const handleAdoptNewSeason = async () => {
     if (!league || targetSeasonNumber == null) return;
     setAdoptLoading(true);
@@ -133,7 +183,12 @@ export default function ManageLeagueDialog({
         updatedAt: new Date(),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.leagues.all });
-      setAdoptConfirmOpen(false);
+      // Defense in depth: if the user reached confirm by skipping steps (no
+      // content), markSeen is a no-op; if they saw the modals it's already
+      // marked. Calling again is safe.
+      recapHook.markSeen();
+      proposalHook.markSeen();
+      setAdoptStep("idle");
       onClose();
     } catch (err) {
       // Surface in the confirm dialog AND log to devtools — silent failures
@@ -435,7 +490,7 @@ export default function ManageLeagueDialog({
                         variant="contained"
                         size="small"
                         startIcon={<EastIcon />}
-                        onClick={() => setAdoptConfirmOpen(true)}
+                        onClick={startAdoptFlow}
                         disabled={adoptLoading || targetSeasonNumber == null}
                         sx={{
                           bgcolor: "var(--flame)",
@@ -603,14 +658,32 @@ export default function ManageLeagueDialog({
         </DialogActions>
       </Dialog>
 
-      {/* Adopt-new-season confirmation */}
+      {/* Carry-over step 1: prior-season recap (read-only) */}
+      {adoptStep === "recap" && (
+        <SeasonRecapModal
+          open
+          league={league}
+          recap={recapHook.recap}
+          onClose={advanceFromRecap}
+        />
+      )}
+
+      {/* Carry-over step 2: new-season rule proposal + voting */}
+      {adoptStep === "proposal" && proposalHook.proposalRelevant && (
+        <SeasonRuleProposalModal
+          open
+          league={league}
+          backtest={proposalHook.backtest}
+          sourceSeasonNumber={proposalHook.sourceSeasonNumber ?? league.seasonNumber}
+          targetSeasonNumber={proposalHook.targetSeasonNumber}
+          onClose={advanceFromProposal}
+        />
+      )}
+
+      {/* Carry-over step 3: final adopt confirmation */}
       <Dialog
-        open={adoptConfirmOpen}
-        onClose={() => {
-          if (adoptLoading) return;
-          setAdoptConfirmOpen(false);
-          setAdoptError(null);
-        }}
+        open={adoptStep === "confirm"}
+        onClose={cancelAdoptFlow}
         aria-labelledby="adopt-season-dialog-title"
       >
         <DialogTitle
@@ -667,10 +740,7 @@ export default function ManageLeagueDialog({
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => setAdoptConfirmOpen(false)}
-            disabled={adoptLoading}
-          >
+          <Button onClick={cancelAdoptFlow} disabled={adoptLoading}>
             Cancel
           </Button>
           <Button
