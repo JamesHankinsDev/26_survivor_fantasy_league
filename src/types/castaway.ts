@@ -34,4 +34,10 @@ export interface Castaway {
   weeklyEvents: Record<string, ScoringEvent[]>;
   /** Manually-tracked advantages/idols. Optional — treat missing as all zero. */
   inventory?: Partial<CastawayInventory>;
+  /**
+   * In-show tribe id (e.g. "lakaya", "mavu", "yumi"). Optional — when present,
+   * downstream UI looks the id up in `src/data/tribes.ts` for color + glyph.
+   * Absent castaways render without the tribe corner mark.
+   */
+  tribe?: string;
 }

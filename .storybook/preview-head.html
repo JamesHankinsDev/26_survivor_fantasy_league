@@ -1,0 +1,16 @@
+<!-- next/font isn't available inside Storybook iframes, so load the design fonts
+     directly. The CSS variable names (`--font-display`, `--font-body`, `--font-mono`)
+     mirror the ones next/font assigns in production, so all token stacks resolve. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  :root {
+    --font-display: "Bricolage Grotesque", "Helvetica Neue", sans-serif;
+    --font-body: "Schibsted Grotesk", "Helvetica Neue", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+</style>
