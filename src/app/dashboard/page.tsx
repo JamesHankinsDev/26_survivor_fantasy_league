@@ -23,6 +23,7 @@ import AppTutorial from "@/components/AppTutorial";
 import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
 import ActiveDashboardView from "@/components/dashboard/ActiveDashboardView";
 import SeasonHubView from "@/components/dashboard/SeasonHubView";
+import PriorSeasonTools from "@/components/dashboard/PriorSeasonTools";
 
 /**
  * Dashboard home — hybrid layout.
@@ -103,17 +104,29 @@ export default function DashboardHome() {
   return (
     <Box sx={{ flex: 1, bgcolor: "background.default", p: { xs: 2, md: 4 } }}>
       <Container maxWidth="lg">
-        {/* Greeting — both views share it */}
-        <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}
-          >
-            Welcome back, {user.displayName || user.email}
-          </Typography>
-          <Typography variant="body1" sx={{ color: "text.secondary" }}>
-            Your Survivor Fantasy League home.
-          </Typography>
+        {/* Greeting + prior-season tools */}
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            alignItems: { xs: "flex-start", md: "flex-end" },
+            justifyContent: "space-between",
+            flexDirection: { xs: "column", md: "row" },
+            gap: 2,
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              variant="h4"
+              sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}
+            >
+              Welcome back, {user.displayName || user.email}
+            </Typography>
+            <Typography variant="body1" sx={{ color: "text.secondary" }}>
+              Your Survivor Fantasy League home.
+            </Typography>
+          </Box>
+          <PriorSeasonTools leagues={leagues} />
         </Box>
 
         {/* S51 rule-proposal info alert — kept on both views for discoverability */}
