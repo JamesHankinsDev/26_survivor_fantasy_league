@@ -238,11 +238,20 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
         <SeasonRuleProposalModal
           open
           league={proposalLeague}
-          backtest={proposalHook.backtest}
-          sourceSeasonNumber={
-            proposalHook.sourceSeasonNumber ?? proposalLeague.seasonNumber
+          // Hardcode the comparison to S50 vs S51 regardless of what season
+          // the focused league is currently on. Once a league carries over to
+          // S51, `league.seasonNumber === 51` would make the hook pass
+          // source=target=51 to the modal, which collapses every comparison
+          // row into "Unchanged" and the table renders empty.
+          sourceSeasonNumber={50}
+          targetSeasonNumber={51}
+          // Backtest is only meaningful when the focused league still has the
+          // S50 weeklyRosters intact. After carry-over those are zeroed, so
+          // pass null to surface the modal's "Not enough roster data" fallback
+          // rather than rendering misleading goose-eggs.
+          backtest={
+            proposalLeague.seasonNumber === 50 ? proposalHook.backtest : null
           }
-          targetSeasonNumber={proposalHook.targetSeasonNumber}
           onClose={() => setProposalOpen(false)}
         />
       )}
