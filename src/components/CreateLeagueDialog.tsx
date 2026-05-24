@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -11,10 +11,12 @@ import {
   Alert,
   CircularProgress,
   Box,
+  MenuItem,
 } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { generateJoinCode, League } from "@/types/league";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
+import { getSeasonStatus } from "@/data/seasons";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import {
@@ -38,11 +40,38 @@ export default function CreateLeagueDialog({
 }: CreateLeagueDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { currentSeason } = useSeasonsWithOverrides();
+  const { seasons, currentSeason } = useSeasonsWithOverrides();
   const [leagueName, setLeagueName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState("8");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Only active + upcoming seasons can host a new league. Concluded seasons
+  // are hidden — no one creates a brand-new league for a finale that aired.
+  const eligibleSeasons = useMemo(
+    () =>
+      seasons
+        .filter((s) => getSeasonStatus(s) !== "past")
+        .sort((a, b) => a.number - b.number),
+    [seasons],
+  );
+
+  // Default to the current-active season if there is one, else the next upcoming
+  // (lowest-numbered eligible). Falls back to `currentSeason.number` so legacy
+  // flows still work if nothing's eligible.
+  const defaultSeasonNumber =
+    eligibleSeasons.find((s) => s.isActive)?.number ??
+    eligibleSeasons[0]?.number ??
+    currentSeason.number;
+
+  const [seasonNumber, setSeasonNumber] = useState<number>(defaultSeasonNumber);
+
+  // If the eligible list shifts (e.g. admin flips a season), keep the
+  // selection valid without stomping a user's explicit choice.
+  useEffect(() => {
+    const stillEligible = eligibleSeasons.some((s) => s.number === seasonNumber);
+    if (!stillEligible) setSeasonNumber(defaultSeasonNumber);
+  }, [eligibleSeasons, seasonNumber, defaultSeasonNumber]);
 
   const handleCreateLeague = async () => {
     try {
@@ -104,7 +133,7 @@ export default function CreateLeagueDialog({
         createdAt: new Date(),
         updatedAt: new Date(),
         status: "active",
-        seasonNumber: currentSeason.number,
+        seasonNumber,
       };
 
       // Defensive: ensure owner is in members and memberDetails, dedupe arrays
@@ -156,6 +185,7 @@ export default function CreateLeagueDialog({
   const resetForm = () => {
     setLeagueName("");
     setMaxPlayers("8");
+    setSeasonNumber(defaultSeasonNumber);
     setError(null);
   };
 
@@ -183,6 +213,30 @@ export default function CreateLeagueDialog({
             placeholder="e.g., Summer 2026 Showdown"
             disabled={loading}
           />
+
+          <TextField
+            select
+            label="Season"
+            fullWidth
+            value={String(seasonNumber)}
+            onChange={(e) => setSeasonNumber(Number(e.target.value))}
+            disabled={loading || eligibleSeasons.length === 0}
+            helperText={
+              eligibleSeasons.length === 0
+                ? "No active or upcoming seasons available."
+                : "Pick the Survivor season this league will play."
+            }
+          >
+            {eligibleSeasons.map((s) => {
+              const status = getSeasonStatus(s);
+              const label = status === "current" ? "Active" : "Upcoming";
+              return (
+                <MenuItem key={s.number} value={String(s.number)}>
+                  {s.name} — {label}
+                </MenuItem>
+              );
+            })}
+          </TextField>
 
           <TextField
             label="Number of Players"
