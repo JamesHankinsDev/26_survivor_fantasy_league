@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import {
+  Bricolage_Grotesque,
+  Schibsted_Grotesk,
+  JetBrains_Mono,
+} from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -9,7 +13,24 @@ import { QueryProvider } from "@/lib/query-client";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const inter = Inter({ subsets: ["latin"] });
+const fontDisplay = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
+  variable: "--font-display",
+  display: "swap",
+});
+const fontBody = Schibsted_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
+  display: "swap",
+});
+const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Survivor Fantasy League",
@@ -64,7 +85,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      data-theme="cream"
+      data-cards="shadow"
+      className={`${fontDisplay.variable} ${fontBody.variable} ${fontMono.variable}`}
+    >
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
@@ -74,7 +100,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="SFL" />
         <meta name="theme-color" content="#20B2AA" />
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className="antialiased">
         <ErrorBoundary>
           <QueryProvider>
             <ThemeProvider>

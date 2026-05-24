@@ -1,16 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  FormControl,
-  Select,
-  MenuItem,
-  Box,
-  Typography,
-  Divider,
-  ListSubheader,
-} from "@mui/material";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useUserLeagues } from "@/hooks/useLeagues";
@@ -18,9 +8,9 @@ import CreateLeagueDialog from "@/components/CreateLeagueDialog";
 import type { League } from "@/types/league";
 
 const STORAGE_KEY = "survivor:lastViewedLeagueId";
-const CREATE_VALUE = "__create_league__";
 
 interface LeagueSwitcherProps {
+  /** Called after a navigation choice so callers can close drawers, etc. */
   onNavigate?: () => void;
 }
 
@@ -29,14 +19,19 @@ export default function LeagueSwitcher({ onNavigate }: LeagueSwitcherProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: leagues = [] } = useUserLeagues(user?.uid || null);
+  const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
 
+  // URL takes precedence — when viewing a specific league, that is "current".
+  // Otherwise fall back to the user's last viewed league (localStorage), then
+  // to the only league if they have exactly one.
   const urlLeagueId = useMemo(() => {
     const match = pathname?.match(/\/dashboard\/my-leagues\/([^/]+)/);
     return match ? match[1] : null;
   }, [pathname]);
 
-  const selected = useMemo(() => {
+  const selectedId = useMemo(() => {
     if (urlLeagueId && leagues.some((l) => l.id === urlLeagueId)) return urlLeagueId;
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -46,19 +41,27 @@ export default function LeagueSwitcher({ onNavigate }: LeagueSwitcherProps) {
     return "";
   }, [urlLeagueId, leagues]);
 
+  const selectedLeague = leagues.find((l) => l.id === selectedId) ?? null;
+
   useEffect(() => {
     if (urlLeagueId && typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, urlLeagueId);
     }
   }, [urlLeagueId]);
 
-  const handleChange = (id: string) => {
-    if (!id) return;
-    if (id === CREATE_VALUE) {
-      setCreateOpen(true);
-      return;
-    }
-    router.push(`/dashboard/my-leagues/${id}`);
+  // Click-outside to dismiss the menu.
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const handleSelect = (league: League) => {
+    setOpen(false);
+    router.push(`/dashboard/my-leagues/${league.id}`);
     onNavigate?.();
   };
 
@@ -68,82 +71,76 @@ export default function LeagueSwitcher({ onNavigate }: LeagueSwitcherProps) {
     onNavigate?.();
   };
 
+  const buttonLabel = selectedLeague?.name ?? "Choose a league…";
+  const memberCount = selectedLeague
+    ? `${selectedLeague.currentPlayers ?? selectedLeague.members?.length ?? 0}/${selectedLeague.maxPlayers ?? 0}`
+    : null;
+
   return (
-    <Box sx={{ mt: 1 }}>
-      <Typography
-        variant="caption"
-        sx={{
-          display: "block",
-          fontWeight: 600,
-          color: "text.secondary",
-          mb: 0.5,
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-          fontSize: "0.65rem",
-        }}
+    <div ref={ref} className="sfl-leagueswitch">
+      <button
+        type="button"
+        className="sfl-ls-button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
       >
-        League
-      </Typography>
-      <FormControl size="small" fullWidth>
-        <Select
-          value={selected}
-          onChange={(e) => handleChange(e.target.value as string)}
-          displayEmpty
-          aria-label="Select league"
-          renderValue={(value) => {
-            if (!value) return <em style={{ opacity: 0.7 }}>Choose a league…</em>;
-            const league = leagues.find((l) => l.id === value);
-            return league?.name ?? "Unknown league";
-          }}
-          sx={{
-            bgcolor: "background.paper",
-            fontWeight: 600,
-            "& .MuiOutlinedInput-notchedOutline": {
-              borderColor: "#E85D2A",
-            },
-            "&:hover .MuiOutlinedInput-notchedOutline": {
-              borderColor: "#D94E23",
-            },
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-              borderColor: "#E85D2A",
-              borderWidth: 2,
-            },
-          }}
-        >
-          {leagues.length > 0 && (
-            <ListSubheader
-              sx={{
-                fontSize: "0.65rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                fontWeight: 700,
-                lineHeight: 2,
-                color: "text.secondary",
-              }}
+        <span className="sfl-ls-dot" aria-hidden />
+        <span className="sfl-ls-name">
+          {buttonLabel}
+          {memberCount && (
+            <span style={{ color: "var(--ink-mute)", fontWeight: 500 }}>
+              {" "}
+              ({memberCount})
+            </span>
+          )}
+        </span>
+        <span className="sfl-ls-caret" aria-hidden>
+          ⌄
+        </span>
+      </button>
+
+      {open && (
+        <div className="sfl-ls-menu" role="menu">
+          {leagues.length === 0 && (
+            <div
+              className="sfl-ls-item ghost"
+              style={{ cursor: "default", padding: "10px" }}
             >
-              Your Leagues
-            </ListSubheader>
+              No leagues yet
+            </div>
           )}
           {leagues.map((l) => (
-            <MenuItem key={l.id} value={l.id}>
-              {l.name}
-            </MenuItem>
+            <button
+              key={l.id}
+              type="button"
+              role="menuitem"
+              className={`sfl-ls-item${l.id === selectedId ? " current" : ""}`}
+              onClick={() => handleSelect(l)}
+            >
+              <span className="sfl-ls-dot" aria-hidden />
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {l.name}
+              </span>
+              <span style={{ color: "var(--ink-mute)", fontSize: 11, fontVariantNumeric: "tabular-nums" }}>
+                {l.currentPlayers ?? l.members?.length ?? 0}/{l.maxPlayers ?? 0}
+              </span>
+            </button>
           ))}
-          {leagues.length > 0 && <Divider sx={{ my: 0.5 }} />}
-          <MenuItem
-            value={CREATE_VALUE}
-            sx={{
-              color: "#E85D2A",
-              fontWeight: 600,
-              gap: 1,
-              "&:hover": { bgcolor: "rgba(232, 93, 42, 0.08)" },
+          {leagues.length > 0 && <div className="sfl-ls-divider" />}
+          <button
+            type="button"
+            role="menuitem"
+            className="sfl-ls-item ghost"
+            onClick={() => {
+              setOpen(false);
+              setCreateOpen(true);
             }}
           >
-            <AddCircleOutlineIcon fontSize="small" />
-            Create New League
-          </MenuItem>
-        </Select>
-      </FormControl>
+            ＋ New league
+          </button>
+        </div>
+      )}
 
       {user && (
         <CreateLeagueDialog
@@ -152,6 +149,6 @@ export default function LeagueSwitcher({ onNavigate }: LeagueSwitcherProps) {
           onLeagueCreated={handleLeagueCreated}
         />
       )}
-    </Box>
+    </div>
   );
 }

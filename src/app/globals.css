@@ -2,20 +2,125 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───────── DESIGN TOKENS ─────────
+ * Cream (default/light) and dark themes. Volcano sits in the prototype but is
+ * out of scope for Phase 00. To switch themes at runtime, set
+ * `data-theme="dark"` on <html> (handled by ThemeProvider).
+ */
+:root,
+[data-theme="cream"] {
+  --bg: oklch(0.965 0.012 80);
+  --bg-paper: #ffffffcc;
+  --bg-elevated: oklch(0.99 0.006 80);
+  --bg-inset: oklch(0.93 0.018 75);
+  --ink: oklch(0.18 0.018 50);
+  --ink-soft: oklch(0.45 0.02 50);
+  --ink-mute: oklch(0.62 0.015 50);
+  --line: oklch(0.86 0.018 70);
+  --line-strong: oklch(0.74 0.025 65);
+
+  --flame: oklch(0.66 0.19 38);
+  --flame-deep: oklch(0.52 0.2 30);
+  --jungle: oklch(0.5 0.13 145);
+  --ocean: oklch(0.48 0.13 230);
+  --sand: oklch(0.84 0.05 75);
+  --bone: oklch(0.92 0.015 80);
+  --danger: oklch(0.55 0.2 28);
+}
+
+[data-theme="dark"] {
+  --bg: oklch(0.16 0.014 50);
+  --bg-paper: oklch(0.2 0.014 50);
+  --bg-elevated: oklch(0.22 0.016 50);
+  --bg-inset: oklch(0.13 0.014 50);
+  --ink: oklch(0.96 0.008 70);
+  --ink-soft: oklch(0.78 0.012 60);
+  --ink-mute: oklch(0.6 0.012 60);
+  --line: oklch(0.3 0.015 50);
+  --line-strong: oklch(0.4 0.018 50);
+
+  --flame: oklch(0.72 0.18 40);
+  --flame-deep: oklch(0.58 0.2 30);
+  --jungle: oklch(0.65 0.14 145);
+  --ocean: oklch(0.68 0.14 230);
+  --sand: oklch(0.65 0.05 75);
+  --bone: oklch(0.3 0.015 80);
+  --danger: oklch(0.65 0.2 28);
+}
+
+:root {
+  /* Font families — Next.js next/font/google assigns the actual values to
+   * --font-display / --font-body / --font-mono via the body className. The
+   * variables below are the fallback stacks (used until/if next/font misses). */
+  --font-display-stack: var(--font-display), "Helvetica Neue", sans-serif;
+  --font-body-stack: var(--font-body), "Helvetica Neue", sans-serif;
+  --font-mono-stack: var(--font-mono), ui-monospace, monospace;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+
+  --pad-card: 18px;
+  --pad-page: 32px;
+  --gap: 14px;
+}
+
+[data-density="compact"] {
+  --pad-card: 12px;
+  --pad-page: 22px;
+  --gap: 10px;
+}
+
+/* ───────── BASE ───────── */
 html {
   box-sizing: border-box;
   width: 100%;
-  overflow-x: hidden;
+  height: 100%;
+  /* `clip` (not `hidden`) prevents horizontal scroll *without* establishing a
+   * scroll container — required so the app shell below can scroll its main
+   * pane independently and keep the nav fixed. */
+  overflow-x: clip;
 }
 body {
   width: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100%;
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body-stack);
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 *,
 *::before,
 *::after {
   box-sizing: inherit;
+}
+::selection {
+  background: var(--flame);
+  color: white;
+}
+
+/* Card style preference — body[data-cards="..."] toggles between visual
+ * treatments. Default: shadow. */
+[data-cards="flat"] .sfl-card {
+  box-shadow: none;
+  border: 1px solid transparent;
+}
+[data-cards="bordered"] .sfl-card {
+  box-shadow: none;
+  border: 1px solid var(--line);
+}
+[data-cards="shadow"] .sfl-card,
+.sfl-card {
+  box-shadow:
+    0 10px 26px -18px oklch(0.25 0.02 50 / 0.35),
+    0 1px 2px oklch(0.25 0.02 50 / 0.08);
+  border: 1px solid var(--line);
 }
 
 /* Screen-reader-only: visually hidden but accessible to assistive technology */
@@ -29,4 +134,577 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* ───────── TORCH FLICKER ─────────
+ * Used by the sidebar / topnav logo. Animation pause is respected for users
+ * with prefers-reduced-motion. */
+.sfl-torch-flame {
+  filter: drop-shadow(0 0 6px var(--flame));
+  animation: sfl-flicker 2.6s ease-in-out infinite;
+  transform-origin: 10px 14px;
+}
+@keyframes sfl-flicker {
+  0%,
+  100% {
+    transform: scaleY(1) scaleX(1);
+    opacity: 1;
+  }
+  17% {
+    transform: scaleY(0.97) scaleX(1.04);
+    opacity: 0.94;
+  }
+  34% {
+    transform: scaleY(1.05) scaleX(0.96);
+    opacity: 1;
+  }
+  51% {
+    transform: scaleY(0.92) scaleX(1.06);
+    opacity: 0.9;
+  }
+  68% {
+    transform: scaleY(1.03) scaleX(0.97);
+    opacity: 0.96;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-torch-flame {
+    animation: none;
+  }
+}
+
+/* Lock-countdown seconds pulse */
+@keyframes sfl-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+.sfl-lock-pulse {
+  animation: sfl-pulse 1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-lock-pulse {
+    animation: none;
+  }
+}
+
+/* ───────── PRIMITIVES ─────────
+ * Static class rules for the design-system primitives. React components in
+ * src/components/primitives/ are thin wrappers that emit these classes; this
+ * keeps all visual rules in one cascading layer so theme switching is free. */
+
+.sfl-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-family: var(--font-body-stack);
+}
+.sfl-eyebrow.flame {
+  color: var(--flame-deep);
+}
+
+.sfl-secthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 2px;
+}
+.sfl-secthead-actions {
+  display: flex;
+  gap: 6px;
+}
+.sfl-secttitle {
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 4px 0 0;
+}
+
+/* Status pill */
+.sfl-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--font-body-stack);
+}
+.sfl-pill.active {
+  background: color-mix(in oklch, var(--jungle) 18%, var(--bg-paper));
+  color: var(--jungle);
+}
+.sfl-pill.jury {
+  background: color-mix(in oklch, var(--ocean) 18%, var(--bg-paper));
+  color: var(--ocean);
+}
+.sfl-pill.out {
+  background: color-mix(in oklch, var(--danger) 16%, var(--bg-paper));
+  color: var(--danger);
+}
+
+/* Tribe chip — consumer sets --tc inline */
+.sfl-tribechip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--tc, var(--flame)) 14%, var(--bg-paper));
+  color: var(--tc, var(--flame));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid color-mix(in oklch, var(--tc, var(--flame)) 30%, transparent);
+  font-family: var(--font-body-stack);
+}
+.sfl-tribechip-glyph {
+  font-size: 9px;
+}
+
+/* Point badge */
+.sfl-pts {
+  font-family: var(--font-mono-stack);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  white-space: nowrap;
+}
+.sfl-pts.pos {
+  color: var(--jungle);
+}
+.sfl-pts.neg {
+  color: var(--danger);
+}
+.sfl-pts.neu {
+  color: var(--ink-mute);
+}
+.sfl-pts.big {
+  font-size: 18px;
+}
+.sfl-pts-arrow {
+  font-size: 9px;
+  font-style: normal;
+  margin-left: 2px;
+}
+
+/* Card surface (the box-shadow / border preference lives on the [data-cards]
+ * selectors above). */
+.sfl-card {
+  background: var(--bg-paper);
+  border-radius: var(--r-lg);
+  padding: var(--pad-card);
+  color: var(--ink);
+}
+
+/* ───────── SHELL ─────────
+ * Sidebar, topnav, league switcher, lock countdown. The React components
+ * just emit these classes. */
+
+/* App shell — fixed-height grid. The sidebar/topnav live in their own grid
+ * cells and never scroll; only `.sfl-main` scrolls vertically. This keeps the
+ * nav reliably fixed without depending on `position: sticky` and the document
+ * scroll quirks that come with `overflow-x: hidden` on html/body. */
+.sfl-app {
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  height: 100vh;
+  height: 100dvh; /* respects mobile dynamic viewport */
+  overflow: hidden;
+  background: var(--bg);
+}
+.sfl-app[data-layout="topnav"] {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+}
+.sfl-app[data-density="compact"][data-layout="sidebar"] {
+  grid-template-columns: 220px 1fr;
+}
+.sfl-main {
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--pad-page);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Sidebar — fills its grid cell; nav list scrolls internally if it overflows. */
+.sfl-sidebar {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-paper);
+  border-right: 1px solid var(--line);
+  padding: 22px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  backdrop-filter: blur(8px);
+  z-index: 20;
+}
+
+.sfl-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px;
+}
+.sfl-logo-text {
+  line-height: 1;
+}
+.sfl-logo-name {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: 17px;
+  color: var(--ink);
+}
+.sfl-logo-sub {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.sfl-torch {
+  color: var(--ink-soft);
+}
+
+/* League switcher */
+.sfl-leagueswitch {
+  position: relative;
+}
+.sfl-ls-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-family: var(--font-body-stack);
+  text-align: left;
+  transition: border 0.15s, background 0.15s;
+}
+.sfl-ls-button:hover {
+  border-color: var(--line-strong);
+}
+.sfl-ls-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--flame);
+  flex-shrink: 0;
+}
+.sfl-ls-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sfl-ls-caret {
+  color: var(--ink-mute);
+}
+.sfl-ls-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 6px;
+  z-index: 50;
+  box-shadow: 0 18px 40px -18px oklch(0.2 0.02 50 / 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sfl-ls-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-family: var(--font-body-stack);
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.sfl-ls-item:hover {
+  background: var(--bg-inset);
+}
+.sfl-ls-item.current {
+  font-weight: 700;
+}
+.sfl-ls-item.ghost {
+  color: var(--ink-soft);
+}
+.sfl-ls-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 0;
+}
+
+/* Nav */
+.sfl-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sfl-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 14px;
+  font-family: var(--font-body-stack);
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  transition: background 0.12s, color 0.12s;
+  text-decoration: none;
+  width: 100%;
+}
+.sfl-nav-item:hover {
+  background: var(--bg-inset);
+  color: var(--ink);
+}
+.sfl-nav-item.active {
+  background: var(--ink);
+  color: var(--bg);
+}
+.sfl-nav-glyph {
+  width: 18px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.7;
+}
+.sfl-nav-item.active .sfl-nav-glyph {
+  opacity: 1;
+  color: var(--flame);
+}
+.sfl-nav-label {
+  flex: 1;
+}
+.sfl-nav-badge {
+  background: var(--flame);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.sfl-side-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sfl-side-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--r-md);
+  background: var(--bg-inset);
+}
+.sfl-side-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.sfl-side-meta {
+  font-size: 11px;
+  color: var(--ink-mute);
+  line-height: 1.2;
+}
+.sfl-side-gear {
+  background: transparent;
+  border: 0;
+  color: var(--ink-soft);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.sfl-side-gear:hover {
+  background: var(--bg-paper);
+  color: var(--ink);
+}
+
+/* Avatar */
+.sfl-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display-stack);
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+.sfl-avatar.sm {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+.sfl-avatar.lg {
+  width: 56px;
+  height: 56px;
+  font-size: 18px;
+}
+
+/* Lock countdown */
+.sfl-lock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--flame) 14%, var(--bg-paper)),
+    var(--bg-paper)
+  );
+  border: 1px solid color-mix(in oklch, var(--flame) 30%, transparent);
+}
+.sfl-lock-label {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sfl-lock-time {
+  font-family: var(--font-mono-stack);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.sfl-lock-time i {
+  font-style: normal;
+  color: var(--ink-mute);
+  font-size: 11px;
+  margin-right: 4px;
+  font-family: var(--font-body-stack);
+  font-weight: 500;
+}
+.sfl-lock-s {
+  color: var(--flame);
+  animation: sfl-pulse 1s ease-in-out infinite;
+}
+.sfl-lock.compact {
+  padding: 8px 10px;
+  gap: 2px;
+}
+.sfl-lock.compact .sfl-lock-time {
+  font-size: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-lock-s {
+    animation: none;
+  }
+}
+
+/* Topnav — first row of the grid; main pane is the only scroller, so the
+ * topnav never moves with content. */
+.sfl-topnav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 28px;
+  background: var(--bg-paper);
+  border-bottom: 1px solid var(--line);
+  z-index: 30;
+  backdrop-filter: blur(10px);
+}
+.sfl-topnav-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+.sfl-topnav-nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.sfl-topnav-item {
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font: inherit;
+  font-family: var(--font-body-stack);
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.sfl-topnav-item:hover {
+  background: var(--bg-inset);
+  color: var(--ink);
+}
+.sfl-topnav-item.active {
+  background: var(--ink);
+  color: var(--bg);
+}
+.sfl-topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
 }

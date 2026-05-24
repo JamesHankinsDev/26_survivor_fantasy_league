@@ -6,100 +6,73 @@ import React, {
   useState,
   useEffect,
   useMemo,
+  useCallback,
 } from "react";
-import {
-  ThemeProvider as MUIThemeProvider,
-  createTheme,
-} from "@mui/material/styles";
+import { ThemeProvider as MUIThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { createAppTheme } from "@/lib/theme";
 
 type ThemeMode = "light" | "dark";
+type LayoutMode = "sidebar" | "topnav";
 
 interface ThemeContextType {
   mode: ThemeMode;
   toggleTheme: () => void;
+  /**
+   * Persisted layout preference. Honored at md+ viewports; below md the
+   * sidebar is forced to topnav by the shell regardless of this value.
+   */
+  layout: LayoutMode;
+  setLayout: (next: LayoutMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const THEME_KEY = "themeMode";
+const LAYOUT_KEY = "shellLayout";
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<ThemeMode>("light");
-  const [_mounted, setMounted] = useState(false);
+  const [layout, setLayoutState] = useState<LayoutMode>("sidebar");
 
+  // Hydrate from localStorage after mount.
   useEffect(() => {
-    // Load theme preference from localStorage after mount
-    const savedMode = localStorage.getItem("themeMode") as ThemeMode;
-    if (savedMode === "dark" || savedMode === "light") {
-      setMode(savedMode);
+    const savedMode = localStorage.getItem(THEME_KEY) as ThemeMode | null;
+    if (savedMode === "dark" || savedMode === "light") setMode(savedMode);
+
+    const savedLayout = localStorage.getItem(LAYOUT_KEY) as LayoutMode | null;
+    if (savedLayout === "sidebar" || savedLayout === "topnav") {
+      setLayoutState(savedLayout);
     }
-    setMounted(true);
   }, []);
 
-  const toggleTheme = () => {
-    setMode((prevMode) => {
-      const newMode = prevMode === "light" ? "dark" : "light";
-      localStorage.setItem("themeMode", newMode);
-      return newMode;
-    });
-  };
+  // Drive the data-theme attribute on <html> so token CSS variables cascade.
+  useEffect(() => {
+    document.documentElement.dataset.theme = mode === "dark" ? "dark" : "cream";
+  }, [mode]);
 
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode,
-          primary: {
-            main: "#E85D2A",
-            light: "#FF8A5C",
-            dark: "#C93F1A",
-          },
-          secondary: {
-            main: "#20B2AA",
-            light: "#5FD6CE",
-            dark: "#158D86",
-          },
-          background: {
-            default: mode === "light" ? "#f5f5f5" : "#121212",
-            paper: mode === "light" ? "#ffffff" : "#1e1e1e",
-          },
-          text: {
-            primary: mode === "light" ? "#1A1A1A" : "#ffffff",
-            secondary: mode === "light" ? "#666666" : "#b3b3b3",
-          },
-        },
-        typography: {
-          fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        },
-        components: {
-          MuiButton: {
-            styleOverrides: {
-              root: {
-                textTransform: "none",
-                borderRadius: 8,
-              },
-            },
-          },
-          MuiCard: {
-            styleOverrides: {
-              root: {
-                borderRadius: 12,
-              },
-            },
-          },
-          MuiPaper: {
-            styleOverrides: {
-              root: {
-                backgroundImage: "none",
-              },
-            },
-          },
-        },
-      }),
-    [mode]
+  const toggleTheme = useCallback(() => {
+    setMode((prev) => {
+      const next = prev === "light" ? "dark" : "light";
+      localStorage.setItem(THEME_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const setLayout = useCallback((next: LayoutMode) => {
+    setLayoutState(next);
+    localStorage.setItem(LAYOUT_KEY, next);
+  }, []);
+
+  const theme = useMemo(() => createAppTheme(mode), [mode]);
+
+  const value = useMemo<ThemeContextType>(
+    () => ({ mode, toggleTheme, layout, setLayout }),
+    [mode, toggleTheme, layout, setLayout],
   );
 
   return (
-    <ThemeContext.Provider value={{ mode, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       <MUIThemeProvider theme={theme}>
         <CssBaseline />
         {children}

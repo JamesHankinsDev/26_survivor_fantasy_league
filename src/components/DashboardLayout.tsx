@@ -7,99 +7,45 @@ import {
   Drawer,
   Fab,
   IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  AppBar,
-  Toolbar,
   Typography,
-  Tooltip,
   useMediaQuery,
 } from "@mui/material";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
-import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
-import HomeIcon from "@mui/icons-material/Home";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import InfoIcon from "@mui/icons-material/Info";
-import SportsBaseballIcon from "@mui/icons-material/SportsBaseball";
-import LeaderboardIcon from "@mui/icons-material/Leaderboard";
-import LogoutIcon from "@mui/icons-material/Logout";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
-import Brightness7Icon from "@mui/icons-material/Brightness7";
 import ForumIcon from "@mui/icons-material/Forum";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
-import { authLogger } from "@/lib/logger";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import NotificationBell from "@/components/NotificationBell";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import MessageBoard from "@/components/MessageBoard";
-import LeagueSwitcher from "@/components/LeagueSwitcher";
 import SeasonRecapModal from "@/components/SeasonRecapModal";
 import { useSeasonRecap } from "@/hooks/useSeasonRecap";
 import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
 import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
-
-const DRAWER_WIDTH = 280;
-
-// Base navigation items (always shown)
-const baseNavItems = [
-  { label: "Home", icon: HomeIcon, path: "/dashboard" },
-  {
-    label: "Leaderboard",
-    icon: LeaderboardIcon,
-    path: "/dashboard/leaderboard",
-  },
-  {
-    label: "Castaways",
-    icon: SportsBaseballIcon,
-    path: "/dashboard/castaways",
-  },
-  {
-    label: "Hall of Fame",
-    icon: EmojiEventsIcon,
-    path: "/dashboard/hall-of-fame",
-  },
-];
-
-// Admin nav item (only shown to league owners)
-const adminNavItem = {
-  label: "Admin",
-  icon: AdminPanelSettingsIcon,
-  path: "/dashboard/admin",
-};
-
-// About nav item (always shown)
-const aboutNavItem = {
-  label: "About",
-  icon: InfoIcon,
-  path: "/dashboard/about",
-};
+import Sidebar from "@/components/shell/Sidebar";
+import TopNav from "@/components/shell/TopNav";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
   const [proposalOpen, setProposalOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
-  const { logout, user, isDemoMode, exitDemoMode } = useAuth();
-  const { mode, toggleTheme } = useTheme();
+  const { user, isDemoMode, exitDemoMode } = useAuth();
+  const { layout } = useTheme();
   const muiTheme = useMuiTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down("md"));
+  const belowMd = useMediaQuery(muiTheme.breakpoints.down("md"));
 
-  // Fetch the user's first active league for the global message board
+  // Sidebar at md+ when chosen; topnav forced below md regardless of preference.
+  const effectiveLayout: "sidebar" | "topnav" =
+    belowMd ? "topnav" : layout;
+
   const { data: userLeagues = [] } = useUserLeagues(user?.uid || null);
   const activeLeague = userLeagues[0] || null;
   const currentMember = activeLeague?.memberDetails?.find(
@@ -116,8 +62,7 @@ export default function DashboardLayout({
     markSeen();
   };
 
-  // S51 rule proposal: auto-open once per user, but defer while the recap is
-  // still on screen so we don't stack two modals on the same sign-in.
+  // S51 rule proposal: auto-open once per user, deferred while the recap is up.
   const proposal = useS51RuleProposal(activeLeague);
   useEffect(() => {
     if (recapOpen || shouldAutoOpen) return;
@@ -128,165 +73,9 @@ export default function DashboardLayout({
     proposal.markSeen();
   };
 
-  // Build navigation items - Admin is now available to all users
-  const navItems = [...baseNavItems, adminNavItem, aboutNavItem];
-
-  const handleToggleDrawer = () => {
-    setDrawerOpen(!drawerOpen);
-  };
-
-  const handleNavClick = (path: string) => {
-    router.push(path);
-    setDrawerOpen(false);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push("/");
-    } catch (error) {
-      authLogger.error("Logout failed:", error);
-    }
-  };
-
-  const drawerContent = (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
-      <Box
-        sx={{
-          p: 2,
-          bgcolor: "rgba(232, 93, 42, 0.1)",
-          borderBottom: "1px solid #E85D2A",
-        }}
-      >
-        <Typography variant="h6" sx={{ color: "#E85D2A", fontWeight: 700 }}>
-          Survivor League
-        </Typography>
-        <LeagueSwitcher onNavigate={() => setDrawerOpen(false)} />
-      </Box>
-
-      {/* Navigation Items */}
-      <List sx={{ flex: 1, py: 2 }}>
-        {navItems.map((item) => {
-          const isHome = item.path === "/dashboard";
-          const isSelected = isHome
-            ? pathname === "/dashboard" ||
-              pathname?.startsWith("/dashboard/my-leagues") === true
-            : pathname === item.path;
-          return (
-          <ListItem key={item.path} disablePadding>
-            <ListItemButton
-              onClick={() => handleNavClick(item.path)}
-              selected={isSelected}
-              sx={{
-                "&.Mui-selected": {
-                  backgroundColor: "rgba(232, 93, 42, 0.12)",
-                  borderLeft: "4px solid #E85D2A",
-                  pl: 1.75,
-                  "&:hover": {
-                    backgroundColor: "rgba(232, 93, 42, 0.16)",
-                  },
-                },
-                "&:hover": {
-                  backgroundColor: "rgba(232, 93, 42, 0.08)",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  color: isSelected ? "#E85D2A" : "inherit",
-                  minWidth: 40,
-                }}
-              >
-                <item.icon />
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                sx={{
-                  "& .MuiTypography-root": {
-                    fontWeight: isSelected ? 600 : 400,
-                    color: isSelected ? "#E85D2A" : "inherit",
-                  },
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-          );
-        })}
-      </List>
-
-      <Divider />
-
-      {/* User Info */}
-      <Box sx={{ p: 2 }}>
-        <Typography
-          variant="caption"
-          sx={{ color: "text.secondary", display: "block", mb: 1 }}
-        >
-          Signed in as:
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: 500,
-            mb: 2,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {user?.displayName || user?.email}
-        </Typography>
-
-        {/* Theme Toggle Button */}
-        <Box sx={{ mb: 2 }}>
-          <Tooltip title="Toggle light/dark mode">
-            <IconButton
-              onClick={toggleTheme}
-              aria-label={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
-              sx={{
-                width: "100%",
-                color: "text.primary",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                "&:hover": {
-                  backgroundColor: "action.hover",
-                },
-              }}
-            >
-              {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {mode === "dark" ? "Light Mode" : "Dark Mode"}
-              </Typography>
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        {/* Logout Button */}
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={handleLogout}
-            sx={{
-              color: "#E85D2A",
-              "&:hover": {
-                backgroundColor: "rgba(232, 93, 42, 0.08)",
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: "#E85D2A", minWidth: 40 }}>
-              <LogoutIcon />
-            </ListItemIcon>
-            <ListItemText primary="Sign Out" />
-          </ListItemButton>
-        </ListItem>
-      </Box>
-    </Box>
-  );
-
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      {/* Skip to main content link for keyboard/screen reader users */}
+    <div className="sfl-app" data-layout={effectiveLayout}>
+      {/* Skip to main content (a11y) */}
       <Box
         component="a"
         href="#main-content"
@@ -305,8 +94,8 @@ export default function DashboardLayout({
             width: "auto",
             height: "auto",
             overflow: "visible",
-            bgcolor: "#E85D2A",
-            color: "white",
+            bgcolor: "var(--ink)",
+            color: "var(--bg)",
             px: 2,
             py: 1,
             borderRadius: 1,
@@ -320,7 +109,7 @@ export default function DashboardLayout({
         Skip to main content
       </Box>
 
-      {/* Fixed Notification Bell in Top Right */}
+      {/* Fixed notification bell, top-right */}
       {user && (
         <Box
           sx={{
@@ -334,95 +123,18 @@ export default function DashboardLayout({
         </Box>
       )}
 
-      {/* Mobile AppBar */}
-      <AppBar
-        sx={{
-          display: { xs: "flex", md: "none" },
-          bgcolor: "background.paper",
-          color: "text.primary",
-          boxShadow: 1,
-          zIndex: 1300,
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label={drawerOpen ? "Close navigation menu" : "Open navigation menu"}
-            onClick={handleToggleDrawer}
-            edge="start"
-            sx={{ mr: 2 }}
-          >
-            {drawerOpen ? <CloseIcon /> : <MenuIcon />}
-          </IconButton>
-          <Typography
-            variant="h6"
-            sx={{ color: "#E85D2A", fontWeight: 700, flex: 1 }}
-          >
-            Survivor League
-          </Typography>
-          <Tooltip title="Toggle light/dark mode">
-            <IconButton
-              onClick={toggleTheme}
-              aria-label={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
-              sx={{ color: "text.primary" }}
-            >
-              {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
-            </IconButton>
-          </Tooltip>
-        </Toolbar>
-      </AppBar>
-
-      {/* PWA Install Button - shown globally */}
+      {/* PWA install button — global */}
       <PWAInstallButton />
 
-      {/* Sidebar Drawer */}
-      <Drawer
-        variant="temporary"
-        open={drawerOpen}
-        onClose={handleToggleDrawer}
-        aria-label="Navigation menu"
-        sx={{
-          display: { xs: "block", md: "none" },
-          "& .MuiDrawer-paper": {
-            width: DRAWER_WIDTH,
-            boxSizing: "border-box",
-          },
-        }}
-      >
-        {drawerContent}
-      </Drawer>
+      {/* Shell — sidebar or topnav */}
+      {effectiveLayout === "sidebar" ? <Sidebar /> : <TopNav />}
 
-      {/* Desktop Sidebar */}
-      <Box
-        component="nav"
-        aria-label="Main navigation"
-        sx={{
-          display: { xs: "none", md: "block" },
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          borderRight: "1px solid #E85D2A",
-        }}
-      >
-        <Box sx={{ width: DRAWER_WIDTH, overflow: "auto" }}>
-          {drawerContent}
-        </Box>
-      </Box>
-
-      {/* Main Content */}
-      <Box
-        component="main"
-        id="main-content"
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          mt: { xs: 7, md: 0 },
-        }}
-      >
+      {/* Main content */}
+      <main id="main-content" className="sfl-main">
         {isDemoMode && (
           <Box
             sx={{
-              bgcolor: "#E85D2A",
+              bgcolor: "var(--flame)",
               color: "white",
               py: 0.75,
               px: 2,
@@ -432,6 +144,7 @@ export default function DashboardLayout({
               gap: 1,
               fontSize: "0.85rem",
               fontWeight: 500,
+              borderRadius: "var(--r-md)",
             }}
           >
             <InfoOutlinedIcon sx={{ fontSize: 16 }} />
@@ -458,9 +171,9 @@ export default function DashboardLayout({
           </Box>
         )}
         {children}
-      </Box>
+      </main>
 
-      {/* Season Recap Modal — auto-opens once per concluded league per user */}
+      {/* Season recap modal — auto-opens once per concluded league per user */}
       {activeLeague && (
         <SeasonRecapModal
           open={recapOpen}
@@ -470,7 +183,7 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* S51 Rule Proposal Modal — auto-opens once per user; defers behind recap */}
+      {/* S51 rule proposal modal — auto-opens once per user; defers behind recap */}
       {activeLeague && proposal.proposalRelevant && (
         <SeasonRuleProposalModal
           open={proposalOpen}
@@ -482,11 +195,10 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* Global Message Board Drawer */}
+      {/* Global message board drawer */}
       {user && activeLeague && (
         <>
-          {/* Desktop: Fixed button in bottom-left */}
-          {!isMobile && !messageDrawerOpen && (
+          {!belowMd && !messageDrawerOpen && (
             <Button
               variant="contained"
               startIcon={<ForumIcon />}
@@ -497,22 +209,22 @@ export default function DashboardLayout({
                 bottom: 24,
                 left: 24,
                 zIndex: 1200,
-                bgcolor: "#E85D2A",
-                "&:hover": { bgcolor: "#d14d1a" },
+                bgcolor: "var(--flame)",
+                "&:hover": { bgcolor: "var(--flame-deep)" },
                 borderRadius: 6,
                 px: 3,
                 py: 1.25,
                 boxShadow: 4,
                 textTransform: "none",
                 fontWeight: 600,
+                color: "white",
               }}
             >
               Message Board
             </Button>
           )}
 
-          {/* Mobile: FAB in bottom-left */}
-          {isMobile && !messageDrawerOpen && (
+          {belowMd && !messageDrawerOpen && (
             <Fab
               color="primary"
               aria-label="Open message board"
@@ -521,8 +233,8 @@ export default function DashboardLayout({
                 position: "fixed",
                 bottom: 24,
                 left: 24,
-                bgcolor: "#E85D2A",
-                "&:hover": { bgcolor: "#d14d1a" },
+                bgcolor: "var(--flame)",
+                "&:hover": { bgcolor: "var(--flame-deep)" },
                 zIndex: 1200,
               }}
             >
@@ -531,14 +243,14 @@ export default function DashboardLayout({
           )}
 
           <Drawer
-            anchor={isMobile ? "bottom" : "right"}
+            anchor={belowMd ? "bottom" : "right"}
             open={messageDrawerOpen}
             onClose={() => setMessageDrawerOpen(false)}
             variant="temporary"
             aria-label="League message board"
             ModalProps={{ keepMounted: true }}
             PaperProps={{
-              sx: isMobile
+              sx: belowMd
                 ? {
                     height: "85vh",
                     borderTopLeftRadius: 16,
@@ -557,7 +269,6 @@ export default function DashboardLayout({
                 height: "100%",
               }}
             >
-              {/* Drawer Header */}
               <Box
                 sx={{
                   display: "flex",
@@ -567,14 +278,14 @@ export default function DashboardLayout({
                   py: 1.5,
                   borderBottom: "1px solid",
                   borderColor: "divider",
-                  bgcolor: "rgba(232, 93, 42, 0.05)",
-                  ...(isMobile && {
+                  bgcolor: "color-mix(in oklch, var(--flame) 6%, var(--bg-paper))",
+                  ...(belowMd && {
                     borderTopLeftRadius: 16,
                     borderTopRightRadius: 16,
                   }),
                 }}
               >
-                {isMobile && (
+                {belowMd && (
                   <Box
                     sx={{
                       position: "absolute",
@@ -589,7 +300,7 @@ export default function DashboardLayout({
                   />
                 )}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <ForumIcon sx={{ color: "#E85D2A", fontSize: 20 }} />
+                  <ForumIcon sx={{ color: "var(--flame)", fontSize: 20 }} />
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                     {activeLeague.name} Chat
                   </Typography>
@@ -603,7 +314,6 @@ export default function DashboardLayout({
                 </IconButton>
               </Box>
 
-              {/* Drawer Body */}
               <Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
                 <MessageBoard
                   league={activeLeague}
@@ -618,6 +328,6 @@ export default function DashboardLayout({
           </Drawer>
         </>
       )}
-    </Box>
+    </div>
   );
 }
