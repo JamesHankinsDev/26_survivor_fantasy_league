@@ -16,7 +16,7 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import type { League } from "@/types/league";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
-import { getSeasonLabel } from "@/data/seasons";
+import { getSeasonLabel, getSeasonStatus } from "@/data/seasons";
 import { listPastSeasons, type PastSeasonEntry } from "@/utils/pastSeasons";
 import PastSeasonRecapModal from "./PastSeasonRecapModal";
 import StandingsTableModal from "./StandingsTableModal";
@@ -80,12 +80,16 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
     : null;
 
   const hasHistory = pastEntries.length > 0;
-  // Show the proposal button whenever the proposal is relevant for this league
-  // (S51 is still Upcoming) — even if hasContent is false. The modal itself
-  // shows a graceful "Not enough roster data to back-test this league" message
-  // when the backtest can't compute (e.g. seasons/{n}/castaways has no
-  // weeklyEvents populated), so users still get to read the rule comparison.
-  const hasProposal = proposalHook.proposalRelevant && proposalLeague != null;
+  // The hook's `proposalRelevant` flag is tuned for auto-pop (S51 must still
+  // be Upcoming or the pitch loses purpose). For the on-demand toolbar
+  // button we want a wider window: the modal stays useful reference material
+  // (rule comparison + per-league votes) until S51 fully concludes. So hide
+  // only on "past" status. The modal handles a null/empty backtest with a
+  // tasteful fallback, so missing weeklyEvents data isn't a blocker either.
+  const s51 = seasons.find((s) => s.number === 51);
+  const proposalAvailable =
+    s51 != null && getSeasonStatus(s51) !== "past" && proposalLeague != null;
+  const hasProposal = proposalAvailable;
 
   if (!hasHistory && !hasProposal) return null;
 
@@ -230,7 +234,7 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
           onClose={() => setOpenStandings(null)}
         />
       )}
-      {proposalOpen && proposalHook.proposalRelevant && proposalLeague && (
+      {proposalOpen && proposalAvailable && proposalLeague && (
         <SeasonRuleProposalModal
           open
           league={proposalLeague}
