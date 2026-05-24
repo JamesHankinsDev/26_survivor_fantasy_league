@@ -80,7 +80,12 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
     : null;
 
   const hasHistory = pastEntries.length > 0;
-  const hasProposal = proposalHook.proposalRelevant && proposalHook.hasContent;
+  // Show the proposal button whenever the proposal is relevant for this league
+  // (S51 is still Upcoming) — even if hasContent is false. The modal itself
+  // shows a graceful "Not enough roster data to back-test this league" message
+  // when the backtest can't compute (e.g. seasons/{n}/castaways has no
+  // weeklyEvents populated), so users still get to read the rule comparison.
+  const hasProposal = proposalHook.proposalRelevant && proposalLeague != null;
 
   if (!hasHistory && !hasProposal) return null;
 
