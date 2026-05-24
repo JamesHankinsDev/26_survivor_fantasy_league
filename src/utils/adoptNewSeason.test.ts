@@ -145,4 +145,27 @@ describe("adoptNewSeason", () => {
     expect(out.updatedAt).toBe(when);
     expect(out.seasonArchive?.["50"].archivedAt).toBe(when);
   });
+
+  it("never emits undefined-valued fields on reset members (Firestore rejects them)", () => {
+    // Members with optional fields missing on the input must not surface as
+    // `key: undefined` on the output — that's the bug that made the original
+    // Adopt button look like it did nothing in prod.
+    const sparseLeague = league({
+      memberDetails: [
+        member({ ownerName: undefined, draftedAt: undefined }),
+        member({ userId: "u2", ownerName: undefined }),
+      ],
+    });
+    const out = adoptNewSeason(sparseLeague, 51);
+    for (const m of out.memberDetails) {
+      for (const [k, v] of Object.entries(m)) {
+        expect(
+          v,
+          `member.${k} should not be undefined`,
+        ).not.toBeUndefined();
+      }
+      // draftedAt should be absent (not present-as-undefined)
+      expect("draftedAt" in m).toBe(false);
+    }
+  });
 });

@@ -42,19 +42,25 @@ export function adoptNewSeason(
   const snapshot: ArchivedSeason = {
     seasonNumber: league.seasonNumber,
     archivedAt,
-    // Deep-clone so subsequent mutations to memberDetails don't leak into
-    // the frozen snapshot (weeklyRosters in particular is an array of objects).
+    // Deep-clone + strip undefined fields so the frozen snapshot is safe to
+    // write to Firestore (which rejects undefined values by default).
     memberDetails: (league.memberDetails ?? []).map(cloneMember),
   };
 
   const resetMembers: TribeMember[] = (league.memberDetails ?? []).map(
-    (m): TribeMember => ({
-      ...m,
-      totalPoints: 0,
-      roster: [],
-      weeklyRosters: [],
-      draftedAt: undefined,
-    }),
+    (m): TribeMember => {
+      // Pull `draftedAt` out so it's omitted (not `undefined`) on the reset
+      // member — Firestore throws on undefined-valued fields, which manifested
+      // as the "click does nothing" bug since the write rejected silently.
+      const { draftedAt: _draftedAt, ...rest } = m;
+      void _draftedAt;
+      return stripUndefined({
+        ...rest,
+        totalPoints: 0,
+        roster: [],
+        weeklyRosters: [],
+      }) as TribeMember;
+    },
   );
 
   return {
@@ -70,12 +76,23 @@ export function adoptNewSeason(
 }
 
 function cloneMember(m: TribeMember): TribeMember {
-  return {
+  return stripUndefined({
     ...m,
     roster: [...(m.roster ?? [])],
-    weeklyRosters: (m.weeklyRosters ?? []).map((wr) => ({
-      ...wr,
-      castawayIds: [...(wr.castawayIds ?? [])],
-    })),
-  };
+    weeklyRosters: (m.weeklyRosters ?? []).map((wr) =>
+      stripUndefined({
+        ...wr,
+        castawayIds: [...(wr.castawayIds ?? [])],
+      }),
+    ),
+  }) as TribeMember;
+}
+
+/** Drop top-level keys whose value is `undefined`. Firestore rejects them. */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k as keyof T] = v as T[keyof T];
+  }
+  return out;
 }

@@ -68,6 +68,7 @@ export default function ManageLeagueDialog({
   const [targetSeasonNumber, setTargetSeasonNumber] = useState<number | null>(null);
   const [adoptConfirmOpen, setAdoptConfirmOpen] = useState(false);
   const [adoptLoading, setAdoptLoading] = useState(false);
+  const [adoptError, setAdoptError] = useState<string | null>(null);
 
   // Sync restrictionEnabled with league prop
   useEffect(() => {
@@ -121,7 +122,7 @@ export default function ManageLeagueDialog({
   const handleAdoptNewSeason = async () => {
     if (!league || targetSeasonNumber == null) return;
     setAdoptLoading(true);
-    setError("");
+    setAdoptError(null);
     try {
       const next = adoptNewSeason(league, targetSeasonNumber);
       const leagueRef = doc(db, "leagues", league.id);
@@ -135,10 +136,12 @@ export default function ManageLeagueDialog({
       setAdoptConfirmOpen(false);
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to adopt new season",
+      // Surface in the confirm dialog AND log to devtools — silent failures
+      // here were the original "click does nothing" bug.
+      // eslint-disable-next-line no-console
+      console.error("[adoptNewSeason] failed:", err);
+      setAdoptError(
+        err instanceof Error ? err.message : "Failed to adopt new season",
       );
     } finally {
       setAdoptLoading(false);
@@ -603,7 +606,11 @@ export default function ManageLeagueDialog({
       {/* Adopt-new-season confirmation */}
       <Dialog
         open={adoptConfirmOpen}
-        onClose={() => !adoptLoading && setAdoptConfirmOpen(false)}
+        onClose={() => {
+          if (adoptLoading) return;
+          setAdoptConfirmOpen(false);
+          setAdoptError(null);
+        }}
         aria-labelledby="adopt-season-dialog-title"
       >
         <DialogTitle
@@ -617,6 +624,11 @@ export default function ManageLeagueDialog({
           ?
         </DialogTitle>
         <DialogContent>
+          {adoptError && (
+            <Alert severity="error" role="alert" sx={{ mt: 2, mb: 2 }}>
+              {adoptError}
+            </Alert>
+          )}
           <Typography variant="body2" sx={{ mt: 2, mb: 2 }}>
             <strong>{league.name}</strong> will be reset for{" "}
             <strong>
