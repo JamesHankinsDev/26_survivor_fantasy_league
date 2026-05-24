@@ -11,13 +11,17 @@ import { INVENTORY_ITEMS } from "@/utils/inventoryConfig";
 interface CastawayCardProps {
   castaway: Castaway;
   seasonScore?: number;
+  /**
+   * Kept in the public signature so existing callers don't need to change, but
+   * has no visual effect — eliminated castaways render with the same rarity
+   * styling as everyone else. Status is still surfaced via the page-level
+   * filter and the optional Jury badge on the art panel.
+   */
   isEliminated?: boolean;
   eventSummary?: CastawayEventSummary[];
   /** Short season label shown in the card footer (e.g. "Survivor 50"). Used in the Hall of Fame. */
   seasonLabel?: string;
 }
-
-const ELIMINATED_FRAME = "#d32f2f";
 
 const ShimmerOverlay = ({ rarity }: { rarity: RarityConfig }) => {
   if (!rarity.shimmer) return null;
@@ -76,18 +80,13 @@ const RarityGem = ({ rarity }: { rarity: RarityConfig }) => (
 
 const CardFace = ({
   rarity,
-  isEliminated,
   children,
   backSide = false,
 }: {
   rarity: RarityConfig;
-  isEliminated: boolean;
   children: React.ReactNode;
   backSide?: boolean;
 }) => {
-  const frameGradient = isEliminated
-    ? `linear-gradient(135deg, ${ELIMINATED_FRAME}, #7a1b1b)`
-    : rarity.frameGradient;
   return (
     <Box
       sx={{
@@ -97,8 +96,8 @@ const CardFace = ({
         transform: backSide ? "rotateY(180deg)" : "none",
         borderRadius: "14px",
         padding: "3px",
-        background: frameGradient,
-        boxShadow: isEliminated ? "none" : rarity.glow || undefined,
+        background: rarity.frameGradient,
+        boxShadow: rarity.glow || undefined,
         display: "flex",
       }}
     >
@@ -122,10 +121,11 @@ const CardFace = ({
 export default function CastawayCard({
   castaway,
   seasonScore = 0,
-  isEliminated = false,
+  isEliminated: _isEliminated = false,
   eventSummary = [],
   seasonLabel,
 }: CastawayCardProps) {
+  void _isEliminated; // prop kept for callers; intentionally unused visually
   const [flipped, setFlipped] = useState(false);
   const rarity = getRarityFromPoints(seasonScore);
   const badges = getCastawayBadges(castaway);
@@ -142,7 +142,7 @@ export default function CastawayCard({
     <Box
       role="button"
       tabIndex={0}
-      aria-label={`${castaway.name} — ${rarity.label}${isEliminated ? ", eliminated" : ""}. ${seasonScore} season points. Press Enter to ${flipped ? "show photo" : "show stats"}.`}
+      aria-label={`${castaway.name} — ${rarity.label}. ${seasonScore} season points. Press Enter to ${flipped ? "show photo" : "show stats"}.`}
       onClick={handleFlip}
       onKeyDown={handleKeyDown}
       sx={{
@@ -169,7 +169,7 @@ export default function CastawayCard({
         }}
       >
         {/* Front */}
-        <CardFace rarity={rarity} isEliminated={isEliminated}>
+        <CardFace rarity={rarity}>
           {/* Top banner */}
           <Box
             sx={{
@@ -178,9 +178,7 @@ export default function CastawayCard({
               gap: 1,
               px: 1.25,
               py: 0.75,
-              background: isEliminated
-                ? `linear-gradient(90deg, ${ELIMINATED_FRAME}, #7a1b1b)`
-                : rarity.frameGradient,
+              background: rarity.frameGradient,
               color: "#fff",
               textShadow: "0 1px 2px rgba(0,0,0,0.35)",
             }}
@@ -239,7 +237,7 @@ export default function CastawayCard({
               mt: 1,
               borderRadius: "6px",
               overflow: "hidden",
-              border: `2px solid ${isEliminated ? ELIMINATED_FRAME : rarity.frame}`,
+              border: `2px solid ${rarity.frame}`,
               background: rarity.surface,
               minHeight: { xs: 200, sm: 240 },
             }}
@@ -257,14 +255,10 @@ export default function CastawayCard({
                   display: "block",
                   position: "absolute",
                   inset: 0,
-                  ...(isEliminated && {
-                    filter: "grayscale(100%)",
-                    opacity: 0.55,
-                  }),
                 }}
               />
             )}
-            {!isEliminated && <ShimmerOverlay rarity={rarity} />}
+            <ShimmerOverlay rarity={rarity} />
 
             {/* Status badges — top-right corner of art panel */}
             <Box
@@ -376,33 +370,18 @@ export default function CastawayCard({
                 fontWeight: 700,
                 letterSpacing: 1.2,
                 textTransform: "uppercase",
-                color: isEliminated ? ELIMINATED_FRAME : rarity.accent,
+                color: rarity.accent,
               }}
             >
-              {isEliminated
-                ? "— Torch Snuffed —"
-                : seasonLabel
-                  ? `${rarity.label} · ${seasonLabel}`
-                  : `${rarity.label} · Castaway`}
+              {seasonLabel
+                ? `${rarity.label} · ${seasonLabel}`
+                : `${rarity.label} · Castaway`}
             </Typography>
-            {isEliminated && (
-              <Chip
-                label="Eliminated"
-                size="small"
-                sx={{
-                  bgcolor: ELIMINATED_FRAME,
-                  color: "white",
-                  fontWeight: 700,
-                  fontSize: "0.65rem",
-                  height: 20,
-                }}
-              />
-            )}
           </Box>
         </CardFace>
 
         {/* Back */}
-        <CardFace rarity={rarity} isEliminated={isEliminated} backSide>
+        <CardFace rarity={rarity} backSide>
           <Box
             sx={{
               display: "flex",
@@ -410,9 +389,7 @@ export default function CastawayCard({
               gap: 1,
               px: 1.25,
               py: 0.75,
-              background: isEliminated
-                ? `linear-gradient(90deg, ${ELIMINATED_FRAME}, #7a1b1b)`
-                : rarity.frameGradient,
+              background: rarity.frameGradient,
               color: "#fff",
               textShadow: "0 1px 2px rgba(0,0,0,0.35)",
             }}
@@ -427,7 +404,7 @@ export default function CastawayCard({
                 textTransform: "uppercase",
               }}
             >
-              {isEliminated ? "Torch Snuffed" : rarity.label}
+              {rarity.label}
             </Typography>
           </Box>
 

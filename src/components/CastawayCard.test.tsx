@@ -38,14 +38,18 @@ describe("CastawayCard", () => {
     expect(images).toHaveLength(0);
   });
 
-  it("should show eliminated chip when isEliminated is true", () => {
+  it("should not render eliminated styling even when isEliminated is true", () => {
+    // isEliminated is kept in the prop signature but is intentionally a
+    // visual no-op — eliminated castaways render as normal rarity-styled cards.
     render(<CastawayCard castaway={mockCastaway} isEliminated={true} />);
-    expect(screen.getByText("Eliminated")).toBeInTheDocument();
+    expect(screen.queryByText("Eliminated")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Torch Snuffed/)).not.toBeInTheDocument();
   });
 
-  it("should not show eliminated chip when isEliminated is false", () => {
+  it("should not render eliminated styling when isEliminated is false", () => {
     render(<CastawayCard castaway={mockCastaway} isEliminated={false} />);
     expect(screen.queryByText("Eliminated")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Torch Snuffed/)).not.toBeInTheDocument();
   });
 
   it("should display season score when provided", () => {
@@ -92,7 +96,7 @@ describe("CastawayCard", () => {
     );
 
     expect(screen.getByText("Test Castaway")).toBeInTheDocument();
-    expect(screen.getByText("Eliminated")).toBeInTheDocument();
+    expect(screen.queryByText("Eliminated")).not.toBeInTheDocument();
     expect(screen.getByText("200 pts this season")).toBeInTheDocument();
     expect(
       screen.getByText("A test castaway from previous seasons."),

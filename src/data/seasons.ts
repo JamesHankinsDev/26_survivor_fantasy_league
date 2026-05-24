@@ -66,6 +66,23 @@ export const CURRENT_SEASON: Season =
 export const isSeasonActive = (season: Season = CURRENT_SEASON): boolean =>
   season.isActive;
 
+/** The next upcoming season — not active, no finale aired yet. Lowest number wins. */
+export const getUpcomingSeason = (): Season | undefined =>
+  [...SEASONS]
+    .filter((s) => !s.isActive && !s.concludedAt)
+    .sort((a, b) => a.number - b.number)[0];
+
+/**
+ * Default season for the Castaways page.
+ *
+ * Prefers the live season; once it concludes, advertises the next upcoming
+ * season (so the page pivots to "next cast" rather than freezing on the finale).
+ * Leagues / scoring continue to use CURRENT_SEASON, which keeps falling back to
+ * the most recently concluded season.
+ */
+export const getDisplayCastawaySeason = (): Season =>
+  SEASONS.find((s) => s.isActive) ?? getUpcomingSeason() ?? CURRENT_SEASON;
+
 /** Display name for a season number — uses metadata if known, otherwise `Survivor N`. */
 export const getSeasonLabel = (seasonNumber: number): string => {
   const match = ALL_SEASONS.find((s) => s.number === seasonNumber);
