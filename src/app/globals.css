@@ -1208,6 +1208,352 @@ body {
   }
 }
 
+/* ───────── DASHBOARD ─────────
+ * Ported from the design handoff's `styles-screens.css` — the single-league
+ * focused dashboard introduced in Phase 02. The multi-season hub fallback
+ * uses MUI's existing styling and doesn't need new classes here. */
+
+.sfl-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Hero */
+.sfl-dash-hero {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 28px;
+  padding: 38px 36px;
+  background:
+    radial-gradient(
+      900px 400px at 100% 0%,
+      color-mix(in oklch, var(--flame) 16%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--bg-paper), var(--bg-elevated));
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  position: relative;
+  overflow: hidden;
+}
+.sfl-dash-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 18px,
+    color-mix(in oklch, var(--ink) 5%, transparent) 18px 19px
+  );
+  opacity: 0.4;
+  pointer-events: none;
+}
+.sfl-dash-hero > * {
+  position: relative;
+}
+.sfl-dash-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+  min-width: 0;
+}
+.sfl-dash-hero-main .sfl-h1 {
+  font-size: 64px;
+}
+.sfl-dash-lede {
+  font-size: 17px;
+  color: var(--ink-soft);
+  max-width: 520px;
+  margin: 0;
+}
+.sfl-dash-lede b {
+  color: var(--ink);
+}
+.sfl-dash-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.sfl-dash-hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: space-between;
+}
+.sfl-dash-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--bg-paper);
+  border: 1px solid var(--line);
+}
+.sfl-dash-hero-meta > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: space-between;
+}
+.sfl-dash-hero-meta i {
+  color: var(--ink-mute);
+  font-style: normal;
+}
+.sfl-dash-hero-meta span {
+  font-family: var(--font-mono-stack);
+  font-size: 20px;
+  font-weight: 700;
+}
+@media (max-width: 900px) {
+  .sfl-dash-hero {
+    grid-template-columns: 1fr;
+    padding: 26px 22px;
+  }
+  .sfl-dash-hero-main .sfl-h1 {
+    font-size: 44px;
+  }
+}
+
+/* Stat strip */
+.sfl-statstrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.sfl-stat {
+  background: var(--bg-paper);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sfl-stat-num {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.sfl-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  font-weight: 700;
+  margin-top: 6px;
+}
+.sfl-stat-sub {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+@media (max-width: 980px) {
+  .sfl-statstrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sfl-stat-num {
+    font-size: 32px;
+  }
+}
+
+/* Dash grid */
+.sfl-dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 22px;
+}
+.sfl-dash-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+@media (max-width: 1280px) {
+  .sfl-dash-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Power movers */
+.sfl-movers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (max-width: 700px) {
+  .sfl-movers {
+    grid-template-columns: 1fr;
+  }
+}
+.sfl-mover {
+  background: var(--bg-paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px;
+}
+.sfl-mover.self {
+  border-color: var(--flame);
+  background: color-mix(in oklch, var(--flame) 6%, var(--bg-paper));
+}
+.sfl-mover-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sfl-mover-name {
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sfl-mover-owner {
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+.sfl-mover-head .sfl-pts {
+  margin-left: auto;
+}
+.sfl-mover-bar {
+  height: 8px;
+  margin-top: 10px;
+  background: var(--bg-inset);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.sfl-mover-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease-out;
+}
+.sfl-mover-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+.sfl-mover-foot b {
+  color: var(--ink);
+  font-family: var(--font-mono-stack);
+}
+
+/* Board mini */
+.sfl-board-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+.sfl-board-mini-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.sfl-board-mini-title {
+  font-family: var(--font-display-stack);
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
+  color: var(--ink);
+}
+.sfl-board-mini-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.sfl-board-mini-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+}
+.sfl-board-mini-meta {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.sfl-board-mini-meta b {
+  font-size: 12px;
+  color: var(--ink);
+}
+.sfl-board-mini-meta span {
+  color: var(--ink-mute);
+  margin-left: 4px;
+}
+.sfl-board-mini-body {
+  font-size: 13px;
+  margin: 2px 0;
+  color: var(--ink);
+}
+.sfl-board-mini-empty {
+  font-size: 13px;
+  color: var(--ink-mute);
+  font-style: italic;
+  padding: 12px 0;
+  text-align: center;
+}
+
+/* Next-episode tile */
+.sfl-next-ep {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+.sfl-next-ep-title {
+  font-family: var(--font-display-stack);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.sfl-next-ep-when {
+  color: var(--ink-mute);
+  font-size: 12px;
+}
+.sfl-next-ep-mini {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.sfl-next-ep-mini > div {
+  background: var(--bg-elevated);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sfl-next-ep-mini i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--ink-mute);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sfl-next-ep-mini b {
+  font-family: var(--font-mono-stack);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 /* Topnav — first row of the grid; main pane is the only scroller, so the
  * topnav never moves with content. */
 .sfl-topnav {
