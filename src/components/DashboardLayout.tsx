@@ -27,6 +27,7 @@ import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
 import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
 import Sidebar from "@/components/shell/Sidebar";
 import TopNav from "@/components/shell/TopNav";
+import MobileTabBar from "@/components/shell/MobileTabBar";
 
 export default function DashboardLayout({
   children,
@@ -126,8 +127,9 @@ export default function DashboardLayout({
       {/* PWA install button — global */}
       <PWAInstallButton />
 
-      {/* Shell — sidebar or topnav */}
+      {/* Shell — sidebar or topnav (slim top bar on mobile + bottom tab bar) */}
       {effectiveLayout === "sidebar" ? <Sidebar /> : <TopNav />}
+      {belowMd && user && <MobileTabBar />}
 
       {/* Main content */}
       <main id="main-content" className="sfl-main">
@@ -141,6 +143,8 @@ export default function DashboardLayout({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              flexWrap: "wrap",
+              textAlign: "center",
               gap: 1,
               fontSize: "0.85rem",
               fontWeight: 500,
@@ -231,8 +235,9 @@ export default function DashboardLayout({
               onClick={() => setMessageDrawerOpen(true)}
               sx={{
                 position: "fixed",
-                bottom: 24,
-                left: 24,
+                // Sits above the fixed bottom tab bar on mobile.
+                bottom: "calc(72px + env(safe-area-inset-bottom))",
+                left: 20,
                 bgcolor: "var(--flame)",
                 "&:hover": { bgcolor: "var(--flame-deep)" },
                 zIndex: 1200,

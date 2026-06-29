@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   Container,
   Box,
@@ -31,8 +31,9 @@ import {
 } from "@/types/league";
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
-import { DraftTeamModal } from "@/components/DraftTeamModal";
-import { AddDropModal } from "@/components/AddDropModal";
+import CardPack from "@/components/cards/CardPack";
+import AddDropDraft from "@/components/cards/AddDropDraft";
+import { hashSeed, seededSample } from "@/utils/seededDeal";
 import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
@@ -132,6 +133,56 @@ export default function LeagueDetailPage() {
     [computedMembers, user],
   );
 
+  // ───────── Season-start "starter pack" draft ─────────
+  // The current member's raw record (carries the persisted dealt hand).
+  const currentMember = useMemo(
+    () => league?.memberDetails?.find((m) => m.userId === user?.uid),
+    [league, user],
+  );
+  const eliminatedSet = useMemo(
+    () => new Set(eliminatedCastawayIds),
+    [eliminatedCastawayIds],
+  );
+  // Stable seed per (member, league, season) so the deal can't be rerolled.
+  const draftSeed = useMemo(
+    () => (user && league ? hashSeed(`${user.uid}|${league.id}|${league.seasonNumber}`) : 0),
+    [user, league],
+  );
+  // The dealt hand of castaway ids: the persisted hand once written, otherwise
+  // a deterministic deal computed from the seed (so display is instant + stable
+  // even before the background persist completes).
+  const dealtHandIds = useMemo(() => {
+    if (currentMember?.dealtHand?.length) return currentMember.dealtHand;
+    const eligible = castaways.filter((c) => !eliminatedSet.has(c.id));
+    // Deal 9, discard down to a tribe of 5 (a 3×3 hand).
+    return seededSample(eligible, Math.min(9, eligible.length), draftSeed).map((c) => c.id);
+  }, [currentMember, castaways, eliminatedSet, draftSeed]);
+  const dealtCastaways = useMemo(
+    () =>
+      dealtHandIds
+        .map((id) => castaways.find((c) => c.id === id))
+        .filter((c): c is NonNullable<typeof c> => Boolean(c)),
+    [dealtHandIds, castaways],
+  );
+
+  // Persist the dealt hand the first time the draft opens, locking it in even
+  // if the eligible pool later changes (e.g. an elimination). Idempotent.
+  const dealtWriteRef = useRef(false);
+  useEffect(() => {
+    if (!draftDialogOpen || !league || !user || !currentMember) return;
+    if (currentMember.dealtHand?.length) return;
+    if (dealtHandIds.length === 0 || dealtWriteRef.current) return;
+    dealtWriteRef.current = true;
+    const updatedMembers = league.memberDetails.map((m) =>
+      m.userId === user.uid ? { ...m, dealtHand: dealtHandIds, dealtAt: new Date() } : m,
+    );
+    updateDoc(doc(db, "leagues", league.id), { memberDetails: updatedMembers })
+      .then(invalidateLeagueData)
+      .catch(() => {
+        dealtWriteRef.current = false;
+      });
+  }, [draftDialogOpen, league?.id, user?.uid, currentMember, dealtHandIds, league, user, invalidateLeagueData]);
+
   // Calculate week number
   const weekNumber = useMemo(() => {
     if (!league?.leagueStartDate) return null;
@@ -178,6 +229,9 @@ export default function LeagueDetailPage() {
   const handleSubmitDraft = useCallback(
     async (selectedCastawayIds: string[]) => {
       if (!league || !user) throw new Error("Missing league or user info");
+      if (selectedCastawayIds.length < 1 || selectedCastawayIds.length > 5) {
+        throw new Error("A starting tribe must have between 1 and 5 castaways");
+      }
       setIsSaving(true);
       try {
         const updatedMembers = league.memberDetails.map((member) =>
@@ -433,12 +487,9 @@ export default function LeagueDetailPage() {
       )}
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          sx={{ fontWeight: 700, color: "text.primary", mb: 1 }}
-        >
+        <h1 className="sfl-h1" style={{ marginBottom: 8 }}>
           {league.name}
-        </Typography>
+        </h1>
         <Box
           sx={{
             display: "flex",
@@ -494,30 +545,32 @@ export default function LeagueDetailPage() {
       {/* Current User's Tribe Card (Highlighted) */}
       {currentUserTribe && (
         <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="subtitle1"
-            sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}
-          >
+          <div className="sfl-eyebrow flame" style={{ marginBottom: 12 }}>
             Your Tribe
-          </Typography>
+          </div>
           {!currentUserTribe.roster || currentUserTribe.roster.length === 0 ? (
             seasonActive ? (
-              <Alert
-                severity="info"
-                action={
-                  <Button
-                    color="inherit"
-                    size="small"
-                    onClick={() => setDraftDialogOpen(true)}
-                  >
-                    Draft Now
-                  </Button>
-                }
-                sx={{ mb: 2 }}
+              <div
+                className="sfl-card"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  marginBottom: 16,
+                  border: "1px solid var(--line)",
+                }}
               >
-                You haven't drafted your team yet. Select 5 castaways to get
-                started!
-              </Alert>
+                <div style={{ fontSize: 14, color: "var(--ink-soft)" }}>
+                  Your <strong style={{ color: "var(--ink)" }}>Starter Pack</strong> is waiting. Rip
+                  it open and cut down to your tribe of 5.
+                </div>
+                <button className="sfl-btn" onClick={() => setDraftDialogOpen(true)}>
+                  <span className="sfl-btn-glyph" aria-hidden>🔥</span>
+                  Open My Pack
+                </button>
+              </div>
             ) : (
               <Alert severity="info" sx={{ mb: 2 }}>
                 You didn't draft a team for {CURRENT_SEASON.name}. The season
@@ -620,20 +673,21 @@ export default function LeagueDetailPage() {
         onClose={() => setEditDialogOpen(false)}
       />
 
-      {/* Draft Team Modal */}
-      <DraftTeamModal
+      {/* Season-start draft — rip the starter pack, discard down to a tribe of 5 */}
+      <CardPack
         open={draftDialogOpen}
+        hand={dealtCastaways}
+        keepCount={Math.min(5, dealtCastaways.length)}
+        season={CURRENT_SEASON.name}
+        seasonNumber={CURRENT_SEASON.number}
         onClose={() => setDraftDialogOpen(false)}
-        onSubmit={handleSubmitDraft}
-        allCastaways={castaways}
-        eliminatedCastawayIds={eliminatedCastawayIds}
-        castawaySeasonScores={castawaySeasonScores}
+        onLock={handleSubmitDraft}
       />
 
-      {/* Add/Drop Modal */}
+      {/* Weekly add/drop — card drag-drop overlay */}
 
       {currentUserTribe && (
-        <AddDropModal
+        <AddDropDraft
           open={addDropDialogOpen}
           onClose={() => setAddDropDialogOpen(false)}
           onSubmit={handleSubmitAddDrop}
@@ -647,12 +701,13 @@ export default function LeagueDetailPage() {
           }
           castawaySeasonScores={castawaySeasonScores}
           addDropRestrictionEnabled={league?.addDropRestrictionEnabled ?? false}
+          seasonNumber={CURRENT_SEASON.number}
         />
       )}
 
-      {/* Admin Add/Drop Modal — league owner editing another member's roster */}
+      {/* Admin add/drop — league owner editing another member's roster */}
       {adminAddDropMember && (
-        <AddDropModal
+        <AddDropDraft
           open={!!adminAddDropMember}
           onClose={() => setAdminAddDropMember(null)}
           onSubmit={handleAdminSubmitAddDrop}
@@ -666,6 +721,7 @@ export default function LeagueDetailPage() {
           }
           castawaySeasonScores={castawaySeasonScores}
           addDropRestrictionEnabled={false}
+          seasonNumber={CURRENT_SEASON.number}
         />
       )}
 

@@ -40,6 +40,12 @@ interface CardProps extends BaseProps {
    * (No `vibe` field on Castaway yet; this prop is the seam for later wiring.)
    */
   vibe?: string;
+  /**
+   * Overrides the picked/dropping tag label (e.g. "DISCARD", "ADD", "DROP").
+   * Only shown while `picked` or `dropping` is set; defaults to the built-in
+   * "✓ PICKED" / "× DROPPING" labels.
+   */
+  actionTag?: string;
 }
 
 export type TradingCardProps = CardProps | GhostProps;
@@ -82,7 +88,7 @@ export default function TradingCard(props: TradingCardProps) {
     );
   }
 
-  const { castaway, onClick, picked = false, dropping = false, vibe = "Castaway" } = props;
+  const { castaway, onClick, picked = false, dropping = false, vibe = "Castaway", actionTag: actionTagLabel } = props;
   const rarity = rarityFor(castaway);
   const status = deriveStatus(castaway);
   const tribe = getTribe(castaway.tribe);
@@ -184,7 +190,7 @@ export default function TradingCard(props: TradingCardProps) {
   const actionTag =
     picked || dropping ? (
       <div className={`sfl-tcg-action-tag${dropping ? " dropping" : ""}`}>
-        {dropping ? "× DROPPING" : "✓ PICKED"}
+        {actionTagLabel ?? (dropping ? "× DROPPING" : "✓ PICKED")}
       </div>
     ) : null;
 

@@ -1,19 +1,10 @@
 "use client";
 
-import {
-  Alert,
-  Box,
-  Chip,
-  CircularProgress,
-  Container,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useHallOfFame } from "@/hooks/useHallOfFame";
-import { getSeasonLabel } from "@/data/seasons";
 import { getRarity, getRarityConfig } from "@/utils/cardRarity";
-import CastawayCard from "@/components/CastawayCard";
+import { CastawayDetailGrid } from "@/components/cards";
 
 export default function HallOfFamePage() {
   const { data: entries = [], isLoading, error } = useHallOfFame();
@@ -27,87 +18,57 @@ export default function HallOfFamePage() {
   const legendaryAccent = getRarityConfig("legendary").accent;
   const mythicAccent = getRarityConfig("mythic").accent;
 
+  // Returning players can appear in multiple seasons — keep card keys unique.
+  const cards = entries.map((e) => ({ ...e, id: `${e.seasonNumber}-${e.id}` }));
+
   if (isLoading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
-        <CircularProgress sx={{ color: "#E85D2A" }} />
-      </Container>
+      <div className="sfl-page" style={{ alignItems: "center", paddingTop: 48 }}>
+        <CircularProgress sx={{ color: "var(--flame)" }} />
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
-          <EmojiEventsIcon sx={{ fontSize: 36, color: "#C8871B" }} />
-          <Typography variant="h3" sx={{ fontWeight: 700 }}>
-            Hall of Fame
-          </Typography>
-        </Stack>
-        <Typography variant="body1" sx={{ color: "text.secondary", mb: 2, maxWidth: 720 }}>
-          The greatest castaways across every season — anyone who finished at
-          Legendary rarity or higher takes their place here, ranked by total
-          points.
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          <Chip
-            label={`${mythicCount} Mythic`}
-            sx={{
-              bgcolor: `${mythicAccent}1A`,
-              color: mythicAccent,
-              fontWeight: 700,
-            }}
-          />
-          <Chip
-            label={`${legendaryCount} Legendary`}
-            sx={{
-              bgcolor: `${legendaryAccent}1A`,
-              color: legendaryAccent,
-              fontWeight: 700,
-            }}
-          />
-        </Stack>
-      </Box>
+    <div className="sfl-page">
+      <div>
+        <div className="sfl-eyebrow flame" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <EmojiEventsIcon sx={{ fontSize: 16 }} /> All-Time Legends
+        </div>
+        <h1 className="sfl-h1">Hall of Fame</h1>
+        <p className="sfl-dash-lede">
+          The greatest castaways across every season — anyone who finished at Legendary rarity or
+          higher takes their place here, ranked by total points.
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+          <span
+            className="sfl-pill"
+            style={{ background: `${mythicAccent}1A`, color: mythicAccent }}
+          >
+            {mythicCount} Mythic
+          </span>
+          <span
+            className="sfl-pill"
+            style={{ background: `${legendaryAccent}1A`, color: legendaryAccent }}
+          >
+            {legendaryCount} Legendary
+          </span>
+        </div>
+      </div>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <p className="sfl-dash-lede" style={{ color: "var(--danger)" }}>
           Couldn&apos;t load the Hall of Fame. Try again in a moment.
-        </Alert>
+        </p>
       )}
 
-      {entries.length === 0 ? (
-        <Box sx={{ py: 8, textAlign: "center" }}>
-          <Typography variant="body1" sx={{ color: "text.secondary" }}>
-            No castaways have reached Legendary rarity yet. Check back after
-            the next finale.
-          </Typography>
-        </Box>
+      {cards.length === 0 ? (
+        <p className="sfl-dash-lede">
+          No castaways have reached Legendary rarity yet. Check back after the next finale.
+        </p>
       ) : (
-        <Box
-          sx={{
-            display: "grid",
-            gap: 3,
-            gridTemplateColumns: {
-              xs: "repeat(1, minmax(0, 1fr))",
-              sm: "repeat(2, minmax(0, 1fr))",
-              md: "repeat(3, minmax(0, 1fr))",
-              lg: "repeat(4, minmax(0, 1fr))",
-            },
-          }}
-        >
-          {entries.map((entry) => (
-            <Box key={`${entry.seasonNumber}-${entry.id}`} sx={{ width: "100%" }}>
-              <CastawayCard
-                castaway={entry}
-                seasonScore={entry.totalPoints}
-                isEliminated={false}
-                seasonLabel={getSeasonLabel(entry.seasonNumber)}
-              />
-            </Box>
-          ))}
-        </Box>
+        <CastawayDetailGrid castaways={cards} seasonNumber={0} size="sm" />
       )}
-    </Container>
+    </div>
   );
 }

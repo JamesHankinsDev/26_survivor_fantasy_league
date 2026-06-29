@@ -1,51 +1,43 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Container,
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-  Chip,
-  CircularProgress,
-  Alert,
-  Card,
-  CardContent,
-} from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { assignRanks, withRankTrends } from "@/types/league";
+import type { Castaway } from "@/types/castaway";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import { getSeasonLabel, getSeasonStatus } from "@/data/seasons";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
-import { useEliminatedCastaways } from "@/hooks/useCastaways";
+import { useEliminatedCastaways, useSeasonCastaways } from "@/hooks/useCastaways";
 import { useComputedScores } from "@/hooks/useScores";
 import RankTrendIndicator from "@/components/RankTrendIndicator";
+import { TradingCard } from "@/components/cards";
 
 // Prevent static generation for this page
 export const dynamic = "force-dynamic";
+
+const RANK_CLASS = ["gold", "silver", "bronze"] as const;
+
+function Notice({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="sfl-page">
+      <div className="sfl-card" style={{ color: "var(--ink-soft)" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
 
-  // Use the same React Query hook as Home page — single cache for league data
-  const {
-    data: leagues = [],
-    isLoading: loading,
-  } = useUserLeagues(user?.uid || null);
+  const { data: leagues = [], isLoading: loading } = useUserLeagues(user?.uid || null);
   const { seasons } = useSeasonsWithOverrides();
 
   // The leaderboard only deals with leagues from currently-active seasons.
-  // Concluded-season leagues live on the home page archive + their detail
-  // page; future-season leagues don't have any data yet.
   const activeSeasonNumbers = useMemo(() => {
     const set = new Set<number>();
     for (const s of seasons) if (getSeasonStatus(s) === "current") set.add(s.number);
@@ -58,14 +50,9 @@ export default function LeaderboardPage() {
   );
 
   useEffect(() => {
-    if (!user) {
-      router.push("/");
-    }
+    if (!user) router.push("/");
   }, [user, router]);
 
-  // Auto-select the first visible league, and clear the selection if the
-  // currently selected league dropped out of the active set (e.g. its season
-  // just concluded).
   useEffect(() => {
     if (visibleLeagues.length === 0) {
       if (selectedLeagueId !== null) setSelectedLeagueId(null);
@@ -77,455 +64,193 @@ export default function LeaderboardPage() {
   }, [visibleLeagues, selectedLeagueId]);
 
   const selectedLeague = visibleLeagues.find((l) => l.id === selectedLeagueId);
-  // Score against whichever season this specific league is playing — supports
-  // multiple concurrent active seasons cleanly.
   const seasonForScoring = selectedLeague?.seasonNumber ?? 0;
 
   const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(seasonForScoring);
   const eliminatedIds = new Set(eliminatedCastawayIds);
+  const { data: seasonCastaways = [] } = useSeasonCastaways(seasonForScoring);
+  const castawayById = useMemo(() => {
+    const m = new Map<string, Castaway>();
+    for (const c of seasonCastaways) m.set(c.id, c);
+    return m;
+  }, [seasonCastaways]);
 
-  // Recompute team scores from episode data via shared React Query cache.
-  const { computedMembers } = useComputedScores(
+  const { computedMembers, castawaySeasonScores } = useComputedScores(
     seasonForScoring,
     selectedLeague?.memberDetails || [],
   );
 
-  // Sort members by points (descending) and assign ranks
-  // Sort members by points and assign tie-aware ranks with trends
   const rankedMembers = withRankTrends(assignRanks(computedMembers));
 
-  /** Resolve player name: use auth user name for current user, ownerName for others */
   const getPlayerName = (member: { userId: string; ownerName?: string; displayName: string }) =>
     user && member.userId === user.uid
       ? user.displayName || user.email || member.displayName
       : member.ownerName || member.displayName;
 
-  // Early returns AFTER all hooks to satisfy Rules of Hooks
-  if (!user) {
-    return null;
-  }
+  /** The member's highest-scoring rostered castaway, as a TradingCard-ready card. */
+  const bestCard = (roster: string[] = []): Castaway | null => {
+    const cards = roster
+      .map((id) => {
+        const c = castawayById.get(id);
+        if (!c) return null;
+        return { ...c, totalPoints: castawaySeasonScores[id] ?? c.totalPoints };
+      })
+      .filter((c): c is Castaway => Boolean(c));
+    cards.sort((a, b) => b.totalPoints - a.totalPoints);
+    return cards[0] ?? null;
+  };
+
+  if (!user) return null;
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }} aria-busy="true">
+      <div className="sfl-page" style={{ alignItems: "center", paddingTop: 48 }} aria-busy="true">
         <CircularProgress aria-label="Loading leaderboard" />
-        <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>
-          Loading leaderboard...
-        </Typography>
-      </Container>
+      </div>
     );
   }
 
   if (leagues.length === 0) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="info">
-          You haven&apos;t joined any leagues yet. Create or join a league to see
-          leaderboards.
-        </Alert>
-      </Container>
-    );
+    return <Notice>You haven&apos;t joined any leagues yet. Create or join a league to see leaderboards.</Notice>;
   }
-
   if (visibleLeagues.length === 0) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="info">
-          No leaderboards to show right now. Leaderboards appear here once a
-          season is active. Your archived league standings stay available from
-          the Home page or the league&apos;s detail page.
-        </Alert>
-      </Container>
+      <Notice>
+        No leaderboards to show right now. Leaderboards appear here once a season is active. Your
+        archived league standings stay available from the Home page or the league&apos;s detail page.
+      </Notice>
     );
+  }
+  if (!selectedLeague) {
+    return <Notice>League not found.</Notice>;
   }
 
-  if (!selectedLeague) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">League not found</Alert>
-      </Container>
-    );
-  }
+  const podium = rankedMembers.slice(0, 3);
+  // Podium display order: 2nd, 1st, 3rd (1st centered + lifted).
+  const podiumOrder = [1, 0, 2];
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        bgcolor: "background.default",
-        p: { xs: 2, md: 4 },
-        overflow: "auto",
-      }}
-    >
-      <Container maxWidth="lg">
-        <Typography
-          component="h1"
-          variant="h4"
-          sx={{ mb: 3, fontWeight: "bold", color: "text.primary" }}
-        >
-          Leaderboards
-        </Typography>
+    <div className="sfl-page">
+      <div className="sfl-secthead">
+        <div>
+          <div className="sfl-eyebrow flame">
+            {getSeasonLabel(selectedLeague.seasonNumber)} ·{" "}
+            {selectedLeague.memberDetails?.length || 0}/{selectedLeague.maxPlayers} players
+          </div>
+          <h1 className="sfl-h1">Standings</h1>
+        </div>
+      </div>
 
-        {/* League Selector — current-season leagues only */}
-        <Box sx={{ mb: 4, display: "flex", gap: 1, flexWrap: "wrap" }}>
+      {/* League selector — current-season leagues only */}
+      {visibleLeagues.length > 1 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {visibleLeagues.map((league) => (
-            <Chip
+            <button
               key={league.id}
-              label={league.name}
+              className={`sfl-btn sm${selectedLeagueId === league.id ? "" : " ghost"}`}
               onClick={() => setSelectedLeagueId(league.id)}
-              color={selectedLeagueId === league.id ? "primary" : "default"}
-              variant={selectedLeagueId === league.id ? "filled" : "outlined"}
-              sx={{
-                fontSize: { xs: "0.875rem", sm: "1rem" },
-                py: { xs: 2, md: 3 },
-                px: { xs: 1.5, md: 2 },
-                fontWeight: selectedLeagueId === league.id ? "bold" : "normal",
-              }}
-            />
-          ))}
-        </Box>
-
-        {/* League Info */}
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, 1fr)",
-                md: "repeat(4, 1fr)",
-              },
-              gap: 2,
-            }}
-          >
-            <Box>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                League Name
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: "bold", color: "text.primary" }}
-              >
-                {selectedLeague.name}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                Members
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: "bold", color: "text.primary" }}
-              >
-                {selectedLeague.memberDetails?.length || 0}/
-                {selectedLeague.maxPlayers}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                Season
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: "bold", color: "text.primary" }}
-              >
-                {getSeasonLabel(selectedLeague.seasonNumber)}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                Status
-              </Typography>
-              <Chip
-                label={selectedLeague.status || "active"}
-                size="small"
-                color={
-                  selectedLeague.status === "archived" ? "error" : "primary"
-                }
-              />
-            </Box>
-          </Box>
-        </Paper>
-
-        {/* Leaderboard Table - Desktop */}
-        <TableContainer component={Paper} sx={{ display: { xs: "none", md: "block" } }}>
-          <Table aria-label={`${selectedLeague.name} leaderboard standings`}>
-            <TableHead
-              sx={{
-                backgroundColor: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "#f5f5f5",
-              }}
+              aria-pressed={selectedLeagueId === league.id}
             >
-              <TableRow>
-                <TableCell sx={{ fontWeight: "bold" }}>Rank</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Tribe Owner</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Tribe Name</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="right">
-                  Points
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  Active Castaways
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rankedMembers.map((member) => {
-                const activeCastaways =
-                  member.roster?.filter(
-                    (id) => !eliminatedIds.has(id)
-                  ).length || 0;
+              {league.name}
+            </button>
+          ))}
+        </div>
+      )}
 
-                const isCurrentUser = member.userId === user.uid;
-
-                return (
-                  <TableRow
-                    key={member.userId}
-                    sx={{
-                      backgroundColor: isCurrentUser
-                        ? "rgba(232, 93, 42, 0.08)"
-                        : "transparent",
-                      borderLeft: isCurrentUser
-                        ? "4px solid #E85D2A"
-                        : "4px solid transparent",
-                      "&:hover": {
-                        backgroundColor: isCurrentUser
-                          ? "rgba(232, 93, 42, 0.12)"
-                          : "action.hover",
-                      },
-                    }}
-                  >
-                    <TableCell
-                      sx={{
-                        fontWeight: "bold",
-                        fontSize: "1.1rem",
-                        color:
-                          member.rank === 1
-                            ? "#E85D2A"
-                            : member.rank === 2
-                            ? "#C0C0C0"
-                            : member.rank === 3
-                            ? "#CD7F32"
-                            : "inherit",
-                      }}
-                    >
-                      {member.rank === 1 && <span role="img" aria-label="1st place trophy">🏆</span>} {member.isTied ? "T-" : ""}{member.rank}
-                      <RankTrendIndicator trend={member.trend} delta={member.trendDelta} />
-                    </TableCell>
-                    <TableCell>
-                      {getPlayerName(member)}
-                      {isCurrentUser && (
-                        <Chip
-                          label="You"
-                          size="small"
-                          sx={{ ml: 1 }}
-                          color="primary"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "600" }}>
-                      {member.tribeColor && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 16,
-                              height: 16,
-                              borderRadius: "50%",
-                              backgroundColor: member.tribeColor,
-                            }}
-                          />
-                          {member.displayName || "Unnamed Tribe"}
-                        </Box>
-                      )}
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          color: member.rank === 1 ? "#E85D2A" : "inherit",
-                        }}
-                      >
-                        {member.totalPoints || 0}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={`${activeCastaways}/5`}
-                        size="small"
-                        variant="outlined"
-                        color={activeCastaways === 5 ? "success" : "default"}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {/* Leaderboard Mobile Cards */}
-        <Box sx={{ display: { xs: "block", md: "none" } }}>
-          {rankedMembers.map((member) => {
-            const activeCastaways =
-              member.roster?.filter(
-                (id) => !eliminatedIds.has(id)
-              ).length || 0;
-            const isCurrentUser = member.userId === user.uid;
-
+      {/* Podium */}
+      {podium.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 28, padding: "8px 0 18px", flexWrap: "wrap" }}>
+          {podiumOrder.map((idx) => {
+            const m = podium[idx];
+            if (!m) return null;
+            const card = bestCard(m.roster);
+            const lift = idx === 0 ? -22 : 0;
             return (
-              <Card
-                key={member.userId}
-                sx={{
-                  mb: 2,
-                  borderLeft: isCurrentUser ? "4px solid #E85D2A" : "none",
-                  backgroundColor: isCurrentUser
-                    ? "rgba(232, 93, 42, 0.08)"
-                    : "background.paper",
-                }}
-              >
-                <CardContent>
-                  {/* Rank and Trophy */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                    <Typography
-                      variant="h4"
-                      sx={{
-                        fontWeight: "bold",
-                        color:
-                          member.rank === 1
-                            ? "#E85D2A"
-                            : member.rank === 2
-                            ? "#C0C0C0"
-                            : member.rank === 3
-                            ? "#CD7F32"
-                            : "text.primary",
-                      }}
-                    >
-                      {member.rank === 1 && <><span role="img" aria-label="1st place trophy">🏆</span>{" "}</>}
-                      {member.isTied ? "T-" : "#"}{member.rank}
-                      <RankTrendIndicator trend={member.trend} delta={member.trendDelta} size="medium" />
-                    </Typography>
-                    <Chip
-                      label={`${activeCastaways}/5 Active`}
-                      size="small"
-                      variant="outlined"
-                      color={activeCastaways === 5 ? "success" : "default"}
-                    />
-                  </Box>
-
-                  {/* Tribe Owner */}
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    {getPlayerName(member)}
-                    {isCurrentUser && (
-                      <Chip
-                        label="You"
-                        size="small"
-                        sx={{ ml: 1 }}
-                        color="primary"
-                      />
-                    )}
-                  </Typography>
-
-                  {/* Tribe Name with Color */}
-                  {member.tribeColor && (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-                      <Box
-                        sx={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: "50%",
-                          backgroundColor: member.tribeColor,
-                        }}
-                      />
-                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                        {member.displayName || "Unnamed Tribe"}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {/* Points */}
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: "bold",
-                      color: member.rank === 1 ? "#E85D2A" : "text.primary",
-                    }}
-                  >
-                    {member.totalPoints || 0} points
-                  </Typography>
-                </CardContent>
-              </Card>
+              <div key={m.userId} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, transform: `translateY(${lift}px)` }}>
+                <div className={`sfl-board-rank ${RANK_CLASS[idx]}`} style={{ width: "auto", fontSize: idx === 0 ? 28 : 20 }}>
+                  {idx === 0 ? "1st" : idx === 1 ? "2nd" : "3rd"}
+                </div>
+                {card ? (
+                  <TradingCard castaway={card} size={idx === 0 ? "md" : "sm"} />
+                ) : (
+                  <TradingCard ghost size={idx === 0 ? "md" : "sm"} />
+                )}
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontFamily: "var(--font-display-stack)", fontWeight: 800, fontSize: 15, color: "var(--ink)" }}>
+                    {m.displayName || "Unnamed Tribe"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--ink-mute)" }}>
+                    {getPlayerName(m)} · {m.totalPoints || 0} pts
+                  </div>
+                </div>
+              </div>
             );
           })}
-        </Box>
+        </div>
+      )}
 
-        {/* Top Performers Card */}
-        {rankedMembers.length > 0 && (
-          <Box
-            sx={{
-              mt: 4,
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr 1fr",
-              },
-              gap: 2,
-            }}
-          >
-            {rankedMembers.slice(0, 3).map((member) => (
-              <Card key={member.userId}>
-                <CardContent sx={{ textAlign: "center", py: 3 }}>
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      color:
-                        member.rank === 1
-                          ? "#E85D2A"
-                          : member.rank === 2
-                          ? "#C0C0C0"
-                          : "#CD7F32",
-                      mb: 1,
-                    }}
-                  >
-                    {member.rank === 1 && <span role="img" aria-label="1st place">🏆</span>}
-                    {member.rank === 2 && <span role="img" aria-label="2nd place">🥈</span>}
-                    {member.rank === 3 && <span role="img" aria-label="3rd place">🥉</span>}
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: "bold", mb: 1, color: "text.primary" }}
-                  >
-                    {getPlayerName(member)}
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5, mb: 2 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "text.secondary" }}
-                    >
-                      {member.isTied ? "T-" : "#"}{member.rank}
-                    </Typography>
+      {/* Standings table */}
+      <div className="sfl-card" style={{ padding: 0, overflow: "auto" }}>
+        <table className="sfl-board-table" aria-label={`${selectedLeague.name} leaderboard standings`}>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Tribe</th>
+              <th className="col-md">Owner</th>
+              <th className="col-md">Best Card</th>
+              <th style={{ textAlign: "center" }}>Active</th>
+              <th style={{ textAlign: "right" }}>Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rankedMembers.map((member) => {
+              const activeCastaways =
+                member.roster?.filter((id) => !eliminatedIds.has(id)).length || 0;
+              const isCurrentUser = member.userId === user.uid;
+              const card = bestCard(member.roster);
+              const initials = (member.displayName || "?")
+                .split(" ")
+                .map((s) => s[0])
+                .slice(0, 2)
+                .join("");
+              return (
+                <tr key={member.userId} className={isCurrentUser ? "self" : ""}>
+                  <td>
+                    <span className={`sfl-board-rank ${RANK_CLASS[member.rank - 1] || ""}`}>
+                      {member.isTied ? "T-" : ""}
+                      {member.rank}
+                    </span>
                     <RankTrendIndicator trend={member.trend} delta={member.trendDelta} />
-                  </Box>
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      color: "#E85D2A",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {member.totalPoints || 0} points
-                  </Typography>
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        )}
-      </Container>
-    </Box>
+                  </td>
+                  <td>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                      <span className="sfl-avatar sm" style={{ background: member.tribeColor }}>
+                        {initials}
+                      </span>
+                      <b style={{ fontWeight: 700 }}>{member.displayName || "Unnamed Tribe"}</b>
+                    </span>
+                  </td>
+                  <td className="col-md" style={{ color: "var(--ink-soft)" }}>
+                    {getPlayerName(member)}
+                    {isCurrentUser && (
+                      <span className="sfl-pill active" style={{ marginLeft: 8 }}>
+                        You
+                      </span>
+                    )}
+                  </td>
+                  <td className="col-md" style={{ color: "var(--ink-soft)" }}>{card?.name ?? "—"}</td>
+                  <td style={{ textAlign: "center", fontFamily: "var(--font-mono-stack)" }}>
+                    {activeCastaways}/5
+                  </td>
+                  <td style={{ textAlign: "right", fontFamily: "var(--font-mono-stack)", fontWeight: 700 }}>
+                    {member.totalPoints || 0}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

@@ -7,6 +7,8 @@
 export interface NavItem {
   id: string;
   label: string;
+  /** Compact label used by the mobile bottom tab bar (falls back to `label`). */
+  shortLabel?: string;
   glyph: string;
   href: string;
   /** Optional unread/notification count. */
@@ -20,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "standings",
     label: "Standings",
+    shortLabel: "Ranks",
     glyph: "≡",
     href: "/dashboard/leaderboard",
   },
@@ -27,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "hall",
     label: "Hall of Fame",
+    shortLabel: "Hall",
     glyph: "★",
     href: "/dashboard/hall-of-fame",
   },

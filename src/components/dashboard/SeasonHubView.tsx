@@ -2,25 +2,13 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import {
-  Alert,
-  Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  Chip,
-  Divider,
-  Stack,
-  Typography,
-} from "@mui/material";
 import { getSeasonStatus, getSeasonLabel, type Season } from "@/data/seasons";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import FutureSeasonCard from "@/components/FutureSeasonCard";
 import type { League } from "@/types/league";
 
 /**
- * Multi-season hub — extracted from the original `/dashboard/page.tsx` with
- * no behavior change.
+ * Multi-season hub — extracted from the original `/dashboard/page.tsx`.
  *
  * The page-level orchestrator renders this when the user has no league in a
  * currently-playing season (pre-season + concluded-only states fall here).
@@ -39,9 +27,7 @@ export default function SeasonHubView({ leagues }: { leagues: League[] }) {
     return map;
   }, [leagues]);
 
-  const currentSeasons = seasons.filter(
-    (s) => getSeasonStatus(s) === "current",
-  );
+  const currentSeasons = seasons.filter((s) => getSeasonStatus(s) === "current");
   const pastSeasons = seasons
     .filter((s) => getSeasonStatus(s) === "past")
     .sort((a, b) => b.number - a.number);
@@ -49,17 +35,21 @@ export default function SeasonHubView({ leagues }: { leagues: League[] }) {
     .filter((s) => getSeasonStatus(s) === "future")
     .sort((a, b) => a.premiereDate.localeCompare(b.premiereDate));
 
+  const noPastLeagues =
+    pastSeasons.length > 0 &&
+    pastSeasons.every((s) => (leaguesBySeason.get(s.number) ?? []).length === 0);
+
   return (
-    <Box>
+    <div className="sfl-page">
       {/* CURRENT SEASON */}
-      <HubSectionHeader title="Current Season" />
+      <h2 className="sfl-secttitle">Current Season</h2>
       {currentSeasons.length === 0 ? (
-        <Alert severity="info" sx={{ mb: 4 }}>
+        <Notice>
           No season is currently in play.
           {futureSeasons.length > 0
             ? ` Survivor ${futureSeasons[0].number} is on the horizon — see Future Seasons below.`
             : ""}
-        </Alert>
+        </Notice>
       ) : (
         currentSeasons.map((season) => (
           <SeasonBlock
@@ -71,71 +61,45 @@ export default function SeasonHubView({ leagues }: { leagues: League[] }) {
         ))
       )}
 
-      <Divider sx={{ my: 5 }} />
-
       {/* PAST SEASONS */}
-      <HubSectionHeader title="Past Seasons" />
-      {pastSeasons.length === 0 ? (
-        <Alert severity="info" sx={{ mb: 4 }}>
-          Your archived leagues will appear here once a season ends.
-        </Alert>
+      <h2 className="sfl-secttitle" style={{ marginTop: 18 }}>Past Seasons</h2>
+      {pastSeasons.length === 0 || noPastLeagues ? (
+        <Notice>Your archived leagues will appear here once a season ends.</Notice>
       ) : (
         pastSeasons.map((season) => {
           const userLeagues = leaguesBySeason.get(season.number) ?? [];
           if (userLeagues.length === 0) return null;
           return (
-            <SeasonBlock
-              key={season.number}
-              season={season}
-              leagues={userLeagues}
-              emptyMessage=""
-            />
+            <SeasonBlock key={season.number} season={season} leagues={userLeagues} emptyMessage="" />
           );
         })
       )}
 
-      {pastSeasons.length > 0 &&
-        pastSeasons.every(
-          (s) => (leaguesBySeason.get(s.number) ?? []).length === 0,
-        ) && (
-          <Alert severity="info" sx={{ mb: 4 }}>
-            No archived leagues yet.
-          </Alert>
-        )}
-
-      <Divider sx={{ my: 5 }} />
-
       {/* FUTURE SEASONS */}
-      <HubSectionHeader title="Future Seasons" />
+      <h2 className="sfl-secttitle" style={{ marginTop: 18 }}>Future Seasons</h2>
       {futureSeasons.length === 0 ? (
-        <Alert severity="info" sx={{ mb: 4 }}>
-          No upcoming seasons announced yet. Check back soon.
-        </Alert>
+        <Notice>No upcoming seasons announced yet. Check back soon.</Notice>
       ) : (
-        <Box
-          sx={{
+        <div
+          style={{
             display: "grid",
-            gap: 2.5,
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)",
-            },
+            gap: 18,
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
           }}
         >
           {futureSeasons.map((season) => (
             <FutureSeasonCard key={season.number} season={season} />
           ))}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }
 
-const HubSectionHeader = ({ title }: { title: string }) => (
-  <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-    {title}
-  </Typography>
+const Notice = ({ children }: { children: React.ReactNode }) => (
+  <div className="sfl-card" style={{ color: "var(--ink-soft)", fontSize: 14 }}>
+    {children}
+  </div>
 );
 
 const SeasonBlock = ({
@@ -148,61 +112,34 @@ const SeasonBlock = ({
   emptyMessage: string;
 }) => {
   const status = getSeasonStatus(season);
-  const statusChip =
-    status === "current" ? (
-      <Chip
-        label="In Play"
-        size="small"
-        sx={{ bgcolor: "var(--jungle)", color: "white", fontWeight: 700 }}
-      />
-    ) : (
-      <Chip
-        label="Archived"
-        size="small"
-        sx={{ bgcolor: "var(--ink-mute)", color: "white", fontWeight: 700 }}
-      />
-    );
-
   return (
-    <Box sx={{ mb: 4 }}>
-      <Stack
-        direction="row"
-        spacing={1.5}
-        alignItems="center"
-        sx={{ mb: 1.5 }}
-        flexWrap="wrap"
-      >
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--font-display-stack)", fontWeight: 700, fontSize: 18, color: "var(--ink)" }}>
           {season.name}
-        </Typography>
-        {statusChip}
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {season.theme}
-        </Typography>
-      </Stack>
+        </span>
+        <span className={`sfl-pill ${status === "current" ? "active" : "out"}`}>
+          {status === "current" ? "In Play" : "Archived"}
+        </span>
+        <span style={{ fontSize: 13, color: "var(--ink-mute)" }}>{season.theme}</span>
+      </div>
 
       {leagues.length === 0 ? (
-        emptyMessage ? (
-          <Alert severity="info">{emptyMessage}</Alert>
-        ) : null
+        emptyMessage ? <Notice>{emptyMessage}</Notice> : null
       ) : (
-        <Box
-          sx={{
+        <div
+          style={{
             display: "grid",
-            gap: 2,
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)",
-            },
+            gap: 16,
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
           }}
         >
           {leagues.map((league) => (
             <LeagueCard key={league.id} league={league} status={status} />
           ))}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };
 
@@ -215,33 +152,25 @@ const LeagueCard = ({
 }) => {
   const isArchived = status === "past";
   return (
-    <Card
-      sx={{
+    <Link
+      href={`/dashboard/my-leagues/${league.id}`}
+      className="sfl-card"
+      style={{
+        display: "block",
+        textDecoration: "none",
         borderLeft: `4px solid ${isArchived ? "var(--ink-mute)" : "var(--flame)"}`,
-        height: "100%",
+        border: "1px solid var(--line)",
       }}
     >
-      <CardActionArea
-        component={Link}
-        href={`/dashboard/my-leagues/${league.id}`}
-        sx={{ height: "100%" }}
-      >
-        <CardContent>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-            {league.name}
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{ color: "text.secondary", display: "block", mb: 1.5 }}
-          >
-            {getSeasonLabel(league.seasonNumber)} ·{" "}
-            {isArchived ? "Final Standings" : "In progress"}
-          </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            <strong>{league.currentPlayers}</strong>/{league.maxPlayers} players
-          </Typography>
-        </CardContent>
-      </CardActionArea>
-    </Card>
+      <div style={{ fontFamily: "var(--font-display-stack)", fontWeight: 700, fontSize: 17, color: "var(--ink)", marginBottom: 4 }}>
+        {league.name}
+      </div>
+      <div className="sfl-eyebrow" style={{ marginBottom: 8 }}>
+        {getSeasonLabel(league.seasonNumber)} · {isArchived ? "Final Standings" : "In progress"}
+      </div>
+      <div style={{ fontSize: 14, color: "var(--ink-soft)" }}>
+        <strong style={{ color: "var(--ink)" }}>{league.currentPlayers}</strong>/{league.maxPlayers} players
+      </div>
+    </Link>
   );
 };

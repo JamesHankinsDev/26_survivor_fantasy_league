@@ -18,6 +18,13 @@ export interface TribeMember {
   roster: string[]; // Current working roster — array of castaway IDs (max 5)
   weeklyRosters: WeeklyRoster[]; // Locked snapshots — source of truth for scoring
   draftedAt?: Date | any; // When the tribe drafted their initial roster
+  /**
+   * The starter-pack hand dealt to this member at draft time (castaway IDs).
+   * Persisted on first pack-open so the deal is stable — a refresh can never
+   * reroll it. Empty/absent until the member opens their draft pack.
+   */
+  dealtHand?: string[];
+  dealtAt?: Date | any; // When the starter pack was first dealt
 }
 
 // League data model and types

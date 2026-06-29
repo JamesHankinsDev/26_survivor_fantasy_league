@@ -60,6 +60,14 @@
   --r-md: 12px;
   --r-lg: 18px;
   --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* Motion + chrome tokens consumed by the extended-card layer (the repo
+   * otherwise inlines these values). */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-base: 0.18s;
+  --ring-flame: 0 0 0 3px color-mix(in oklch, var(--flame) 45%, transparent);
+  --blur-chrome: blur(8px);
 
   --pad-card: 18px;
   --pad-page: 32px;
@@ -318,18 +326,21 @@ body {
  * scroll quirks that come with `overflow-x: hidden` on html/body. */
 .sfl-app {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  /* minmax(0, 1fr) — NOT `1fr` — so the content track can shrink below its
+   * content's min-width. A plain `1fr` track refuses to shrink, letting any
+   * wide child blow the whole shell out past the viewport (and clip on mobile). */
+  grid-template-columns: 248px minmax(0, 1fr);
   height: 100vh;
   height: 100dvh; /* respects mobile dynamic viewport */
   overflow: hidden;
   background: var(--bg);
 }
 .sfl-app[data-layout="topnav"] {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
 }
 .sfl-app[data-density="compact"][data-layout="sidebar"] {
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 220px minmax(0, 1fr);
 }
 .sfl-main {
   min-width: 0;
@@ -429,6 +440,11 @@ body {
   top: calc(100% + 6px);
   left: 0;
   right: 0;
+  /* Stay wide enough to show league names even when the trigger is collapsed
+   * (e.g. the slim mobile top bar with no league selected), without spilling
+   * past the viewport. */
+  min-width: 240px;
+  max-width: calc(100vw - 24px);
   background: var(--bg-paper);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -1608,4 +1624,878 @@ body {
   align-items: center;
   gap: 14px;
   flex-shrink: 0;
+}
+
+/* ───────── BUTTON ─────────
+ * Canonical brand button class. Used by the dashboard hero/actions and the
+ * season-draft pack. Variants: primary (default flame), secondary (ink),
+ * ghost, danger; sizes sm/lg; `block` for full-width.
+ */
+.sfl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: var(--flame);
+  color: #fff;
+  font-family: var(--font-body-stack);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.14s var(--ease-out), border-color 0.14s var(--ease-out),
+    transform 0.14s var(--ease-out), box-shadow 0.14s var(--ease-out);
+  box-shadow: 0 6px 16px -10px var(--flame);
+}
+.sfl-btn:hover { background: var(--flame-deep); }
+.sfl-btn:active { transform: translateY(1px); }
+.sfl-btn:focus-visible { outline: none; box-shadow: var(--ring-flame); }
+.sfl-btn .sfl-btn-glyph { font-size: 15px; line-height: 0; }
+.sfl-btn .sfl-btn-arrow {
+  font-size: 15px;
+  line-height: 0;
+  transition: transform 0.14s var(--ease-out);
+}
+.sfl-btn:hover .sfl-btn-arrow { transform: translateX(3px); }
+
+.sfl-btn.primary { background: var(--flame); }
+.sfl-btn.secondary {
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: none;
+}
+.sfl-btn.secondary:hover { background: var(--ink-soft); }
+
+.sfl-btn.ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--line);
+  box-shadow: none;
+}
+.sfl-btn.ghost:hover {
+  background: var(--bg-inset);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.sfl-btn.danger { background: var(--danger); box-shadow: none; }
+.sfl-btn.danger:hover { filter: brightness(0.92); }
+
+.sfl-btn.sm { padding: 7px 12px; font-size: 12px; border-radius: var(--r-sm); }
+.sfl-btn.lg { padding: 13px 24px; font-size: 15px; }
+.sfl-btn.block { width: 100%; }
+.sfl-btn:disabled,
+.sfl-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ───────── CARDS, EXTENDED ─────────
+ * Pieces that complete the trading-card loop: a branded card back, the
+ * season-start "pack", a full-screen card detail sheet (the mobile mini→full
+ * pattern), a compact mini-card grid, and the discard / draw / reveal motion.
+ */
+
+/* ── Card back ── the reverse of a TradingCard: torch + repeating chevrons.
+ * Same outer frame as the front so a flip reads as one object. */
+.sfl-tcg-back .sfl-tcg-inner {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in oklch, var(--flame) 16%, #2a1c14) 0 14px,
+      color-mix(in oklch, var(--flame) 9%, #2a1c14) 14px 28px
+    );
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
+  text-align: center;
+}
+.sfl-tcg-back-mark {
+  width: 38%;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+}
+.sfl-tcg-back-word {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+.sfl-tcg-back-sub {
+  font-family: var(--font-body-stack);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sand);
+}
+.sfl-tcg.size-mini .sfl-tcg-back-word { font-size: 7.5px; letter-spacing: 0.12em; }
+.sfl-tcg.size-mini .sfl-tcg-back-sub { font-size: 6.5px; }
+
+/* ═══════════════ STARTER PACK ═══════════════ */
+.sfl-pack {
+  width: 248px;
+  aspect-ratio: 2.5 / 3.5;
+  border-radius: var(--r-lg);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  font: inherit;
+  background:
+    linear-gradient(150deg, var(--flame) 0%, var(--flame-deep) 55%, #3a1408 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 22px 50px -22px rgba(0, 0, 0, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  transition: transform var(--t-base) var(--ease-out), box-shadow var(--t-base);
+}
+.sfl-pack::before {
+  /* foil sheen */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 47%,
+    rgba(255, 255, 255, 0.06) 53%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: sfl-pack-sheen 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.sfl-pack::after {
+  /* diagonal hatch texture */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 12px,
+    rgba(0, 0, 0, 0.08) 12px 13px
+  );
+  pointer-events: none;
+}
+.sfl-pack:hover { transform: translateY(-4px) scale(1.02); }
+.sfl-pack:active { transform: translateY(0) scale(0.99); }
+.sfl-pack:focus-visible { outline: none; box-shadow: var(--ring-flame), 0 22px 50px -22px rgba(0,0,0,0.6); }
+.sfl-pack-mark {
+  width: 42%;
+  position: relative;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
+}
+.sfl-pack-title {
+  position: relative;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  padding: 0 18px;
+}
+.sfl-pack-sub {
+  position: relative;
+  font-family: var(--font-body-stack);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sand);
+}
+.sfl-pack-hint {
+  position: relative;
+  margin-top: 6px;
+  font-family: var(--font-body-stack);
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  animation: sfl-pulse 1.6s ease-in-out infinite;
+}
+.sfl-pack.opening { animation: sfl-pack-burst 0.5s var(--ease-out) forwards; }
+@keyframes sfl-pack-sheen {
+  0%, 100% { background-position: 130% 0; }
+  50% { background-position: -30% 0; }
+}
+@keyframes sfl-pack-burst {
+  0% { transform: scale(1); opacity: 1; }
+  40% { transform: scale(1.08) rotate(-1deg); }
+  100% { transform: scale(1.25) rotate(2deg); opacity: 0; }
+}
+
+/* Full-screen overlay that hosts the season-start draft (replaces the MUI
+ * draft dialog). Scrim + centered, scrollable panel. */
+.sfl-pack-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above the fixed notification bell (1400) + chat FAB so nothing bleeds
+   * through the draft. */
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 60% at 50% 0%, color-mix(in oklch, var(--flame) 18%, transparent), transparent 55%),
+    color-mix(in oklch, var(--ink) 78%, #000 22%);
+  backdrop-filter: blur(3px);
+  animation: sfl-sheet-up 0.28s var(--ease-out);
+}
+.sfl-pack-overlay-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  z-index: 3;
+}
+.sfl-pack-overlay-close:hover { background: rgba(255, 255, 255, 0.28); }
+
+/* Sealed pack (rip-open) — centered in the column. */
+.sfl-pack-sealed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  color: #fff;
+  padding: 24px;
+}
+.sfl-pack-sealed-sub { max-width: 360px; color: var(--sand); font-size: 14px; line-height: 1.5; }
+
+/* Header band — light text on the dark "felt". */
+.sfl-pack-head {
+  flex-shrink: 0;
+  padding: max(16px, env(safe-area-inset-top)) 18px 12px;
+  text-align: center;
+}
+.sfl-pack-head .sfl-eyebrow.flame { color: color-mix(in oklch, var(--flame) 60%, #fff); }
+.sfl-pack-title-sm {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: #fff;
+  margin-top: 2px;
+}
+
+/* Draw zone — the cards you keep; scrolls if the hand is tall. */
+.sfl-pack-draw {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 16px 14px;
+  border-radius: var(--r-lg);
+  transition: background 0.15s;
+}
+.sfl-pack-draw.over { background: color-mix(in oklch, var(--jungle) 12%, transparent); }
+.sfl-pack-drawgrid {
+  /* Always 3 across — a 9-card hand reads as a tidy 3×3. Capped width keeps
+   * the cards card-sized (not huge) on wider screens. */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.sfl-pack-cardwrap { cursor: grab; touch-action: none; }
+.sfl-pack-cardwrap:active { cursor: grabbing; }
+.sfl-pack-cardwrap.dragging { opacity: 0.35; }
+.sfl-pack-cardwrap .sfl-tcg { width: 100%; }
+.sfl-pack-dragoverlay {
+  width: 116px;
+  pointer-events: none;
+  transform: scale(1.06) rotate(-3deg);
+  filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.5));
+}
+
+/* Bottom dock — discard tray + confirm bar, on a light surface. */
+.sfl-pack-dock {
+  flex-shrink: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sfl-pack-discard {
+  position: relative;
+  min-height: 88px;
+  border: 2px dashed color-mix(in oklch, var(--danger) 45%, var(--line));
+  border-radius: var(--r-md);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sfl-pack-discard.over {
+  border-color: var(--danger);
+  background: color-mix(in oklch, var(--danger) 9%, transparent);
+}
+.sfl-pack-discard-label {
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  padding: 1px 8px;
+  background: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--danger);
+}
+.sfl-pack-discard-empty {
+  flex: 1;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-mute);
+}
+.sfl-pack-discard-stack { display: flex; gap: 8px; flex-wrap: wrap; }
+.sfl-pack-discard-stack .sfl-pack-cardwrap { width: 58px; }
+.sfl-pack-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sfl-pack-confirm-status { font-size: 13px; color: var(--ink-soft); min-width: 0; }
+.sfl-pack-cardwrap.is-disabled { cursor: default; opacity: 0.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sfl-pack-overlay { animation: none; }
+}
+
+/* ── Weekly add/drop (reuses the pack overlay/dock/discard shell) ── */
+.sfl-swap-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0 0 8px;
+}
+.sfl-swap-tribe {
+  flex-shrink: 0;
+  padding: 8px 16px 12px;
+  border-radius: var(--r-lg);
+  transition: background 0.15s;
+}
+.sfl-swap-tribe.over { background: color-mix(in oklch, var(--jungle) 14%, transparent); }
+.sfl-swap-tribegrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.sfl-swap-tribegrid .sfl-tcg,
+.sfl-swap-tribegrid .sfl-tcg-ghost { width: 100%; }
+.sfl-swap-avail {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 14px;
+  transition: background 0.15s;
+}
+.sfl-swap-availgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 auto;
+  transition: opacity 0.15s;
+}
+.sfl-swap-availgrid .sfl-tcg { width: 100%; }
+@media (min-width: 600px) {
+  .sfl-swap-availgrid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); max-width: 640px; }
+}
+.sfl-swap-warn {
+  font-size: 12.5px;
+  color: var(--danger);
+  background: color-mix(in oklch, var(--danger) 10%, var(--bg));
+  border-radius: var(--r-sm);
+  padding: 7px 10px;
+}
+
+/* Reveal grid — cards staggering in after the pack opens */
+.sfl-reveal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 16px 14px;
+  justify-content: center;
+  align-items: start;
+}
+@media (max-width: 560px) {
+  .sfl-reveal-grid { grid-template-columns: repeat(3, auto); gap: 12px 10px; }
+}
+.sfl-reveal-item {
+  animation: sfl-reveal-in 0.5s var(--ease-out) backwards;
+}
+@keyframes sfl-reveal-in {
+  0% { opacity: 0; transform: translateY(14px) scale(0.9) rotate(-3deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Card marked for discard inside the pack/roster picker */
+.sfl-tcg.discarded {
+  animation: sfl-discard-out 0.45s var(--ease-out) forwards;
+  pointer-events: none;
+}
+@keyframes sfl-discard-out {
+  0% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.6) rotate(-14deg); }
+}
+
+/* Newly drawn card */
+.sfl-tcg.drawn { animation: sfl-draw-in 0.55s var(--ease-out) backwards; }
+@keyframes sfl-draw-in {
+  0% { opacity: 0; transform: translateY(30px) rotateY(90deg) scale(0.85); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sfl-pack::before,
+  .sfl-pack-hint,
+  .sfl-pack.opening,
+  .sfl-reveal-item,
+  .sfl-tcg.discarded,
+  .sfl-tcg.drawn { animation: none; }
+}
+
+/* ═══════════════ MINI-CARD GRID (mobile roster) ═══════════════ */
+.sfl-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 12px;
+}
+.sfl-mini-grid .sfl-tcg { width: 100%; }
+
+/* Roomier auto-fill grid for full-size card pages (Cast, Hall of Fame). */
+.sfl-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 18px;
+}
+.sfl-card-grid .sfl-tcg { width: 100%; }
+
+/* Leaderboard table + podium ranks (Standings). */
+.sfl-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body-stack);
+}
+.sfl-board-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.sfl-board-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.sfl-board-table tr:last-child td { border-bottom: 0; }
+.sfl-board-table tr.self td {
+  background: color-mix(in oklch, var(--flame) 7%, var(--bg-paper));
+}
+.sfl-board-rank {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 16px;
+  width: 44px;
+}
+.sfl-board-rank.gold { color: #c8871b; }
+.sfl-board-rank.silver { color: #8a8f98; }
+.sfl-board-rank.bronze { color: #b06a3b; }
+/* Secondary columns drop on small phones so the table fits without scrolling. */
+@media (max-width: 560px) {
+  .sfl-board-table .col-md { display: none; }
+  .sfl-board-table th,
+  .sfl-board-table td { padding: 10px 8px; }
+}
+
+/* ═══════════════ FULL-SCREEN CARD SHEET (mini → full) ═══════════════ */
+.sfl-cardsheet {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in oklch, var(--flame) 18%, transparent), transparent 60%),
+    color-mix(in oklch, var(--ink) 92%, #000);
+  backdrop-filter: blur(2px);
+  animation: sfl-sheet-up 0.32s var(--ease-out);
+  overflow-y: auto;
+}
+.sfl-cardsheet-scrim { position: absolute; inset: 0; z-index: -1; }
+.sfl-cardsheet-close {
+  position: sticky;
+  top: 0;
+  align-self: flex-end;
+  margin: 12px 12px 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+.sfl-cardsheet-close:hover { background: rgba(255, 255, 255, 0.24); }
+.sfl-cardsheet-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 18px;
+  perspective: 1400px;
+}
+
+/* ── Flip card (front ⇄ season-stats back) ── */
+.sfl-cardflip {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+}
+.sfl-cardflip:focus-visible { outline: none; }
+.sfl-cardflip:focus-visible .sfl-cardflip-inner { box-shadow: var(--ring-flame); border-radius: var(--r-lg); }
+.sfl-cardflip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.55s var(--ease-out);
+}
+.sfl-cardflip-inner.flipped { transform: rotateY(180deg); }
+.sfl-cardflip-front { backface-visibility: hidden; }
+.sfl-cardflip-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: linear-gradient(165deg, color-mix(in oklch, var(--ink) 92%, #000), #1b1410);
+  box-shadow: var(--shadow-tcg, 0 18px 40px -18px rgba(0, 0, 0, 0.6));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 14px;
+  text-align: left;
+}
+.sfl-cardflip-back-head { flex-shrink: 0; margin-bottom: 8px; }
+.sfl-cardflip-back-name {
+  display: block;
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.1;
+}
+.sfl-cardflip-back-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--flame) 65%, #fff);
+}
+.sfl-cardflip-back-events {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sfl-cardflip-back-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.sfl-cardflip-back-row:last-child { border-bottom: 0; }
+.sfl-cardflip-back-empty {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 8px 0;
+}
+.sfl-cardflip-back-total {
+  flex-shrink: 0;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+.sfl-cardflip-hint {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-cardflip-inner { transition: none; }
+}
+.sfl-cardsheet-body {
+  background: var(--bg);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  margin-top: auto;
+  padding: 22px 20px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--ink);
+}
+.sfl-cardsheet-name {
+  font-family: var(--font-display-stack);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+  margin: 0;
+}
+.sfl-cardsheet-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sfl-cardsheet-pts { margin-left: auto; }
+.sfl-cardsheet-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sfl-cardsheet-event {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.sfl-cardsheet-event:last-child { border-bottom: 0; }
+.sfl-cardsheet-actions { display: flex; gap: 8px; margin-top: 4px; }
+@keyframes sfl-sheet-up {
+  0% { opacity: 0; transform: translateY(8%); }
+  100% { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-cardsheet { animation: none; }
+}
+
+/* Fixed full-viewport host for the card sheet when it's not inside a phone
+ * frame (e.g. tapping a mini card on the Cast or Tribe page). */
+.sfl-cardsheet-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+}
+
+/* ═══════════════ PHONE FRAME (for mobile UI-kit demos) ═══════════════ */
+.sfl-phone {
+  width: 390px;
+  height: 844px;
+  background: #0c0a09;
+  border-radius: 52px;
+  padding: 13px;
+  box-shadow:
+    0 0 0 2px #2a2622,
+    0 40px 80px -30px rgba(0, 0, 0, 0.55);
+  position: relative;
+  flex-shrink: 0;
+}
+.sfl-phone-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 40px;
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.sfl-phone-notch {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 30px;
+  background: #0c0a09;
+  border-radius: 0 0 18px 18px;
+  z-index: 80;
+}
+.sfl-phone-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 26px 4px;
+  font-family: var(--font-body-stack);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.sfl-phone-status .dots { display: flex; gap: 5px; align-items: center; font-size: 11px; }
+.sfl-phone-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Mobile tab bar */
+.sfl-tabbar {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--bg-paper);
+  backdrop-filter: var(--blur-chrome);
+  padding: 8px 6px 22px;
+  flex-shrink: 0;
+}
+.sfl-tab {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-body-stack);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+.sfl-tab-glyph { font-size: 18px; line-height: 1; }
+.sfl-tab.active { color: var(--flame); }
+.sfl-tab { text-decoration: none; min-width: 0; padding: 2px 2px; }
+.sfl-tab-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sfl-tab-badge {
+  position: absolute;
+  top: -2px;
+  right: 50%;
+  transform: translateX(16px);
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--flame);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.sfl-tab { position: relative; }
+
+/* ═══════════════ MOBILE APP SHELL ═══════════════
+ * Below the md breakpoint the shell drops to a slim top bar + a fixed bottom
+ * tab bar (the design system's mobile nav), with tighter gutters. */
+
+/* The app's bottom tab bar is fixed to the viewport (the phone-frame demo
+ * version stays in-flow). */
+.sfl-tabbar-fixed {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1100;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 899px) {
+  /* Slim top bar: drop the wrapping nav pills — nav lives in the tab bar. */
+  .sfl-topnav-nav { display: none; }
+  .sfl-topnav {
+    gap: 8px;
+    padding: 10px 12px;
+    justify-content: space-between;
+  }
+  /* Collapse the logo to just the torch and let the league switcher shrink +
+   * truncate, so the top bar fits a phone without clipping the right cluster. */
+  .sfl-topnav .sfl-logo-text { display: none; }
+  .sfl-topnav-left {
+    flex-shrink: 1;
+    min-width: 0;
+    gap: 8px;
+  }
+  .sfl-topnav-left .sfl-leagueswitch {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .sfl-topnav-left .sfl-ls-button { padding: 8px 10px; }
+  /* The roster-lock countdown is wide; hide it in the slim top bar (it still
+   * shows on the dashboard hero + the add/drop sheet) so the league switcher
+   * has room for its label. */
+  .sfl-topnav .sfl-lock { display: none; }
+  /* Collapse the user menu to just the avatar + gear (hide name/email). */
+  .sfl-topnav .sfl-side-profile > div { display: none; }
+  .sfl-topnav .sfl-side-profile { gap: 6px; padding: 2px; border: 0; background: transparent; }
+  .sfl-topnav-right { gap: 8px; flex-shrink: 0; }
+  /* Reserve space at the far right for the fixed notification bell so it
+   * doesn't sit on top of the user menu. */
+  .sfl-topnav-right { padding-right: 38px; }
+  /* Leave room for the fixed tab bar at the bottom of the scroll area. */
+  .sfl-main { padding-bottom: 80px; }
+}
+
+@media (max-width: 640px) {
+  .sfl-main { padding-left: 14px; padding-right: 14px; gap: 18px; }
+  .sfl-page { gap: 18px; }
 }
