@@ -27,6 +27,7 @@ import PowerMovers from "./PowerMovers";
 import type { PowerMoverData } from "./PowerMover";
 import LeagueChatMini from "./LeagueChatMini";
 import NextEpisodeTile from "./NextEpisodeTile";
+import { formatSeasonDate } from "@/utils/seasonDates";
 
 interface ActiveDashboardViewProps {
   league: League;
@@ -262,7 +263,7 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
             }
             when={
               isPreSeason
-                ? new Date(season.premiereDate).toLocaleDateString("en-US", {
+                ? formatSeasonDate(season.premiereDate, {
                     weekday: "short",
                     month: "short",
                     day: "numeric",

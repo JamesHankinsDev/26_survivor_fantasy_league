@@ -14,31 +14,19 @@ import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import EventIcon from "@mui/icons-material/Event";
 import { Season } from "@/data/seasons";
 import { useSeasonNotifications } from "@/hooks/useSeasonNotifications";
+import { formatSeasonDate, daysUntilSeasonDate } from "@/utils/seasonDates";
 
 interface FutureSeasonCardProps {
   season: Season;
 }
 
-const formatPremiereDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-const daysUntil = (iso: string): number => {
-  const target = new Date(iso).getTime();
-  const now = Date.now();
-  return Math.max(0, Math.ceil((target - now) / (1000 * 60 * 60 * 24)));
-};
-
 export default function FutureSeasonCard({ season }: FutureSeasonCardProps) {
   const { isSubscribed, toggle, loaded } = useSeasonNotifications();
   const subscribed = isSubscribed(season.number);
 
-  const days = useMemo(() => daysUntil(season.premiereDate), [season.premiereDate]);
+  const days = useMemo(() => daysUntilSeasonDate(season.premiereDate), [season.premiereDate]);
   const premiereLabel = useMemo(
-    () => formatPremiereDate(season.premiereDate),
+    () => formatSeasonDate(season.premiereDate),
     [season.premiereDate],
   );
 

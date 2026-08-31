@@ -1,11 +1,11 @@
 /**
  * Episode scoring drafter.
  *
- * Survivor airs Wednesday 8pm ET. From 10pm ET — as the episode ends — this
- * reads published recaps and drafts the episode's scoring events, so the admin
- * reviews a filled-in form instead of transcribing 21 castaways x 13 event
- * types by hand. Recaps lag the broadcast, so the caller retries through the
- * night (see inScorerWindow).
+ * Survivor airs Wednesday 8pm ET. From Thursday midnight ET — about two hours
+ * after the episode ends — this reads published recaps and drafts the episode's
+ * scoring events, so the admin reviews a filled-in form instead of transcribing
+ * 21 castaways x 13 event types by hand. Not every outlet has published by
+ * then, so the caller retries across a 12-hour window (see inScorerWindow).
  *
  * IT NEVER COMMITS SCORES. It writes one document —
  * `seasons/{n}/pendingScores/{episode}` — which the admin scores page reads and
@@ -142,22 +142,29 @@ export function etDayAndHour(at = new Date()) {
 /**
  * Is `at` inside the drafting window?
  *
- * Opens Wednesday 10pm ET, right as the episode ends, and stays open until noon
- * ET the next day. The window matters because at 10pm ET no recap exists yet —
- * the episode has only just finished, and the season premiere runs until
- * exactly 10:00. Outlets publish 30-90 minutes later, and sometimes not until
- * morning. So the job opens on schedule and keeps trying rather than writing
- * one "not found" and giving up for the week.
+ * Expressed as a start (ET weekday + hour) plus a duration in hours, rather
+ * than a start-day/end-day pair. The pair version breaks at midnight: a window
+ * starting Thursday 00:00 would match "any hour on Thursday >= 0", i.e. the
+ * whole day, plus part of Friday.
  *
- * Expressed in ET rather than UTC deliberately: Wed 10pm ET is Thu 02:00 UTC in
- * summer and Thu 03:00 UTC in winter, so a UTC schedule silently shifts an hour
- * when the clocks change mid-season.
+ * Default is Thursday 00:00 ET for 12 hours. Midnight is roughly two hours
+ * after the episode ends (90-minute episodes finish 9:30pm ET; the premiere
+ * runs to 10:00), which is when recaps start landing — but not all of them, so
+ * the window stays open through the morning and the caller retries.
+ *
+ * ET rather than UTC deliberately: Thu midnight ET is 04:00 UTC in summer and
+ * 05:00 UTC in winter, so a UTC schedule silently shifts when the clocks change
+ * mid-season.
  */
-export function inScorerWindow(at = new Date(), { day = 3, startHour = 22, endHour = 12 } = {}) {
+export function inScorerWindow(
+  at = new Date(),
+  { day = 4, startHour = 0, durationHours = 12 } = {},
+) {
   const et = etDayAndHour(at);
-  if (et.day === day) return et.hour >= startHour;
-  if (et.day === (day + 1) % 7) return et.hour < endHour;
-  return false;
+  // Hours from the window's opening moment, wrapping across the week.
+  const elapsed = (et.day - day + 7) % 7 * 24 + (et.hour - startHour);
+  const normalized = ((elapsed % (7 * 24)) + 7 * 24) % (7 * 24);
+  return normalized < durationHours;
 }
 
 /**

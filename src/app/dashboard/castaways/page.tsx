@@ -18,6 +18,7 @@ import {
 import { useSeasonCastaways, useEliminatedCastaways } from "@/hooks/useCastaways";
 import { useEpisodeScores } from "@/hooks/useEpisodes";
 import { CastawayDetailGrid } from "@/components/cards";
+import { formatSeasonDate } from "@/utils/seasonDates";
 
 type StatusFilter = "all" | "active" | "eliminated" | "jury";
 
@@ -49,14 +50,9 @@ export default function CastawaysPage() {
   const { data: castawayScores = {} } = useEpisodeScores(seasonNumber);
   const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(seasonNumber);
 
-  const premiereDate = new Date(selectedSeason.premiereDate);
-  const formattedPremiereDate = premiereDate.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const formattedPremiereDate = formatSeasonDate(selectedSeason.premiereDate);
   const formattedConcludedDate = selectedSeason.concludedAt
-    ? new Date(selectedSeason.concludedAt).toLocaleDateString("en-US", {
+    ? formatSeasonDate(selectedSeason.concludedAt, {
         year: "numeric",
         month: "long",
         day: "numeric",

@@ -7,7 +7,7 @@
   "BATCH_LIMIT": "200",
   "ANTHROPIC_API_KEY": "sk-ant-...  (only needed for the Thursday episode drafter)",
   "EPISODE_SCORER_ENABLED": "false",
-  "SCORER_DAY_ET": "3",
-  "SCORER_START_HOUR_ET": "22",
-  "SCORER_RETRY_UNTIL_HOUR_ET": "12"
+  "SCORER_DAY_ET": "4",
+  "SCORER_START_HOUR_ET": "0",
+  "SCORER_WINDOW_HOURS": "12"
 }

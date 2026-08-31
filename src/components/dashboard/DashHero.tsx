@@ -4,6 +4,7 @@ import Link from "next/link";
 import { differenceInCalendarDays } from "date-fns";
 import LockCountdown from "@/components/shell/LockCountdown";
 import type { Season } from "@/data/seasons";
+import { formatSeasonDate, daysUntilSeasonDate, parseSeasonDate } from "@/utils/seasonDates";
 
 interface HeroAction {
   label: string;
@@ -71,13 +72,11 @@ function HeroActions({
 export default function DashHero(props: DashHeroProps) {
   if (props.mode === "pre-season") {
     const { season, primaryAction, secondaryAction } = props;
-    const premiere = new Date(season.premiereDate);
-    const daysUntil = Math.max(0, differenceInCalendarDays(premiere, new Date()));
-    const premiereLabel = premiere.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
+    // Local-midnight parse so the countdown and label agree with the stored
+    // calendar date in every timezone (see utils/seasonDates).
+    const premiere = parseSeasonDate(season.premiereDate);
+    const daysUntil = daysUntilSeasonDate(season.premiereDate);
+    const premiereLabel = formatSeasonDate(season.premiereDate);
     const { lead, tail } = splitLastWord(season.name);
 
     return (

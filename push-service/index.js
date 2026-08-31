@@ -41,11 +41,11 @@ const {
   EPISODE_SCORER_ENABLED = "",
   SCORER_SEASON_NUMBER = "",
   // All in America/New_York — the timezone the show and the league run on.
-  // Expressing this in UTC would be a DST bug waiting to happen: Wed 10pm ET
-  // is Thu 02:00 UTC in summer and Thu 03:00 UTC in winter.
-  SCORER_DAY_ET = "3",          // 0=Sun … 3=Wednesday
-  SCORER_START_HOUR_ET = "22",  // 10pm ET — right as the episode ends
-  SCORER_RETRY_UNTIL_HOUR_ET = "12", // give up at noon ET the next day
+  // Expressing this in UTC would be a DST bug waiting to happen: Thu midnight
+  // ET is 04:00 UTC in summer and 05:00 UTC in winter.
+  SCORER_DAY_ET = "4",            // 0=Sun … 4=Thursday
+  SCORER_START_HOUR_ET = "0",     // midnight ET, ~2h after the episode ends
+  SCORER_WINDOW_HOURS = "12",     // retry through the morning while recaps land
 } = process.env;
 
 for (const [name, value] of Object.entries({
@@ -258,7 +258,7 @@ async function scorerTick() {
     !inScorerWindow(new Date(), {
       day: Number(SCORER_DAY_ET),
       startHour: Number(SCORER_START_HOUR_ET),
-      endHour: Number(SCORER_RETRY_UNTIL_HOUR_ET),
+      durationHours: Number(SCORER_WINDOW_HOURS),
     })
   ) {
     return;
@@ -307,8 +307,8 @@ if (scorerEnabled) {
   const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   console.log(
     `[scorer] enabled — window opens ${DAY_NAMES[Number(SCORER_DAY_ET)]} ` +
-      `${SCORER_START_HOUR_ET}:00 ET, retries until ` +
-      `${DAY_NAMES[(Number(SCORER_DAY_ET) + 1) % 7]} ${SCORER_RETRY_UNTIL_HOUR_ET}:00 ET`,
+      `${String(SCORER_START_HOUR_ET).padStart(2, "0")}:00 ET and retries for ` +
+      `${SCORER_WINDOW_HOURS}h`,
   );
   setInterval(scorerTick, 10 * 60 * 1000);
   scorerTick();
