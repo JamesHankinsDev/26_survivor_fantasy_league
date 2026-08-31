@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/lock-rosters",
       "schedule": "0 1 * * 4"
+    },
+    {
+      "path": "/api/cron/deadline-reminder",
+      "schedule": "0 22 * * 3"
     }
   ]
 }

@@ -6,6 +6,7 @@ import {
   Badge,
   Menu,
   MenuItem,
+  Switch,
   Box,
   Typography,
   ListItemIcon,
@@ -34,6 +35,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Notification } from "@/types/league";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
@@ -51,6 +53,7 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ userId }: NotificationBellProps) {
+  const push = usePushNotifications();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -199,6 +202,51 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
             </Button>
           )}
         </Box>
+
+        {/* Push opt-in. Per-device, not per-account: subscribing on a phone
+            says nothing about a laptop, so this reflects only this browser. */}
+        {push.status !== "unsupported" && (
+          <Box
+            sx={{
+              px: 2,
+              py: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" fontWeight={600}>
+                Notifications on this device
+              </Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                {push.status === "denied"
+                  ? "Blocked — re-enable in your browser settings"
+                  : push.status === "on"
+                    ? "You'll get alerts when scores post"
+                    : "Get alerts even when the app is closed"}
+              </Typography>
+            </Box>
+            <Switch
+              size="small"
+              checked={push.status === "on"}
+              disabled={push.isBusy || push.status === "denied"}
+              onChange={(e) => (e.target.checked ? push.enable() : push.disable())}
+              inputProps={{ "aria-label": "Push notifications on this device" }}
+            />
+          </Box>
+        )}
+
+        {push.error && (
+          <Box sx={{ px: 2, py: 1 }}>
+            <Typography variant="caption" color="error">
+              {push.error}
+            </Typography>
+          </Box>
+        )}
 
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>

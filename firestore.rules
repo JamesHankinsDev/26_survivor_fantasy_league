@@ -89,6 +89,14 @@ service cloud.firestore {
                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
         allow delete: if isAuthenticated() && request.auth.uid == userId;
       }
+
+      // Web Push endpoints, one doc per device. Only the owner may read or
+      // write their own; the push-service uses the Admin SDK and bypasses
+      // these rules entirely. Nothing else in the app should read them — an
+      // endpoint is a capability to push to someone's device.
+      match /pushSubscriptions/{subscriptionId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // ========================================

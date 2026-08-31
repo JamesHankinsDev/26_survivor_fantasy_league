@@ -102,6 +102,7 @@ export const logger = new Logger();
 export const authLogger = logger.child("Auth");
 export const dbLogger = logger.child("Database");
 export const apiLogger = logger.child("API");
+export const swLogger = logger.child("ServiceWorker");
 
 // Export Logger class for custom instances
 export { Logger };

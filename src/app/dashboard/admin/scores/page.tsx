@@ -43,6 +43,9 @@ import {
   ALL_EVENT_TYPES,
 } from "@/utils/eventScoringConfig";
 import { lockRostersForLeague, saveEpisodeScores } from "@/utils/scoring";
+import { notifyScoresPosted } from "@/utils/notifications";
+import NotifySchedulePicker from "@/components/NotifySchedulePicker";
+import { resolveSendAfter, type NotifySchedule } from "@/utils/notifySchedule";
 import { dbLogger } from "@/lib/logger";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
@@ -65,6 +68,10 @@ export default function AdminScoresPage() {
   const [lockWeek, setLockWeek] = useState<number | null>(null);
   const [locking, setLocking] = useState(false);
   const [lockResult, setLockResult] = useState("");
+  // Default to holding the push: scores are usually entered mid-episode, and an
+  // immediate "scores are in" buzz tips off anyone who hasn't watched yet.
+  const [notifySchedule, setNotifySchedule] = useState<NotifySchedule>("after_west_coast");
+  const [notifyCustom, setNotifyCustom] = useState("");
 
   // Initialize empty events when castaways load
   useEffect(() => {
@@ -296,8 +303,41 @@ export default function AdminScoresPage() {
         ? ` Scores updated for ${allLeagueIds.length} league(s).`
         : "";
 
+      // Tell every member their standings moved. Notification failures must not
+      // fail the save — the scoring cascade has already committed by this point.
+      const sendAfter = resolveSendAfter(notifySchedule, notifyCustom);
+      let notified = 0;
+      if (sendAfter !== null) {
+        const targets = ownedLeagues.flatMap((league) =>
+          (league.memberDetails ?? []).map((m) => ({ league, userId: m.userId })),
+        );
+        const results = await Promise.allSettled(
+          targets.map(({ league, userId }) =>
+            notifyScoresPosted(
+              userId,
+              league.id,
+              league.name,
+              effectiveEpisodeNumber,
+              sendAfter,
+            ),
+          ),
+        );
+        notified = results.filter((r) => r.status === "fulfilled").length;
+        const failed = results.length - notified;
+        if (failed > 0) dbLogger.error(`${failed} score notification(s) failed to write`);
+      }
+
+      const notifyMsg =
+        sendAfter === null
+          ? " No push sent."
+          : notified === 0
+            ? ""
+            : sendAfter === undefined
+              ? ` Notified ${notified} member(s).`
+              : ` ${notified} member(s) will be notified at ${sendAfter.toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} ET.`;
+
       setSuccess(
-        `Episode ${effectiveEpisodeNumber} events saved to castaway profiles.${leagueMsg}`
+        `Episode ${effectiveEpisodeNumber} events saved to castaway profiles.${leagueMsg}${notifyMsg}`
       );
 
       setEpisodeNumber(effectiveEpisodeNumber + 1);
@@ -607,6 +647,16 @@ export default function AdminScoresPage() {
                 ? ` Team scores will be updated for all ${allLeagueIds.length} league(s) you own.`
                 : " No leagues to update scores for."}
             </Typography>
+
+            {allLeagueIds.length > 0 && (
+              <NotifySchedulePicker
+                schedule={notifySchedule}
+                onScheduleChange={setNotifySchedule}
+                customValue={notifyCustom}
+                onCustomValueChange={setNotifyCustom}
+                label="Notify members"
+              />
+            )}
           </Box>
         </DialogContent>
         <DialogActions>

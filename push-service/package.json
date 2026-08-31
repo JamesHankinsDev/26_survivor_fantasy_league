@@ -1,0 +1,19 @@
+{
+  "name": "sfl-push-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Web Push delivery worker for Survivor Fantasy League (Railway)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --env-file=.env index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "web-push": "^3.6.7"
+  }
+}

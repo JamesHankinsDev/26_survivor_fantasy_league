@@ -97,6 +97,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "push.state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "push.sendAfter",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

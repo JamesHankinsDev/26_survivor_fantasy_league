@@ -21,6 +21,10 @@ import { useRouter } from "next/navigation";
 import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { toggleCastawayEliminated } from "@/utils/scoring";
+import { useOwnedLeagues } from "@/hooks/useLeagues";
+import { notifyElimination } from "@/utils/notifications";
+import NotifySchedulePicker from "@/components/NotifySchedulePicker";
+import { resolveSendAfter, type NotifySchedule } from "@/utils/notifySchedule";
 import { dbLogger } from "@/lib/logger";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
@@ -30,7 +34,12 @@ export default function AdminCastawaysPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: castaways = [], isLoading: castawaysLoading } = useSeasonCastaways(CURRENT_SEASON.number);
+  const { data: ownedLeagues = [] } = useOwnedLeagues(user?.uid || null);
   const [saving, setSaving] = useState<string | null>(null);
+  // An elimination names the castaway, so it's the most spoiler-prone push of
+  // the lot — hold it until after the West Coast airing by default.
+  const [notifySchedule, setNotifySchedule] = useState<NotifySchedule>("after_west_coast");
+  const [notifyCustom, setNotifyCustom] = useState("");
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [confirmTarget, setConfirmTarget] = useState<{
@@ -58,8 +67,36 @@ export default function AdminCastawaysPage() {
       });
 
       const castaway = castaways.find((c) => c.id === castawayId);
+
+      // Only notify people whose tribe actually took the hit — and only on an
+      // elimination, never on a restore (nothing to warn anyone about).
+      let notified = 0;
+      const sendAfter = resolveSendAfter(notifySchedule, notifyCustom);
+      if (!currentlyEliminated && castaway && sendAfter !== null) {
+        const affected = ownedLeagues.flatMap((league) =>
+          (league.memberDetails ?? [])
+            .filter((m) => Array.isArray(m.roster) && m.roster.includes(castawayId))
+            .map((m) => ({ league, userId: m.userId })),
+        );
+        const results = await Promise.allSettled(
+          affected.map(({ league, userId }) =>
+            notifyElimination(userId, league.id, league.name, castaway.name, sendAfter),
+          ),
+        );
+        notified = results.filter((r) => r.status === "fulfilled").length;
+        const failed = results.length - notified;
+        if (failed > 0) dbLogger.error(`${failed} elimination notification(s) failed to write`);
+      }
+
+      const notifyMsg =
+        notified === 0 || sendAfter === null
+          ? ""
+          : sendAfter === undefined
+            ? ` ${notified} member(s) notified.`
+            : ` ${notified} member(s) will be notified at ${sendAfter.toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} ET.`;
+
       setSuccess(
-        `${castaway?.name} ${!currentlyEliminated ? "marked as eliminated" : "restored"}.`
+        `${castaway?.name} ${!currentlyEliminated ? "marked as eliminated" : "restored"}.${notifyMsg}`
       );
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -279,9 +316,19 @@ export default function AdminCastawaysPage() {
                 </Box>
               </Alert>
             )}
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
               This change takes effect immediately and is visible to all users.
             </Typography>
+
+            {!confirmTarget?.currentlyEliminated && (
+              <NotifySchedulePicker
+                schedule={notifySchedule}
+                onScheduleChange={setNotifySchedule}
+                customValue={notifyCustom}
+                onCustomValueChange={setNotifyCustom}
+                label="Notify affected members"
+              />
+            )}
           </Box>
         </DialogContent>
         <DialogActions>

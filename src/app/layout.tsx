@@ -9,6 +9,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import { QueryProvider } from "@/lib/query-client";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -107,6 +108,7 @@ export default function RootLayout({
               <AuthProvider>
                 {children}
                 <FeedbackWidget />
+                <ServiceWorkerRegistrar />
               </AuthProvider>
             </ThemeProvider>
           </QueryProvider>
