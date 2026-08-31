@@ -46,6 +46,12 @@ interface CardProps extends BaseProps {
    * "✓ PICKED" / "× DROPPING" labels.
    */
   actionTag?: string;
+  /**
+   * Short season label stamped on the photo (e.g. "S50"). Only worth setting in
+   * cross-season contexts like the Hall of Fame — within a single season's
+   * roster or cast list the season is already implied by the page.
+   */
+  seasonBadge?: string;
 }
 
 export type TradingCardProps = CardProps | GhostProps;
@@ -88,7 +94,15 @@ export default function TradingCard(props: TradingCardProps) {
     );
   }
 
-  const { castaway, onClick, picked = false, dropping = false, vibe = "Castaway", actionTag: actionTagLabel } = props;
+  const {
+    castaway,
+    onClick,
+    picked = false,
+    dropping = false,
+    vibe = "Castaway",
+    actionTag: actionTagLabel,
+    seasonBadge,
+  } = props;
   const rarity = rarityFor(castaway);
   const status = deriveStatus(castaway);
   const tribe = getTribe(castaway.tribe);
@@ -117,8 +131,8 @@ export default function TradingCard(props: TradingCardProps) {
   };
 
   const ariaLabel = `${castaway.name}, ${rarity.label}, ${castaway.totalPoints} points${
-    isOut ? ", voted out" : status === "jury" ? ", on jury" : ""
-  }`;
+    seasonBadge ? `, ${seasonBadge}` : ""
+  }${isOut ? ", voted out" : status === "jury" ? ", on jury" : ""}`;
 
   const inner = (
     <div className="sfl-tcg-border">
@@ -170,6 +184,13 @@ export default function TradingCard(props: TradingCardProps) {
               aria-label={`Tribe: ${tribe.name}`}
             >
               {tribe.glyph}
+            </span>
+          )}
+
+          {/* SEASON STAMP */}
+          {seasonBadge && (
+            <span className="sfl-tcg-season-badge" aria-hidden>
+              {seasonBadge}
             </span>
           )}
 

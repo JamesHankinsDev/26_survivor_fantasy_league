@@ -16,6 +16,12 @@ export interface Season {
   concludedAt?: string; // ISO 8601 format: YYYY-MM-DD
   /** Week the merge aired — used by the season recap to gate "biggest climber" math. */
   mergeWeek?: number;
+  /**
+   * QA-only sandbox season. Its castaways are copies used to exercise the draft /
+   * add-drop / leaderboard UI and must be excluded from cross-season aggregates
+   * like the Hall of Fame. Delete the season entry to remove the sandbox entirely.
+   */
+  isTest?: boolean;
 }
 
 /**
@@ -39,14 +45,38 @@ const SEASONS: Season[] = [
   {
     number: 51,
     name: "Survivor 51",
-    theme: "To be revealed",
+    theme: "Open Era",
     premiereDate: "2026-09-23",
+    isActive: true,
+  },
+  // ⚠️ TEMPORARY QA SANDBOX — stood down now that S51 is live. Keep the entry
+  // (don't delete it) for as long as `seasons/99/castaways` exists: it is what
+  // makes isTestSeason(99) true, which keeps those 24 sandbox copies out of the
+  // Hall of Fame. The lifecycle helpers below skip it, so it stays invisible to
+  // the home page. To retire the sandbox for good, delete the Firestore data
+  // (`npx tsx scripts/delete-test-league.ts`) and then this entry.
+  {
+    number: 99,
+    name: "Test Season",
+    theme: "QA Sandbox",
+    premiereDate: "2026-06-01",
     isActive: false,
+    mergeWeek: 7,
+    isTest: true,
   },
 ];
 
 /** All known seasons (past, present, future). */
 export const ALL_SEASONS: Season[] = SEASONS;
+
+/** Season numbers flagged as QA sandboxes — excluded from cross-season aggregates. */
+export const TEST_SEASON_NUMBERS: ReadonlySet<number> = new Set(
+  SEASONS.filter((s) => s.isTest).map((s) => s.number),
+);
+
+/** Whether a season number is a QA sandbox (Hall of Fame, stats, etc. skip these). */
+export const isTestSeason = (seasonNumber: number): boolean =>
+  TEST_SEASON_NUMBERS.has(seasonNumber);
 
 /**
  * The "focus" season used by castaway / league lookups across the app.
@@ -69,7 +99,7 @@ export const isSeasonActive = (season: Season = CURRENT_SEASON): boolean =>
 /** The next upcoming season — not active, no finale aired yet. Lowest number wins. */
 export const getUpcomingSeason = (): Season | undefined =>
   [...SEASONS]
-    .filter((s) => !s.isActive && !s.concludedAt)
+    .filter((s) => !s.isTest && !s.isActive && !s.concludedAt)
     .sort((a, b) => a.number - b.number)[0];
 
 /**
@@ -98,9 +128,12 @@ export const getSeasonStatus = (season: Season): SeasonStatus => {
   return "future";
 };
 
-/** All seasons in a given lifecycle bucket. */
+/**
+ * All seasons in a given lifecycle bucket. QA sandboxes are excluded — they are
+ * registered for Hall-of-Fame exclusion, not for display.
+ */
 export const getSeasonsByStatus = (status: SeasonStatus): Season[] =>
-  ALL_SEASONS.filter((s) => getSeasonStatus(s) === status);
+  ALL_SEASONS.filter((s) => !s.isTest && getSeasonStatus(s) === status);
 
 /** The current active season, or CURRENT_SEASON as fallback. */
 export const getCurrentSeason = (): Season => CURRENT_SEASON;

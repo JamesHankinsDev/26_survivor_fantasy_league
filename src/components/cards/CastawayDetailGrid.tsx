@@ -18,6 +18,13 @@ export interface CastawayDetailGridProps {
   size?: TradingCardSize;
   /** Optional per-castaway vibe/eyebrow resolver. */
   vibeFor?: (castaway: Castaway) => string | undefined;
+  /**
+   * Stamp each card with its own season (e.g. "S50"). Only useful in
+   * cross-season grids like the Hall of Fame; within one season's cast the
+   * season is already implied by the page. Cards whose castaway has no
+   * `seasonNumber` are left unstamped.
+   */
+  showSeasonBadge?: boolean;
   /** Optional footer actions in the detail sheet, given the open castaway. */
   renderActions?: (castaway: Castaway, close: () => void) => React.ReactNode;
   className?: string;
@@ -35,6 +42,7 @@ export default function CastawayDetailGrid({
   seasonNumber,
   size = "mini",
   vibeFor,
+  showSeasonBadge = false,
   renderActions,
   className,
 }: CastawayDetailGridProps) {
@@ -42,6 +50,8 @@ export default function CastawayDetailGrid({
   const open = castaways.find((c) => c.id === openId) ?? null;
   const close = () => setOpenId(null);
   const gridClass = size === "mini" ? "sfl-mini-grid" : "sfl-card-grid";
+  const seasonBadgeFor = (c: Castaway): string | undefined =>
+    showSeasonBadge && typeof c.seasonNumber === "number" ? `S${c.seasonNumber}` : undefined;
 
   return (
     <>
@@ -52,6 +62,7 @@ export default function CastawayDetailGrid({
             castaway={c}
             size={size}
             vibe={vibeFor?.(c)}
+            seasonBadge={seasonBadgeFor(c)}
             onClick={() => setOpenId(c.id)}
           />
         ))}
@@ -62,6 +73,7 @@ export default function CastawayDetailGrid({
           <CardDetail
             castaway={open}
             vibe={vibeFor?.(open)}
+            seasonBadge={seasonBadgeFor(open)}
             events={castawayEventBreakdown(open, open.seasonNumber ?? seasonNumber)}
             onClose={close}
             actions={renderActions?.(open, close)}

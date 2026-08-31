@@ -53,3 +53,6 @@ public/fallback-*.js
 
 *storybook.log
 storybook-static
+
+# Ad-hoc roster snapshots written by scripts/ — league data, never commit
+roster-backup-*.json

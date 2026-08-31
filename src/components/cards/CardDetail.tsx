@@ -21,6 +21,8 @@ export interface CardDetailProps {
   vibe?: string;
   /** Optional secondary eyebrow note (e.g. "Played S45"). */
   prev?: string;
+  /** Short season label stamped on the card (e.g. "S50"). See TradingCard. */
+  seasonBadge?: string;
   /** Close handler — renders the dismiss button when provided. */
   onClose?: () => void;
   /** Footer action buttons (e.g. Discard / Add / Close). */
@@ -49,6 +51,7 @@ export default function CardDetail({
   events = [],
   vibe = "Castaway",
   prev,
+  seasonBadge,
   onClose,
   actions,
   className,
@@ -80,7 +83,12 @@ export default function CardDetail({
         >
           <div className={`sfl-cardflip-inner${flipped ? " flipped" : ""}`}>
             <div className="sfl-cardflip-front">
-              <TradingCard castaway={castaway} vibe={vibe} size="lg" />
+              <TradingCard
+                castaway={castaway}
+                vibe={vibe}
+                size="lg"
+                seasonBadge={seasonBadge}
+              />
             </div>
             <div className="sfl-cardflip-back" aria-hidden={!flipped}>
               <div className="sfl-cardflip-back-head">
@@ -114,6 +122,7 @@ export default function CardDetail({
       <div className="sfl-cardsheet-body">
         <div className="sfl-eyebrow flame">
           {vibe}
+          {seasonBadge ? ` · ${seasonBadge}` : ""}
           {prev ? ` · ${prev}` : ""}
         </div>
         <h2 className="sfl-cardsheet-name">{castaway.name}</h2>

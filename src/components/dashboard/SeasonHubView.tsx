@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { getSeasonStatus, getSeasonLabel, type Season } from "@/data/seasons";
+import { getSeasonStatus, getSeasonLabel, isTestSeason, type Season } from "@/data/seasons";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import FutureSeasonCard from "@/components/FutureSeasonCard";
 import type { League } from "@/types/league";
@@ -15,7 +15,13 @@ import type { League } from "@/types/league";
  * In-season users see `<ActiveDashboardView />` instead.
  */
 export default function SeasonHubView({ leagues }: { leagues: League[] }) {
-  const { seasons } = useSeasonsWithOverrides();
+  const { seasons: allSeasons } = useSeasonsWithOverrides();
+  // QA sandboxes are registered only so the Hall of Fame can skip them — they
+  // are never a season anyone plays, so keep them out of the hub entirely.
+  const seasons = useMemo(
+    () => allSeasons.filter((s) => !isTestSeason(s.number)),
+    [allSeasons],
+  );
 
   const leaguesBySeason = useMemo(() => {
     const map = new Map<number, League[]>();

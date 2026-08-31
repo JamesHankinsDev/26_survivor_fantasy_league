@@ -5,6 +5,7 @@ import { Castaway } from "@/types/castaway";
 import { getRarity } from "@/utils/cardRarity";
 import { useAuth } from "@/lib/auth-context";
 import { DEMO_CASTAWAYS } from "@/data/demo-data";
+import { isTestSeason } from "@/data/seasons";
 
 export interface HallOfFameEntry extends Castaway {
   /** Season the castaway competed in (denormalized for cross-season queries). */
@@ -48,6 +49,10 @@ export function useHallOfFame() {
           typeof data.seasonNumber === "number"
             ? data.seasonNumber
             : parseInt(d.ref.parent.parent?.id ?? "0", 10);
+
+        // QA sandbox castaways are copies of real casts — keep them out of the
+        // cross-season Hall of Fame so they don't duplicate the originals.
+        if (isTestSeason(seasonNumber)) return;
 
         entries.push({
           id: d.id,

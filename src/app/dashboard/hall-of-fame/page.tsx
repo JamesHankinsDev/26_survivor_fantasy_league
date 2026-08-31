@@ -67,7 +67,12 @@ export default function HallOfFamePage() {
           No castaways have reached Legendary rarity yet. Check back after the next finale.
         </p>
       ) : (
-        <CastawayDetailGrid castaways={cards} seasonNumber={0} size="sm" />
+        <CastawayDetailGrid
+          castaways={cards}
+          seasonNumber={0}
+          size="sm"
+          showSeasonBadge
+        />
       )}
     </div>
   );

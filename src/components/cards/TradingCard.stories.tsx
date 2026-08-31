@@ -96,6 +96,34 @@ export const OnJury: Story = {
   },
 };
 
+/**
+ * Hall of Fame stamps each card with its own season, since the grid mixes
+ * castaways from every season. Sits bottom-left, clear of the tribe mark
+ * (top-left) and the idol/jury column (top-right).
+ */
+export const WithSeasonBadge: Story = {
+  args: {
+    castaway: { ...base, id: "c-hof", name: "Sasha Lin", totalPoints: 44 },
+    seasonBadge: "S50",
+    size: "sm",
+  },
+};
+
+export const SeasonBadgeCrowded: Story = {
+  args: {
+    castaway: {
+      ...base,
+      id: "c-hof-crowded",
+      name: "Bri Walker",
+      totalPoints: 52,
+      inventory: { immunity_idol: 2 },
+      weeklyEvents: { "9": [{ eventType: "made_jury", count: 1 }] },
+    },
+    seasonBadge: "S49",
+    size: "sm",
+  },
+};
+
 export const Ghost: Story = {
   args: { ghost: true, size: "md" },
 };
