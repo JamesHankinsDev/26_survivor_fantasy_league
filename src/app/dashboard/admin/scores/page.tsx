@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   Box,
   Container,
@@ -46,6 +46,8 @@ import { lockRostersForLeague, saveEpisodeScores } from "@/utils/scoring";
 import { notifyScoresPosted } from "@/utils/notifications";
 import NotifySchedulePicker from "@/components/NotifySchedulePicker";
 import { resolveSendAfter, type NotifySchedule } from "@/utils/notifySchedule";
+import { usePendingEpisodeScores } from "@/hooks/usePendingEpisodeScores";
+import EpisodeDraftBanner from "@/components/EpisodeDraftBanner";
 import { dbLogger } from "@/lib/logger";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
@@ -72,6 +74,7 @@ export default function AdminScoresPage() {
   // immediate "scores are in" buzz tips off anyone who hasn't watched yet.
   const [notifySchedule, setNotifySchedule] = useState<NotifySchedule>("after_west_coast");
   const [notifyCustom, setNotifyCustom] = useState("");
+  const [draftApplied, setDraftApplied] = useState(false);
 
   // Initialize empty events when castaways load
   useEffect(() => {
@@ -203,6 +206,38 @@ export default function AdminScoresPage() {
 
   /** Effective episode number — use nextEpisodeNumber as fallback while loading */
   const effectiveEpisodeNumber = episodeNumber ?? nextEpisodeNumber;
+
+  // Thursday-morning AI draft for this episode, if the scorer produced one.
+  const { data: draft } = usePendingEpisodeScores(
+    CURRENT_SEASON.number,
+    effectiveEpisodeNumber,
+  );
+
+  // Switching episodes invalidates "already applied".
+  useEffect(() => {
+    setDraftApplied(false);
+  }, [effectiveEpisodeNumber]);
+
+  /**
+   * Copy the draft into the form. Deliberately additive-by-replacement per
+   * castaway rather than a merge: the admin is reviewing a proposal, and a
+   * silent merge with whatever was already typed would make it unclear which
+   * numbers came from where.
+   */
+  const applyDraft = useCallback(() => {
+    if (!draft || draft.status !== "ready") return;
+    setEpisodes((prev) => {
+      const next = { ...prev };
+      for (const c of draft.castaways) {
+        if (!next[c.castawayId]) continue; // not in this season's cast
+        next[c.castawayId] = {
+          events: c.events.map((e) => ({ eventType: e.eventType, count: e.count })),
+        };
+      }
+      return next;
+    });
+    setDraftApplied(true);
+  }, [draft]);
 
   // Load previous episode events from castaway docs when episode number changes
   useEffect(() => {
@@ -375,6 +410,15 @@ export default function AdminScoresPage() {
           all {ownedLeagues.length} league(s) you own.
         </Typography>
       </Box>
+
+      {draft && (
+        <EpisodeDraftBanner
+          draft={draft}
+          episodeNumber={effectiveEpisodeNumber}
+          onApply={applyDraft}
+          applied={draftApplied}
+        />
+      )}
 
       {!seasonActive && (
         <Alert severity="warning" sx={{ mb: 3 }}>

@@ -111,6 +111,13 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow write: if isAdmin();
       }
+
+      // AI-drafted episode scoring awaiting admin review. Admin-only: these are
+      // unreviewed and may be wrong, so they must never reach players. The
+      // Railway drafter writes them via the Admin SDK, bypassing these rules.
+      match /pendingScores/{episodeNumber} {
+        allow read, write: if isAdmin();
+      }
     }
 
     // Permit cross-season collection group queries on `castaways`.

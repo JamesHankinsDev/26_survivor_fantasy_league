@@ -26,6 +26,7 @@ import { createServer } from "node:http";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 import webpush from "web-push";
+import { runEpisodeDraft } from "./episode-scorer.js";
 
 const {
   FIREBASE_SERVICE_ACCOUNT,
@@ -35,6 +36,11 @@ const {
   SWEEP_INTERVAL_MS = "15000",
   BATCH_LIMIT = "200",
   PORT = "8080",
+  // Thursday-morning episode scoring drafter. Off unless a key is present.
+  ANTHROPIC_API_KEY,
+  EPISODE_SCORER_ENABLED = "",
+  SCORER_SEASON_NUMBER = "",
+  SCORER_UTC_HOUR = "13", // Thu 13:00 UTC = 8am EST / 9am EDT
 } = process.env;
 
 for (const [name, value] of Object.entries({
@@ -57,6 +63,9 @@ const sweepInterval = Number(SWEEP_INTERVAL_MS);
 const batchLimit = Number(BATCH_LIMIT);
 
 const stats = { sweeps: 0, sent: 0, failed: 0, pruned: 0, lastSweepAt: null, lastError: null };
+
+const scorerEnabled = EPISODE_SCORER_ENABLED === "true" && Boolean(ANTHROPIC_API_KEY);
+const scorerStats = { enabled: scorerEnabled, runs: 0, lastRunAt: null, lastResult: null };
 
 /**
  * Atomically move a notification from pending -> sending.
@@ -217,11 +226,52 @@ async function tick() {
   }
 }
 
+/**
+ * Which season to draft for. An explicit env var wins; otherwise take the
+ * highest season among active leagues, so this doesn't rot each September.
+ */
+async function activeSeasonNumber() {
+  if (SCORER_SEASON_NUMBER) return Number(SCORER_SEASON_NUMBER);
+  const snap = await db.collection("leagues").where("status", "==", "active").get();
+  const seasons = snap.docs
+    .map((d) => d.get("seasonNumber"))
+    .filter((n) => typeof n === "number");
+  return seasons.length ? Math.max(...seasons) : null;
+}
+
+/**
+ * Fire once on Thursday morning UTC. Idempotence comes from the draft document
+ * existing, not from a timer — a restart or a redeploy can't double-run it, and
+ * a missed window is picked up on the next tick rather than skipped.
+ */
+async function scorerTick() {
+  if (!scorerEnabled) return;
+  const now = new Date();
+  if (now.getUTCDay() !== 4) return; // 4 = Thursday
+  if (now.getUTCHours() < Number(SCORER_UTC_HOUR)) return;
+
+  try {
+    const seasonNumber = await activeSeasonNumber();
+    if (!seasonNumber) return;
+
+    const result = await runEpisodeDraft(db, { seasonNumber, apiKey: ANTHROPIC_API_KEY });
+    if (result.skipped) return; // already drafted this episode — the common case
+
+    scorerStats.runs++;
+    scorerStats.lastRunAt = new Date().toISOString();
+    scorerStats.lastResult = result;
+    console.log("[scorer]", JSON.stringify(result));
+  } catch (err) {
+    scorerStats.lastResult = { ok: false, reason: err.message };
+    console.error("[scorer] tick failed:", err.message);
+  }
+}
+
 // Railway health check + a peek at what the worker has been doing.
 createServer((req, res) => {
   if (req.url === "/health" || req.url === "/") {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true, ...stats }, null, 2));
+    res.end(JSON.stringify({ ok: true, ...stats, scorer: scorerStats }, null, 2));
     return;
   }
   res.writeHead(404).end();
@@ -232,6 +282,16 @@ createServer((req, res) => {
 console.log(`[push] sweeping every ${sweepInterval}ms (batch limit ${batchLimit})`);
 setInterval(tick, sweepInterval);
 tick();
+
+// The scorer only acts inside a Thursday-morning window, so a slow poll is
+// plenty — and it keeps the Claude call well away from the 15s push sweep.
+if (scorerEnabled) {
+  console.log(`[scorer] enabled — checking hourly for a Thursday ${SCORER_UTC_HOUR}:00 UTC window`);
+  setInterval(scorerTick, 10 * 60 * 1000);
+  scorerTick();
+} else {
+  console.log("[scorer] disabled (set EPISODE_SCORER_ENABLED=true and ANTHROPIC_API_KEY to enable)");
+}
 
 for (const signal of ["SIGTERM", "SIGINT"]) {
   process.on(signal, () => {

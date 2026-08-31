@@ -1,6 +1,10 @@
 # Push service (Railway)
 
-Delivers Web Push notifications for Survivor Fantasy League.
+Two background jobs for Survivor Fantasy League, in one always-on service:
+
+1. **Push delivery** — polls Firestore for due notifications and pushes them.
+2. **Thursday episode drafter** *(optional)* — reads published recaps and drafts
+   the week's scoring for admin review. **It never commits scores.**
 
 The Next app on Vercel writes notification docs to Firestore. This worker polls
 for the ones that are **due** and pushes them to every device the recipient has
@@ -112,3 +116,58 @@ service account JSON to it to run locally.
 Rotating invalidates **every existing subscription** — each device must
 re-subscribe, which happens silently the next time someone opens the app and
 toggles notifications back on. Only rotate if the private key leaks.
+
+
+---
+
+# Thursday episode drafter
+
+Survivor airs Wednesday 8pm ET. Thursday morning this reads published recaps and
+writes a proposed scoring to `seasons/{n}/pendingScores/{episode}`. The admin
+scores page shows it as a banner with an **Apply draft to form** button; saving
+still goes through `saveEpisodeScores` with a human pressing the button.
+
+**It never commits scores, by design.** `saveEpisodeScores` cascades across every
+league and recomputes totals from deltas — there is no undo. A recap that
+garbles who went home would silently rewrite everyone's standings, and nobody
+would notice until they questioned their score. Drafting removes the tedium
+without moving the decision.
+
+## Accuracy is uneven, and the prompt says so
+
+| Reported reliably by any recap | Covered inconsistently |
+|---|---|
+| `voted_out`, `immunity_win`, `team_challenge_win`, `made_jury`, `made_final_three`, `season_winner`, `fire_making_win` | `found_idol`, `found_advantage`, `used_idol_successfully`, `used_advantage_successfully` |
+
+The right-hand column is where the show deliberately hides information. Those
+events come back `medium`/`low` confidence, or as a note in `unresolved`, rather
+than being guessed. The banner puts the low-confidence count up front.
+
+## Measure it before you trust it
+
+Season 50 is a complete answer key — 13 episodes of hand-entered events already
+in Firestore. Replay the drafter against them:
+
+```bash
+cd push-service
+node --env-file=.env backtest.js 50 1-5
+```
+
+Read-only; writes no drafts and touches no scoring. It reports precision and
+recall, broken out into *invented*, *missed*, and *wrong count*.
+
+**Precision is the number that matters.** A missed event you'll spot while
+reviewing; an invented one you might not.
+
+## Enabling it
+
+Set `ANTHROPIC_API_KEY` and `EPISODE_SCORER_ENABLED=true` on the Railway
+service. Optional: `SCORER_UTC_HOUR` (default 13 — Thu 8am EST / 9am EDT) and
+`SCORER_SEASON_NUMBER` (defaults to the highest season among active leagues).
+
+Idempotence comes from the draft document existing, not from a timer — a restart
+or redeploy can't double-run it, and a missed window is picked up on the next
+tick rather than skipped. Cost is roughly one Opus call a week, well under a
+dollar including web search.
+
+`GET /health` reports a `scorer` block alongside the push counters.
