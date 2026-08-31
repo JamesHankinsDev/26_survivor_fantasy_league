@@ -26,7 +26,7 @@ import { createServer } from "node:http";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp, FieldValue } from "firebase-admin/firestore";
 import webpush from "web-push";
-import { runEpisodeDraft } from "./episode-scorer.js";
+import { runEpisodeDraft, inScorerWindow } from "./episode-scorer.js";
 
 const {
   FIREBASE_SERVICE_ACCOUNT,
@@ -36,11 +36,16 @@ const {
   SWEEP_INTERVAL_MS = "15000",
   BATCH_LIMIT = "200",
   PORT = "8080",
-  // Thursday-morning episode scoring drafter. Off unless a key is present.
+  // Episode scoring drafter. Off unless a key is present.
   ANTHROPIC_API_KEY,
   EPISODE_SCORER_ENABLED = "",
   SCORER_SEASON_NUMBER = "",
-  SCORER_UTC_HOUR = "13", // Thu 13:00 UTC = 8am EST / 9am EDT
+  // All in America/New_York — the timezone the show and the league run on.
+  // Expressing this in UTC would be a DST bug waiting to happen: Wed 10pm ET
+  // is Thu 02:00 UTC in summer and Thu 03:00 UTC in winter.
+  SCORER_DAY_ET = "3",          // 0=Sun … 3=Wednesday
+  SCORER_START_HOUR_ET = "22",  // 10pm ET — right as the episode ends
+  SCORER_RETRY_UNTIL_HOUR_ET = "12", // give up at noon ET the next day
 } = process.env;
 
 for (const [name, value] of Object.entries({
@@ -240,22 +245,35 @@ async function activeSeasonNumber() {
 }
 
 /**
- * Fire once on Thursday morning UTC. Idempotence comes from the draft document
- * existing, not from a timer — a restart or a redeploy can't double-run it, and
- * a missed window is picked up on the next tick rather than skipped.
+ * Attempt a draft if we're in the window and don't already have one.
+ *
+ * Idempotence comes from the draft document, not from a timer — a restart or
+ * redeploy can't double-run it. A "ready" draft ends the week; a "not_found"
+ * one is retried on the next tick while the window is still open, since it
+ * usually just means the recap wasn't published yet.
  */
 async function scorerTick() {
   if (!scorerEnabled) return;
-  const now = new Date();
-  if (now.getUTCDay() !== 4) return; // 4 = Thursday
-  if (now.getUTCHours() < Number(SCORER_UTC_HOUR)) return;
+  if (
+    !inScorerWindow(new Date(), {
+      day: Number(SCORER_DAY_ET),
+      startHour: Number(SCORER_START_HOUR_ET),
+      endHour: Number(SCORER_RETRY_UNTIL_HOUR_ET),
+    })
+  ) {
+    return;
+  }
 
   try {
     const seasonNumber = await activeSeasonNumber();
     if (!seasonNumber) return;
 
-    const result = await runEpisodeDraft(db, { seasonNumber, apiKey: ANTHROPIC_API_KEY });
-    if (result.skipped) return; // already drafted this episode — the common case
+    const result = await runEpisodeDraft(db, {
+      seasonNumber,
+      apiKey: ANTHROPIC_API_KEY,
+      retryNotFound: true,
+    });
+    if (result.skipped) return; // already have a usable draft — the common case
 
     scorerStats.runs++;
     scorerStats.lastRunAt = new Date().toISOString();
@@ -283,10 +301,15 @@ console.log(`[push] sweeping every ${sweepInterval}ms (batch limit ${batchLimit}
 setInterval(tick, sweepInterval);
 tick();
 
-// The scorer only acts inside a Thursday-morning window, so a slow poll is
-// plenty — and it keeps the Claude call well away from the 15s push sweep.
+// The scorer only acts inside its window, so a slow poll is plenty — and it
+// keeps the Claude call well away from the 15s push sweep.
 if (scorerEnabled) {
-  console.log(`[scorer] enabled — checking hourly for a Thursday ${SCORER_UTC_HOUR}:00 UTC window`);
+  const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  console.log(
+    `[scorer] enabled — window opens ${DAY_NAMES[Number(SCORER_DAY_ET)]} ` +
+      `${SCORER_START_HOUR_ET}:00 ET, retries until ` +
+      `${DAY_NAMES[(Number(SCORER_DAY_ET) + 1) % 7]} ${SCORER_RETRY_UNTIL_HOUR_ET}:00 ET`,
+  );
   setInterval(scorerTick, 10 * 60 * 1000);
   scorerTick();
 } else {

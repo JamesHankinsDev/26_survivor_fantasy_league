@@ -1,9 +1,11 @@
 /**
- * Thursday-morning episode scoring drafter.
+ * Episode scoring drafter.
  *
- * Survivor airs Wednesday 8pm ET. This reads published recaps the next morning
- * and drafts the episode's scoring events, so the admin reviews a filled-in
- * form instead of transcribing 21 castaways x 13 event types by hand.
+ * Survivor airs Wednesday 8pm ET. From 10pm ET — as the episode ends — this
+ * reads published recaps and drafts the episode's scoring events, so the admin
+ * reviews a filled-in form instead of transcribing 21 castaways x 13 event
+ * types by hand. Recaps lag the broadcast, so the caller retries through the
+ * night (see inScorerWindow).
  *
  * IT NEVER COMMITS SCORES. It writes one document —
  * `seasons/{n}/pendingScores/{episode}` — which the admin scores page reads and
@@ -123,6 +125,41 @@ CAST (id — name)
 ${cast.map((c) => `  ${c.id} — ${c.name}`).join("\n")}`;
 }
 
+/** Weekday (0=Sun) and hour in America/New_York, DST-aware. */
+export function etDayAndHour(at = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "numeric",
+    hour12: false,
+  })
+    .formatToParts(at)
+    .reduce((acc, p) => (p.type === "literal" ? acc : { ...acc, [p.type]: p.value }), {});
+  const days = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return { day: days[parts.weekday], hour: Number(parts.hour) % 24 };
+}
+
+/**
+ * Is `at` inside the drafting window?
+ *
+ * Opens Wednesday 10pm ET, right as the episode ends, and stays open until noon
+ * ET the next day. The window matters because at 10pm ET no recap exists yet —
+ * the episode has only just finished, and the season premiere runs until
+ * exactly 10:00. Outlets publish 30-90 minutes later, and sometimes not until
+ * morning. So the job opens on schedule and keeps trying rather than writing
+ * one "not found" and giving up for the week.
+ *
+ * Expressed in ET rather than UTC deliberately: Wed 10pm ET is Thu 02:00 UTC in
+ * summer and Thu 03:00 UTC in winter, so a UTC schedule silently shifts an hour
+ * when the clocks change mid-season.
+ */
+export function inScorerWindow(at = new Date(), { day = 3, startHour = 22, endHour = 12 } = {}) {
+  const et = etDayAndHour(at);
+  if (et.day === day) return et.hour >= startHour;
+  if (et.day === (day + 1) % 7) return et.hour < endHour;
+  return false;
+}
+
 /**
  * Ask Claude to read recaps and draft the episode.
  * Returns the parsed draft, or null if the model produced nothing usable.
@@ -178,7 +215,14 @@ export function nextEpisodeNumber(castawayDocs) {
  * Generate and store a draft for the next unscored episode.
  * Returns a short result object for logging. Never throws past its own catch.
  */
-export async function runEpisodeDraft(db, { seasonNumber, force = false, apiKey }) {
+export async function runEpisodeDraft(db, {
+  seasonNumber,
+  force = false,
+  apiKey,
+  /** Re-attempt when a previous run found no recap (it may have posted since). */
+  retryNotFound = false,
+  maxAttempts = 12,
+}) {
   const castCol = db.collection("seasons").doc(String(seasonNumber)).collection("castaways");
   const castSnap = await castCol.get();
   if (castSnap.empty) return { ok: false, reason: "no cast for season" };
@@ -190,9 +234,19 @@ export async function runEpisodeDraft(db, { seasonNumber, force = false, apiKey 
     .collection("seasons").doc(String(seasonNumber))
     .collection("pendingScores").doc(String(episodeNumber));
 
-  if (!force && (await draftRef.get()).exists) {
-    return { ok: true, skipped: true, episodeNumber, reason: "draft already exists" };
+  const existing = await draftRef.get();
+  if (!force && existing.exists) {
+    const status = existing.get("status");
+    const attempts = existing.get("attempts") ?? 1;
+    // A finished draft ends the week. A "not_found" one usually just means the
+    // recap hadn't been published yet, so retry while the window is open —
+    // bounded, so a genuinely missing episode can't loop all night.
+    const retryable = retryNotFound && status === "not_found" && attempts < maxAttempts;
+    if (!retryable) {
+      return { ok: true, skipped: true, episodeNumber, reason: `draft exists (${status})` };
+    }
   }
+  const priorAttempts = existing.exists ? (existing.get("attempts") ?? 1) : 0;
 
   let draft;
   try {
@@ -207,12 +261,13 @@ export async function runEpisodeDraft(db, { seasonNumber, force = false, apiKey 
   if (!draft.episodeFound) {
     // Store the miss so the loop doesn't retry all day, and so the admin can
     // see it was attempted rather than silently skipped.
+    const attempts = priorAttempts + 1;
     await draftRef.set({
-      seasonNumber, episodeNumber, status: "not_found",
+      seasonNumber, episodeNumber, status: "not_found", attempts,
       summary: draft.summary ?? "", unresolved: draft.unresolved ?? [],
       sources: [], castaways: [], generatedAt: Timestamp.now(), model: "claude-opus-5",
     });
-    return { ok: true, episodeNumber, found: false };
+    return { ok: true, episodeNumber, found: false, attempts };
   }
 
   // Drop anything referencing a castaway that isn't in this season's cast.
@@ -224,6 +279,7 @@ export async function runEpisodeDraft(db, { seasonNumber, force = false, apiKey 
     seasonNumber,
     episodeNumber,
     status: "ready",
+    attempts: priorAttempts + 1,
     episodeTitle: draft.episodeTitle ?? null,
     airDate: draft.airDate ?? null,
     summary: draft.summary ?? "",

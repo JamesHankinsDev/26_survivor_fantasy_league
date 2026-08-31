@@ -3,8 +3,8 @@
 Two background jobs for Survivor Fantasy League, in one always-on service:
 
 1. **Push delivery** — polls Firestore for due notifications and pushes them.
-2. **Thursday episode drafter** *(optional)* — reads published recaps and drafts
-   the week's scoring for admin review. **It never commits scores.**
+2. **Episode drafter** *(optional)* — Wednesday nights, reads published recaps
+   and drafts the week's scoring for admin review. **It never commits scores.**
 
 The Next app on Vercel writes notification docs to Firestore. This worker polls
 for the ones that are **due** and pushes them to every device the recipient has
@@ -120,10 +120,11 @@ toggles notifications back on. Only rotate if the private key leaks.
 
 ---
 
-# Thursday episode drafter
+# Episode drafter
 
-Survivor airs Wednesday 8pm ET. Thursday morning this reads published recaps and
-writes a proposed scoring to `seasons/{n}/pendingScores/{episode}`. The admin
+Survivor airs Wednesday 8pm ET. This opens at **Wednesday 10pm ET**, reads
+published recaps, and writes a proposed scoring to
+`seasons/{n}/pendingScores/{episode}`. The admin
 scores page shows it as a banner with an **Apply draft to form** button; saving
 still goes through `saveEpisodeScores` with a human pressing the button.
 
@@ -159,15 +160,33 @@ recall, broken out into *invented*, *missed*, and *wrong count*.
 **Precision is the number that matters.** A missed event you'll spot while
 reviewing; an invented one you might not.
 
+## Schedule, and why it retries
+
+The window opens **Wednesday 10pm ET** and stays open until **noon Thursday ET**.
+
+10pm is when the episode ends — 90-minute episodes finish at 9:30, and the
+season premiere runs until exactly 10:00 — so at the moment the window opens,
+a recap almost never exists yet. Outlets publish 30-90 minutes later, sometimes
+not until morning. The job therefore opens on schedule and keeps retrying every
+10 minutes rather than writing one "not found" and giving up for the week. A
+`ready` draft ends the week; a `not_found` one is retried, bounded at 12
+attempts so a genuinely missing episode can't loop all night.
+
+The schedule is expressed in **America/New_York, not UTC** — Wed 10pm ET is Thu
+02:00 UTC in summer and Thu 03:00 UTC in winter, so a UTC schedule would
+silently shift an hour when the clocks change mid-season. `npm test` covers both
+DST sides.
+
 ## Enabling it
 
 Set `ANTHROPIC_API_KEY` and `EPISODE_SCORER_ENABLED=true` on the Railway
-service. Optional: `SCORER_UTC_HOUR` (default 13 — Thu 8am EST / 9am EDT) and
-`SCORER_SEASON_NUMBER` (defaults to the highest season among active leagues).
+service. Optional: `SCORER_DAY_ET` (default 3 = Wednesday),
+`SCORER_START_HOUR_ET` (default 22), `SCORER_RETRY_UNTIL_HOUR_ET` (default 12),
+and `SCORER_SEASON_NUMBER` (defaults to the highest season among active
+leagues).
 
-Idempotence comes from the draft document existing, not from a timer — a restart
-or redeploy can't double-run it, and a missed window is picked up on the next
-tick rather than skipped. Cost is roughly one Opus call a week, well under a
-dollar including web search.
+Idempotence comes from the draft document, not a timer — a restart or redeploy
+can't double-run it. Cost is roughly one Opus call a week, well under a dollar
+including web search; a night that needs several retries is still cents.
 
 `GET /health` reports a `scorer` block alongside the push counters.
