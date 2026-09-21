@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { Button, Snackbar, Alert, IconButton } from "@mui/material";
 import {
   Download as DownloadIcon,
@@ -13,6 +13,29 @@ interface NavigatorWithStandalone extends Navigator {
   standalone?: boolean;
 }
 
+/**
+ * Whether the app is already running as an installed PWA.
+ *
+ * Detected through useSyncExternalStore rather than in an effect: the check is
+ * synchronous and client-only, so doing it in an effect meant one render where
+ * an already-installed user saw the install button before it was removed.
+ * `getServerSnapshot` returns false so SSR renders the pre-install state.
+ */
+const STANDALONE_QUERY = "(display-mode: standalone)";
+
+function subscribeToStandalone(onChange: () => void) {
+  const mql = window.matchMedia(STANDALONE_QUERY);
+  mql.addEventListener("change", onChange);
+  return () => mql.removeEventListener("change", onChange);
+}
+
+function readStandalone() {
+  return (
+    window.matchMedia(STANDALONE_QUERY).matches ||
+    (window.navigator as NavigatorWithStandalone).standalone === true
+  );
+}
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -21,22 +44,21 @@ interface BeforeInstallPromptEvent extends Event {
 export default function PWAInstallButton() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  // Detected at render time; `installedThisSession` covers the appinstalled
+  // event, which fires before the display-mode query flips over.
+  const detectedInstalled = useSyncExternalStore(
+    subscribeToStandalone,
+    readStandalone,
+    () => false,
+  );
+  const [installedThisSession, setInstalledThisSession] = useState(false);
+  const isInstalled = detectedInstalled || installedThisSession;
   const [showPrompt, setShowPrompt] = useState(false);
   const [installSuccess, setInstallSuccess] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
-
-    // Check iOS standalone mode
-    if ((window.navigator as NavigatorWithStandalone).standalone === true) {
-      setIsInstalled(true);
-      return;
-    }
+    // Already installed — nothing to prompt for.
+    if (detectedInstalled) return;
 
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -56,7 +78,7 @@ export default function PWAInstallButton() {
 
     // Listen for successful installation
     window.addEventListener("appinstalled", () => {
-      setIsInstalled(true);
+      setInstalledThisSession(true);
       setInstallSuccess(true);
       setDeferredPrompt(null);
       setShowPrompt(false);
@@ -71,7 +93,7 @@ export default function PWAInstallButton() {
         handleBeforeInstallPrompt
       );
     };
-  }, []);
+  }, [detectedInstalled]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {

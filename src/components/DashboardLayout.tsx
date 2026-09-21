@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -18,13 +18,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { useUserLeagues } from "@/hooks/useLeagues";
-import NotificationBell from "@/components/NotificationBell";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import MessageBoard from "@/components/MessageBoard";
 import SeasonRecapModal from "@/components/SeasonRecapModal";
 import { useSeasonRecap } from "@/hooks/useSeasonRecap";
-import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
-import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
 import Sidebar from "@/components/shell/Sidebar";
 import TopNav from "@/components/shell/TopNav";
 import MobileTabBar from "@/components/shell/MobileTabBar";
@@ -35,8 +32,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
-  const [recapOpen, setRecapOpen] = useState(false);
-  const [proposalOpen, setProposalOpen] = useState(false);
+  // Dismissal is the state worth storing; "is it open" is derived from the
+  // hook's auto-open signal below. Storing `open` directly meant an effect had
+  // to copy the signal into state, costing a second render before the modal
+  // appeared.
+  const [recapDismissed, setRecapDismissed] = useState(false);
   const router = useRouter();
   const { user, isDemoMode, exitDemoMode } = useAuth();
   const { layout } = useTheme();
@@ -55,23 +55,12 @@ export default function DashboardLayout({
 
   // Season recap: auto-open once per concluded league per user.
   const { recap, shouldAutoOpen, markSeen } = useSeasonRecap(activeLeague);
-  useEffect(() => {
-    if (shouldAutoOpen) setRecapOpen(true);
-  }, [shouldAutoOpen]);
+  const recapOpen = shouldAutoOpen && !recapDismissed;
   const handleRecapClose = () => {
-    setRecapOpen(false);
+    // Local dismissal closes the modal immediately; markSeen() persists it, and
+    // flips shouldAutoOpen false once the write lands.
+    setRecapDismissed(true);
     markSeen();
-  };
-
-  // S51 rule proposal: auto-open once per user, deferred while the recap is up.
-  const proposal = useS51RuleProposal(activeLeague);
-  useEffect(() => {
-    if (recapOpen || shouldAutoOpen) return;
-    if (proposal.shouldAutoOpen) setProposalOpen(true);
-  }, [recapOpen, shouldAutoOpen, proposal.shouldAutoOpen]);
-  const handleProposalClose = () => {
-    setProposalOpen(false);
-    proposal.markSeen();
   };
 
   return (
@@ -109,20 +98,6 @@ export default function DashboardLayout({
       >
         Skip to main content
       </Box>
-
-      {/* Fixed notification bell, top-right */}
-      {user && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 1400,
-          }}
-        >
-          <NotificationBell userId={user.uid} />
-        </Box>
-      )}
 
       {/* PWA install button — global */}
       <PWAInstallButton />
@@ -184,18 +159,6 @@ export default function DashboardLayout({
           league={activeLeague}
           recap={recap}
           onClose={handleRecapClose}
-        />
-      )}
-
-      {/* S51 rule proposal modal — auto-opens once per user; defers behind recap */}
-      {activeLeague && proposal.proposalRelevant && (
-        <SeasonRuleProposalModal
-          open={proposalOpen}
-          league={activeLeague}
-          backtest={proposal.backtest}
-          sourceSeasonNumber={proposal.sourceSeasonNumber ?? 50}
-          targetSeasonNumber={proposal.targetSeasonNumber}
-          onClose={handleProposalClose}
         />
       )}
 

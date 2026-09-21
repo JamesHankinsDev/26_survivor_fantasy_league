@@ -2,9 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import { useOwnedLeagues } from "@/hooks/useLeagues";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { authLogger } from "@/lib/logger";
+import { SECONDARY_NAV_ITEMS } from "./navItems";
 
 interface UserMenuProps {
   displayName: string;
@@ -33,9 +37,24 @@ export default function UserMenu({
 }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { mode, toggleTheme, layout, setLayout } = useTheme();
   const router = useRouter();
+
+  // Admin tooling is only meaningful to a league owner — one person per league.
+  // Gating it here is what lets the tab bar drop from six tabs to four.
+  const { data: ownedLeagues = [] } = useOwnedLeagues(user?.uid || null);
+  const isOwner = ownedLeagues.length > 0;
+  const secondaryItems = SECONDARY_NAV_ITEMS.filter(
+    (item) => !item.requiresAdmin || isOwner,
+  );
+
+  // Push opt-in lived in the notification bell, which floated fixed at
+  // top-right and sat on top of this menu's gear. The bell is gone; the toggle
+  // belongs here anyway — it's a setting, and this is the settings menu.
+  // Per-device, not per-account: subscribing on a phone says nothing about a
+  // laptop, so this reflects only the current browser.
+  const push = usePushNotifications();
 
   useEffect(() => {
     if (!open) return;
@@ -97,6 +116,21 @@ export default function UserMenu({
               : { top: "auto", bottom: "calc(100% + 6px)" }
           }
         >
+          {secondaryItems.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className="sfl-ls-item"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              <span style={{ width: 14, textAlign: "center" }} aria-hidden>
+                {item.glyph}
+              </span>
+              {item.label}
+            </Link>
+          ))}
+          {secondaryItems.length > 0 && <div className="sfl-ls-divider" />}
           <button
             type="button"
             className="sfl-ls-item"
@@ -119,6 +153,37 @@ export default function UserMenu({
             </span>
             {layout === "sidebar" ? "Use top nav" : "Use sidebar"}
           </button>
+          {push.status !== "unsupported" && (
+            <button
+              type="button"
+              className="sfl-ls-item"
+              // A toggle in a menu is a menuitemcheckbox, not a menuitem —
+              // menuitem doesn't support a checked/pressed state.
+              role="menuitemcheckbox"
+              aria-checked={push.status === "on"}
+              disabled={push.isBusy || push.status === "denied"}
+              onClick={() => (push.status === "on" ? push.disable() : push.enable())}
+              title={
+                push.status === "denied"
+                  ? "Blocked — re-enable notifications in your browser settings"
+                  : "Alerts on this device, even when the app is closed"
+              }
+            >
+              <span style={{ width: 14, textAlign: "center" }} aria-hidden>
+                {push.status === "on" ? "🔔" : "🔕"}
+              </span>
+              {push.status === "denied"
+                ? "Alerts blocked by browser"
+                : push.status === "on"
+                  ? "Alerts on for this device"
+                  : "Turn on alerts for this device"}
+            </button>
+          )}
+          {push.error && (
+            <div className="sfl-ls-note" role="status">
+              {push.error}
+            </div>
+          )}
           <div className="sfl-ls-divider" />
           <button
             type="button"

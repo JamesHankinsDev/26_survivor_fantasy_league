@@ -49,18 +49,31 @@ const PODIUM_STYLES: Record<
   3: { color: "#CD7F32", bg: "linear-gradient(180deg, #DDB077, #A06A2E)", label: "3rd", height: 110 },
 };
 
+/**
+ * Deterministic pseudo-random in [0, 1) from an integer seed.
+ *
+ * The confetti scatter used Math.random(), which makes render impure — the same
+ * component could paint differently on a re-render, and React is free to
+ * re-run render whenever it likes. Seeding off the piece index keeps the
+ * scatter visually identical but stable across renders.
+ */
+const scatter = (seed: number) => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+
 /** Hand-rolled CSS confetti — no extra deps. */
 const Confetti = ({ active }: { active: boolean }) => {
   const pieces = useMemo(
     () =>
       Array.from({ length: 60 }).map((_, i) => ({
         id: i,
-        left: Math.random() * 100,
-        delay: Math.random() * 1.5,
-        duration: 2.5 + Math.random() * 2,
+        left: scatter(i + 1) * 100,
+        delay: scatter(i + 101) * 1.5,
+        duration: 2.5 + scatter(i + 201) * 2,
         color: ["#E85D2A", "#20B2AA", "#FFD700", "#9C27B0", "#4FC3F7", "#66BB6A"][i % 6],
-        rotate: Math.random() * 360,
-        size: 6 + Math.random() * 6,
+        rotate: scatter(i + 301) * 360,
+        size: 6 + scatter(i + 401) * 6,
       })),
     [],
   );
@@ -148,10 +161,15 @@ export default function SeasonRecapModal({
     return phases;
   }, [recap]);
 
-  // Reset phase whenever the modal re-opens.
-  useEffect(() => {
+  // Reset phase whenever the modal re-opens. This is React's documented
+  // "adjusting state when a prop changes" pattern rather than an effect:
+  // resetting in an effect painted one frame of the previous run's final phase
+  // (usually the outro) before snapping back to the intro.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) setPhase(sequence[0] ?? "intro");
-  }, [open, sequence]);
+  }
 
   // Auto-advance based on PHASE_DURATIONS.
   useEffect(() => {

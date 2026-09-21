@@ -12,7 +12,10 @@ import { WeeklyRoster, TribeMember, ScoringEvent } from "@/types/league";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, collection, getDocs, writeBatch } from "firebase/firestore";
 import { dbLogger } from "@/lib/logger";
-import { calculatePointsFromEvents } from "@/utils/eventScoringConfig";
+import {
+  calculateSeasonPoints,
+  applyWeeklyFloor,
+} from "@/utils/seasonScoringConfig";
 import { getCurrentWeek } from "@/utils/week";
 
 export { getCurrentWeek };
@@ -34,15 +37,21 @@ export const getAvailableCastaways = (
 };
 
 /**
- * Check if net roster change is allowed (max 1 change from previous week).
- * Returns true if at least 4 out of 5 castaways are the same as last week.
+ * Is this week's net roster change within the allowance?
+ *
+ * `maxChanges` is how many castaways may be swapped out relative to last
+ * week's locked roster — 1 historically, and from S51 it's 2 pre-merge and 1
+ * post-merge (see `utils/rosterRules.ts`). Measured against the *previous*
+ * roster's size rather than a hardcoded five, so a short roster (someone who
+ * drafted fewer than five) isn't accidentally handed extra moves.
  */
 export const isNetRosterChangeAllowed = (
   previousRoster: string[],
   proposedRoster: string[],
+  maxChanges = 1,
 ): boolean => {
   const sameCount = previousRoster.filter((id) => proposedRoster.includes(id)).length;
-  return sameCount >= 4;
+  return sameCount >= previousRoster.length - maxChanges;
 };
 
 /**
@@ -161,10 +170,10 @@ export const saveEpisodeScores = async (
     // Recalculate totalPoints from all weekly events
     let totalPoints = 0;
     for (const epEvents of Object.values(weeklyEvents) as ScoringEvent[][]) {
-      totalPoints += calculatePointsFromEvents(epEvents);
+      totalPoints += calculateSeasonPoints(epEvents, seasonNumber);
     }
 
-    const epPoints = calculatePointsFromEvents(events);
+    const epPoints = calculateSeasonPoints(events, seasonNumber);
     episodeScores[castawayId] = epPoints;
 
     const castawayRef = doc(db, "seasons", seasonNumber.toString(), "castaways", castawayId);
@@ -178,7 +187,7 @@ export const saveEpisodeScores = async (
 
   // 3. Update league member scores
   for (const leagueId of targetLeagueIds) {
-    await updateLeagueWeekScores(leagueId, episodeNumber, episodeScores);
+    await updateLeagueWeekScores(leagueId, seasonNumber, episodeNumber, episodeScores);
   }
 };
 
@@ -187,6 +196,7 @@ export const saveEpisodeScores = async (
  */
 const updateLeagueWeekScores = async (
   leagueId: string,
+  seasonNumber: number,
   episodeNumber: number,
   episodeScores: Record<string, number>,
 ): Promise<void> => {
@@ -205,11 +215,13 @@ const updateLeagueWeekScores = async (
     const weeklyRosters = (member.weeklyRosters || []).map((roster) => {
       if (roster.week !== episodeNumber) return roster;
 
-      // Calculate weekScore from rostered castaways' episode scores
+      // Calculate weekScore from rostered castaways' episode scores, then
+      // apply the season's weekly floor (S51+: a bad week can't go negative).
       let weekScore = 0;
       for (const castawayId of roster.castawayIds) {
         weekScore += episodeScores[castawayId] || 0;
       }
+      weekScore = applyWeeklyFloor(weekScore, seasonNumber);
 
       return { ...roster, weekScore };
     });

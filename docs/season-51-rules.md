@@ -18,11 +18,17 @@ A retroactive S50 simulation using the new scoring (vote-out -5, removed survive
 | Season winner | +10 | **+25** |
 | Immunity win | +5 | unchanged |
 | Team challenge win | +3 | unchanged |
-| Found idol/advantage | +5 | unchanged |
+| Found idol | +5 | unchanged |
+| Found advantage | 0 (not tracked) | **+2** |
 | Used idol successfully | +3 | unchanged |
+| Used advantage successfully | 0 (not tracked) | **+1** |
 | Voted at tribal | +3 | unchanged |
 | Fire-making win | +5 | unchanged |
 | Made jury | +3 | unchanged |
+
+> **Implementation note (2026-09-21):** advantages are now scored separately from
+> idols and worth less — the earlier draft of this table folded them together as
+> "found idol/advantage +5", which never matched the shipped config.
 
 **New: weekly score floor of 0.** No matter how brutal the week, your team can't go negative. Multiple vote-outs in a single bad week stop hurting once you hit zero.
 
@@ -35,6 +41,11 @@ A retroactive S50 simulation using the new scoring (vote-out -5, removed survive
 - **Voted-out castaways can be dropped** — frees the slot for a swap
 
 ### Post-merge
+> **Implementation note (2026-09-21):** live as of this date. Season 51 has **no
+> merge week set** — until one is entered under Admin → Seasons, every week
+> counts as pre-merge (2 swaps, voted-out castaways droppable). Dead weight only
+> begins once that value is filled in.
+
 - **1 roster swap per week**
 - **Voted-out castaways stay on your roster** as dead weight — you don't get to replace them. By finale you might be down to 1 or 2 active castaways carrying you home.
 

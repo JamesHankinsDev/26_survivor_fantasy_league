@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Box } from "@mui/material";
 import {
   assignRanks,
@@ -20,12 +21,16 @@ import {
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import PointBadge from "@/components/primitives/PointBadge";
 import SectionHeader from "@/components/primitives/SectionHeader";
-import { CardHand } from "@/components/cards";
-import DashHero from "./DashHero";
+import { CardHand, SwapSheet } from "@/components/cards";
 import StatStrip from "./StatStrip";
+import { useRosterSwap } from "@/hooks/useRosterSwap";
+import { getLatestLockedRoster } from "@/utils/scoring";
+import { getRosterRules } from "@/utils/rosterRules";
+import { getCurrentWeek } from "@/utils/week";
+import DashHero from "./DashHero";
+import ThisWeekCard from "./ThisWeekCard";
 import PowerMovers from "./PowerMovers";
 import type { PowerMoverData } from "./PowerMover";
-import LeagueChatMini from "./LeagueChatMini";
 import NextEpisodeTile from "./NextEpisodeTile";
 import { formatSeasonDate } from "@/utils/seasonDates";
 
@@ -52,6 +57,7 @@ const initialsFor = (name: string): string =>
  */
 export default function ActiveDashboardView({ league }: ActiveDashboardViewProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const { seasons } = useSeasonsWithOverrides();
   const { data: castaways = [] } = useSeasonCastaways(league.seasonNumber);
   const { data: eliminatedIds = [] } = useEliminatedCastaways(league.seasonNumber);
@@ -118,14 +124,55 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
     rank: m.rank ?? ranked.length,
   }));
 
-  const [chatHandlerNoop] = useState<() => void>(() => () => {
-    // Compact preview placeholder; the actual chat drawer is owned by
-    // DashboardLayout. Once Phase 07 ships, wire this to open it.
-  });
+  // ── The weekly swap, performed here rather than four screens away ──
+  const [swapOpen, setSwapOpen] = useState(false);
+  const selfMember = useMemo(
+    () => (league.memberDetails ?? []).find((m) => m.userId === user?.uid) ?? null,
+    [league.memberDetails, user?.uid],
+  );
+  // Roster rules in force this week. S51 splits at the merge: 2 swaps and
+  // droppable voted-out castaways before it, 1 swap and dead weight after.
+  // S51 has no mergeWeek set yet, so everything reads as pre-merge until it's
+  // filled in from Admin → Seasons.
+  const currentWeek = useMemo(
+    () => (season.premiereDate ? getCurrentWeek(new Date(season.premiereDate)) : 0),
+    [season.premiereDate],
+  );
+  const rosterRules = useMemo(
+    () => getRosterRules(league.seasonNumber, currentWeek, season.mergeWeek),
+    [league.seasonNumber, currentWeek, season.mergeWeek],
+  );
+
+  const submitSwap = useRosterSwap(league, selfMember, { rules: rosterRules });
+
+  // Swaps left this week = the allowance minus castaways already added since
+  // last week's lock. Mirrors SwapSheet's own gating.
+  const swapsLeft = useMemo(() => {
+    if (!league.addDropRestrictionEnabled || !selfMember) return null;
+    const locked = getLatestLockedRoster(selfMember.weeklyRosters || []);
+    if (locked.length === 0) return rosterRules.swapsPerWeek;
+    const used = (selfMember.roster ?? []).filter((id) => !locked.includes(id)).length;
+    return Math.max(0, rosterRules.swapsPerWeek - used);
+  }, [league.addDropRestrictionEnabled, selfMember, rosterRules.swapsPerWeek]);
+
+  const needsDraft = (selfMember?.roster?.length ?? 0) === 0;
+
+  const castawaySeasonScores = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const c of castaways) map[c.id] = c.totalPoints ?? 0;
+    return map;
+  }, [castaways]);
 
   return (
     <Box className="sfl-page">
-      {/* HERO */}
+      {/* THE WEEKLY MOVE — first thing on the page, in-season.
+       *
+       * The in-season DashHero used to sit here and said much of what
+       * ThisWeekCard now says (lock time, member count, eliminations) plus a
+       * "Set lineup" CTA that only navigated somewhere else. Its lede also
+       * hardcoded "One add/drop remaining this week" whether or not one was
+       * actually left. Pre-season the hero still earns its place: a premiere
+       * countdown is the whole message. */}
       {isPreSeason ? (
         <DashHero
           mode="pre-season"
@@ -137,40 +184,34 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
           secondaryAction={{ label: "View cast", href: "/dashboard/castaways" }}
         />
       ) : (
-        <DashHero
-          mode="in-season"
-          weekKicker={`${season.name} · in play`}
-          episodeTitle={season.theme || "Outwit Outplay Outlast"}
-          lede={
-            <>
-              Your roster locks at <b>Wednesday 8:00 PM ET</b>. One add/drop
-              remaining this week — make it count.
-            </>
-          }
-          primaryAction={{
-            label: "Set lineup",
-            href: `/dashboard/my-leagues/${league.id}`,
-          }}
-          secondaryAction={{
-            label: "Standings",
-            href: "/dashboard/leaderboard",
-          }}
-          totalMembers={league.currentPlayers}
-          eliminations={{
-            eliminated: eliminatedSet.size,
-            total: castaways.length || 0,
-          }}
-        />
+        selfMember && (
+          <ThisWeekCard
+            rank={selfRanked?.rank ?? null}
+            totalMembers={ranked.length}
+            totalPoints={selfRanked?.totalPoints ?? 0}
+            weekDelta={weekDeltaByUserId.get(selfMember.userId) ?? 0}
+            roster={selfRoster}
+            eliminatedIds={eliminatedSet}
+            swapsLeft={swapsLeft}
+            onSwap={() => setSwapOpen(true)}
+            needsDraft={needsDraft}
+            // The starter-pack reveal lives on the league page.
+            onDraft={() => router.push(`/dashboard/my-leagues/${league.id}`)}
+          />
+        )
       )}
 
-      {/* STAT STRIP */}
-      {selfRanked && (
+      {/* The stat strip that stood here restated rank / total / active from
+       * ThisWeekCard directly above it, plus a fourth "Win streak — coming
+       * soon" cell that never had data behind it. Pre-season keeps a trimmed
+       * version, since there's no ThisWeekCard then. */}
+      {isPreSeason && selfRanked && (
         <StatStrip
           cells={[
             {
               value: (
                 <>
-                  <span className="sfl-mono">#{selfRanked.rank ?? "—"}</span>
+                  <span className="sfl-mono">#{selfRanked.rank ?? "\u2014"}</span>
                   {selfRanked.trendDelta !== 0 && (
                     <PointBadge
                       value={selfRanked.trendDelta}
@@ -180,12 +221,12 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
                 </>
               ),
               label: "League rank",
-              sub: `of ${ranked.length} tribes · ${league.name}`,
+              sub: `of ${ranked.length} tribes \u00b7 ${league.name}`,
             },
             {
               value: <span className="sfl-mono">{selfRanked.totalPoints ?? 0}</span>,
               label: "Total points",
-              sub: isInSeason ? "Season in play" : "Pre-season",
+              sub: "Pre-season",
             },
             {
               value: (
@@ -199,11 +240,6 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
                   ? `${eliminatedSet.size} eliminated overall`
                   : "No eliminations yet",
             },
-            {
-              value: <span className="sfl-mono">—</span>,
-              label: "Win streak",
-              sub: "Weeks at #1 (coming soon)",
-            },
           ]}
         />
       )}
@@ -215,20 +251,14 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
             eyebrow={`Your tribe · ${selfRoster.length} of 5 in hand`}
             title={selfRanked?.displayName || "Set up your tribe"}
             action={
-              <>
-                <a
-                  className="sfl-btn-tiny"
-                  href={`/dashboard/my-leagues/${league.id}`}
-                >
-                  Manage roster
-                </a>
-                <a
-                  className="sfl-btn-tiny ghost"
-                  href={`/dashboard/my-leagues/${league.id}`}
-                >
-                  Add / drop
-                </a>
-              </>
+              /* Was two links to the identical URL ("Manage roster" and
+               * "Add / drop"). Add/drop is the CTA on ThisWeekCard now. */
+              <a
+                className="sfl-btn-tiny"
+                href={`/dashboard/my-leagues/${league.id}`}
+              >
+                Open league
+              </a>
             }
           />
           <CardHand
@@ -250,11 +280,10 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
         </section>
 
         <aside className="sfl-dash-col side">
-          <LeagueChatMini
-            leagueName={league.name}
-            messages={[]}
-            onOpen={chatHandlerNoop}
-          />
+          {/* LeagueChatMini stood here permanently empty — it was passed
+           * `messages={[]}` and a no-op open handler, so it advertised a
+           * conversation and then did nothing when tapped. The message board
+           * is reachable from the league page and the chat FAB. */}
           <NextEpisodeTile
             title={
               isPreSeason
@@ -294,6 +323,26 @@ export default function ActiveDashboardView({ league }: ActiveDashboardViewProps
           />
         </aside>
       </div>
+
+      {/* The swap sheet opens over Home — the dashboard never unmounts, so
+       * closing it returns the player exactly where they were. */}
+      {selfMember && (
+        <SwapSheet
+          open={swapOpen}
+          onClose={() => setSwapOpen(false)}
+          onSubmit={submitSwap}
+          tribeMember={selfMember}
+          allCastaways={castaways}
+          eliminatedCastawayIds={eliminatedIds}
+          seasonStartDate={
+            season.premiereDate ? new Date(season.premiereDate) : new Date()
+          }
+          castawaySeasonScores={castawaySeasonScores}
+          addDropRestrictionEnabled={league.addDropRestrictionEnabled ?? false}
+          seasonNumber={league.seasonNumber}
+          rules={rosterRules}
+        />
+      )}
     </Box>
   );
 }

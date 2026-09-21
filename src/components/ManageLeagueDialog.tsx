@@ -40,9 +40,7 @@ import { getSeasonStatus } from "@/data/seasons";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
 import { adoptNewSeason } from "@/utils/adoptNewSeason";
 import SeasonRecapModal from "@/components/SeasonRecapModal";
-import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
 import { useSeasonRecap } from "@/hooks/useSeasonRecap";
-import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
 
 interface ManageLeagueDialogProps {
   open: boolean;
@@ -72,22 +70,20 @@ export default function ManageLeagueDialog({
   const [targetSeasonNumber, setTargetSeasonNumber] = useState<number | null>(null);
   /**
    * Multi-step carry-over flow:
-   *  - "recap":    show the prior season's recap (read-only)
-   *  - "proposal": show the new season's rule proposal + voting
-   *  - "confirm":  final confirmation; clicking Adopt commits the write
+   *  - "recap":   show the prior season's recap (read-only)
+   *  - "confirm": final confirmation; clicking Adopt commits the write
    *
    * Steps that have no content for this league get skipped automatically.
    */
-  const [adoptStep, setAdoptStep] = useState<
-    "idle" | "recap" | "proposal" | "confirm"
-  >("idle");
+  const [adoptStep, setAdoptStep] = useState<"idle" | "recap" | "confirm">(
+    "idle",
+  );
   const [adoptLoading, setAdoptLoading] = useState(false);
   const [adoptError, setAdoptError] = useState<string | null>(null);
 
-  // Recap + proposal hooks read pre-adopt state (current league.memberDetails
-  // still has S50 totals + weeklyRosters), so they compute correctly.
+  // The recap hook reads pre-adopt state (current league.memberDetails still
+  // has last season's totals + weeklyRosters), so it computes correctly.
   const recapHook = useSeasonRecap(league);
-  const proposalHook = useS51RuleProposal(league);
 
   // Sync restrictionEnabled with league prop
   useEffect(() => {
@@ -144,22 +140,13 @@ export default function ManageLeagueDialog({
   const startAdoptFlow = () => {
     setAdoptError(null);
     if (recapHook.hasContent) setAdoptStep("recap");
-    else if (proposalHook.proposalRelevant && proposalHook.hasContent)
-      setAdoptStep("proposal");
     else setAdoptStep("confirm");
   };
 
-  // Advance from recap → proposal (if relevant) → confirm. Mark recap seen so
-  // the dashboard's auto-open path doesn't re-pop it after the carry-over.
+  // Advance from recap → confirm. Mark recap seen so the dashboard's auto-open
+  // path doesn't re-pop it after the carry-over.
   const advanceFromRecap = () => {
     recapHook.markSeen();
-    if (proposalHook.proposalRelevant && proposalHook.hasContent)
-      setAdoptStep("proposal");
-    else setAdoptStep("confirm");
-  };
-
-  const advanceFromProposal = () => {
-    proposalHook.markSeen();
     setAdoptStep("confirm");
   };
 
@@ -187,13 +174,11 @@ export default function ManageLeagueDialog({
       // content), markSeen is a no-op; if they saw the modals it's already
       // marked. Calling again is safe.
       recapHook.markSeen();
-      proposalHook.markSeen();
       setAdoptStep("idle");
       onClose();
     } catch (err) {
       // Surface in the confirm dialog AND log to devtools — silent failures
       // here were the original "click does nothing" bug.
-      // eslint-disable-next-line no-console
       console.error("[adoptNewSeason] failed:", err);
       setAdoptError(
         err instanceof Error ? err.message : "Failed to adopt new season",
@@ -668,19 +653,7 @@ export default function ManageLeagueDialog({
         />
       )}
 
-      {/* Carry-over step 2: new-season rule proposal + voting */}
-      {adoptStep === "proposal" && proposalHook.proposalRelevant && (
-        <SeasonRuleProposalModal
-          open
-          league={league}
-          backtest={proposalHook.backtest}
-          sourceSeasonNumber={proposalHook.sourceSeasonNumber ?? league.seasonNumber}
-          targetSeasonNumber={proposalHook.targetSeasonNumber}
-          onClose={advanceFromProposal}
-        />
-      )}
-
-      {/* Carry-over step 3: final adopt confirmation */}
+      {/* Carry-over step 2: final adopt confirmation */}
       <Dialog
         open={adoptStep === "confirm"}
         onClose={cancelAdoptFlow}

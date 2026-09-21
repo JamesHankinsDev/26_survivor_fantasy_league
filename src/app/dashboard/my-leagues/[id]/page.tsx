@@ -32,17 +32,31 @@ import {
 import TribeCard from "@/components/TribeCard";
 import EditTribeDialog from "@/components/EditTribeDialog";
 import CardPack from "@/components/cards/CardPack";
-import AddDropDraft from "@/components/cards/AddDropDraft";
+import SwapSheet from "@/components/cards/SwapSheet";
 import { hashSeed, seededSample } from "@/utils/seededDeal";
 import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
 import { useSeasonCastaways } from "@/hooks/useCastaways";
-import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
+import { useRosterSwap } from "@/hooks/useRosterSwap";
+import type { RosterRules } from "@/utils/rosterRules";
+import { getRosterRules } from "@/utils/rosterRules";
+import { getCurrentWeek } from "@/utils/week";
 import ScoringHistory from "@/components/ScoringHistory";
 import SeasonRecapModal from "@/components/SeasonRecapModal";
 import { useSeasonRecap } from "@/hooks/useSeasonRecap";
 import ReplayIcon from "@mui/icons-material/Replay";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
+
+/**
+ * Owners fixing another member's roster aren't bound by the weekly allowance or
+ * the post-merge dead-weight rule — the admin path has always bypassed the
+ * restriction, and the sheet needs a rules object regardless.
+ */
+const ADMIN_ROSTER_RULES: RosterRules = {
+  swapsPerWeek: 5,
+  canDropEliminated: true,
+  isPostMerge: false,
+};
 
 export default function LeagueDetailPage() {
   const { user, loading: authLoading } = useAuth();
@@ -259,155 +273,24 @@ export default function LeagueDetailPage() {
     [league, user, invalidateLeagueData],
   );
 
-  // Add/Drop submit
-  const handleSubmitAddDrop = useCallback(
-    async (dropId: string | null, addId: string | null) => {
-      if (!league || !user || !currentUserTribe)
-        throw new Error("Missing league or user info");
-      setIsSaving(true);
-      try {
-        // Reset to prior week
-        if (dropId === "__RESET_TO_PRIOR_WEEK__") {
-          const previousRoster = getLatestLockedRoster(
-            currentUserTribe.weeklyRosters || [],
-          );
-          if (previousRoster.length === 0)
-            throw new Error("No prior week roster to reset to.");
-
-          const updatedMembers = league.memberDetails.map((member) =>
-            member.userId === user.uid
-              ? {
-                  ...member,
-                  roster: previousRoster,
-                }
-              : member,
-          );
-          const leagueRef = doc(db, "leagues", league.id);
-          await updateDoc(leagueRef, {
-            memberDetails: updatedMembers,
-            updatedAt: new Date(),
-          });
-          invalidateLeagueData();
-          setAddDropDialogOpen(false);
-          setIsSaving(false);
-          return;
-        }
-
-        // Normal add/drop — modify the working roster
-        let newRoster = [...(currentUserTribe.roster || [])];
-
-        if (dropId) {
-          newRoster = newRoster.filter((id) => id !== dropId);
-        }
-        if (addId) {
-          newRoster.push(addId);
-        }
-
-        // Enforce net roster change limit
-        if (league.addDropRestrictionEnabled) {
-          const previousRoster = getLatestLockedRoster(
-            currentUserTribe.weeklyRosters || [],
-          );
-          if (previousRoster.length > 0 && !isNetRosterChangeAllowed(previousRoster, newRoster)) {
-            setIsSaving(false);
-            throw new Error(
-              "You can only make one net roster change per week. At least 4 out of 5 castaways must remain the same as last week.",
-            );
-          }
-        }
-
-        const updatedMembers = league.memberDetails.map((member) =>
-          member.userId === user.uid
-            ? {
-                ...member,
-                roster: newRoster,
-              }
-            : member,
-        );
-        const leagueRef = doc(db, "leagues", league.id);
-        await updateDoc(leagueRef, {
-          memberDetails: updatedMembers,
-          updatedAt: new Date(),
-        });
-        invalidateLeagueData();
-        setAddDropDialogOpen(false);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to process add/drop",
-        );
-        setIsSaving(false);
-        throw err;
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [league, user, currentUserTribe, invalidateLeagueData],
+  // Both add/drop paths share one implementation with the dashboard's copy of
+  // the swap sheet — see `useRosterSwap`. The owner path skips the net-change
+  // rule, matching how admin edits have always worked.
+  const rosterRules = useMemo(
+    () =>
+      getRosterRules(
+        CURRENT_SEASON.number,
+        getCurrentWeek(new Date(CURRENT_SEASON.premiereDate)),
+        CURRENT_SEASON.mergeWeek,
+      ),
+    [],
   );
-
-  // Admin add/drop submit — league owner editing another member's roster
-  const handleAdminSubmitAddDrop = useCallback(
-    async (dropId: string | null, addId: string | null) => {
-      if (!league || !user || !adminAddDropMember)
-        throw new Error("Missing league or user info");
-      setIsSaving(true);
-      try {
-        // Reset to prior week
-        if (dropId === "__RESET_TO_PRIOR_WEEK__") {
-          const previousRoster = getLatestLockedRoster(
-            adminAddDropMember.weeklyRosters || [],
-          );
-          if (previousRoster.length === 0)
-            throw new Error("No prior week roster to reset to.");
-
-          const updatedMembers = league.memberDetails.map((member) =>
-            member.userId === adminAddDropMember.userId
-              ? { ...member, roster: previousRoster }
-              : member,
-          );
-          const leagueRef = doc(db, "leagues", league.id);
-          await updateDoc(leagueRef, {
-            memberDetails: updatedMembers,
-            updatedAt: new Date(),
-          });
-          invalidateLeagueData();
-          setAdminAddDropMember(null);
-          setIsSaving(false);
-          return;
-        }
-
-        // Normal add/drop
-        let newRoster = [...(adminAddDropMember.roster || [])];
-        if (dropId) {
-          newRoster = newRoster.filter((id) => id !== dropId);
-        }
-        if (addId) {
-          newRoster.push(addId);
-        }
-
-        const updatedMembers = league.memberDetails.map((member) =>
-          member.userId === adminAddDropMember.userId
-            ? { ...member, roster: newRoster }
-            : member,
-        );
-        const leagueRef = doc(db, "leagues", league.id);
-        await updateDoc(leagueRef, {
-          memberDetails: updatedMembers,
-          updatedAt: new Date(),
-        });
-        invalidateLeagueData();
-        setAdminAddDropMember(null);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to process add/drop",
-        );
-        setIsSaving(false);
-        throw err;
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [league, user, adminAddDropMember, invalidateLeagueData],
-  );
+  const handleSubmitAddDrop = useRosterSwap(league, currentUserTribe, {
+    rules: rosterRules,
+  });
+  const handleAdminSubmitAddDrop = useRosterSwap(league, adminAddDropMember, {
+    enforceRestriction: false,
+  });
 
   const isLeagueOwner = user?.uid === league?.ownerId;
   const seasonActive = isSeasonActive();
@@ -687,7 +570,7 @@ export default function LeagueDetailPage() {
       {/* Weekly add/drop — card drag-drop overlay */}
 
       {currentUserTribe && (
-        <AddDropDraft
+        <SwapSheet
           open={addDropDialogOpen}
           onClose={() => setAddDropDialogOpen(false)}
           onSubmit={handleSubmitAddDrop}
@@ -702,12 +585,13 @@ export default function LeagueDetailPage() {
           castawaySeasonScores={castawaySeasonScores}
           addDropRestrictionEnabled={league?.addDropRestrictionEnabled ?? false}
           seasonNumber={CURRENT_SEASON.number}
+          rules={rosterRules}
         />
       )}
 
       {/* Admin add/drop — league owner editing another member's roster */}
       {adminAddDropMember && (
-        <AddDropDraft
+        <SwapSheet
           open={!!adminAddDropMember}
           onClose={() => setAdminAddDropMember(null)}
           onSubmit={handleAdminSubmitAddDrop}
@@ -722,6 +606,8 @@ export default function LeagueDetailPage() {
           castawaySeasonScores={castawaySeasonScores}
           addDropRestrictionEnabled={false}
           seasonNumber={CURRENT_SEASON.number}
+          // Owners fixing someone's roster aren't bound by the merge rules.
+          rules={ADMIN_ROSTER_RULES}
         />
       )}
 
@@ -768,6 +654,7 @@ export default function LeagueDetailPage() {
             <ScoringHistory
               weeklyRosters={currentUserTribe.weeklyRosters || []}
               allCastaways={castaways}
+              seasonNumber={CURRENT_SEASON.number}
             />
           </DialogContent>
         </Dialog>

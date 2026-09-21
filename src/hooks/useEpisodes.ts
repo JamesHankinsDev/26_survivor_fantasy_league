@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ScoringEventType } from "@/types/league";
-import { SCORING_CONFIG } from "@/utils/eventScoringConfig";
+import { getScoringConfig } from "@/utils/seasonScoringConfig";
 import { useSeasonCastaways } from "./useCastaways";
 
 export interface CastawayEventSummary {
@@ -35,6 +35,7 @@ export function useEpisodeScoresPerEpisode(seasonNumber: number) {
   const { data: castaways = [], ...rest } = useSeasonCastaways(seasonNumber);
 
   const scoresMap = useMemo(() => {
+    const config = getScoringConfig(seasonNumber);
     const map: Record<number, Record<string, number>> = {};
 
     for (const castaway of castaways) {
@@ -43,14 +44,14 @@ export function useEpisodeScoresPerEpisode(seasonNumber: number) {
         if (!map[epNum]) map[epNum] = {};
         let total = 0;
         for (const event of events) {
-          total += event.count * (SCORING_CONFIG[event.eventType] || 0);
+          total += event.count * (config[event.eventType] || 0);
         }
         map[epNum][castaway.id] = total;
       }
     }
 
     return map;
-  }, [castaways]);
+  }, [castaways, seasonNumber]);
 
   return { data: scoresMap, ...rest };
 }
@@ -63,6 +64,7 @@ export function useEpisodeEventsByCastaway(seasonNumber: number) {
   const { data: castaways = [], ...rest } = useSeasonCastaways(seasonNumber);
 
   const eventsMap = useMemo(() => {
+    const config = getScoringConfig(seasonNumber);
     const result: Record<string, CastawayEventSummary[]> = {};
 
     for (const castaway of castaways) {
@@ -79,7 +81,7 @@ export function useEpisodeEventsByCastaway(seasonNumber: number) {
         .map(([eventType, count]) => ({
           eventType: eventType as ScoringEventType,
           count,
-          points: count * SCORING_CONFIG[eventType as ScoringEventType],
+          points: count * (config[eventType as ScoringEventType] ?? 0),
         }));
 
       if (summaries.length > 0) {
@@ -88,7 +90,7 @@ export function useEpisodeEventsByCastaway(seasonNumber: number) {
     }
 
     return result;
-  }, [castaways]);
+  }, [castaways, seasonNumber]);
 
   return { data: eventsMap, ...rest };
 }

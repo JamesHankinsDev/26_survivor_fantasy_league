@@ -13,7 +13,11 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { WeeklyRoster, ScoringEvent } from "@/types/league";
 import { Castaway } from "@/types/castaway";
-import { getEventLabel, SCORING_CONFIG, calculatePointsFromEvents } from "@/utils/eventScoringConfig";
+import { getEventLabel } from "@/utils/eventScoringConfig";
+import {
+  getScoringConfig,
+  calculateSeasonPoints,
+} from "@/utils/seasonScoringConfig";
 
 interface WeekBreakdown {
   week: number;
@@ -29,12 +33,16 @@ interface WeekBreakdown {
 interface ScoringHistoryProps {
   weeklyRosters: WeeklyRoster[];
   allCastaways: Castaway[];
+  /** Season whose point values apply. Drives the per-event math shown here. */
+  seasonNumber: number;
 }
 
 export default function ScoringHistory({
   weeklyRosters,
   allCastaways,
+  seasonNumber,
 }: ScoringHistoryProps) {
+  const scoringConfig = getScoringConfig(seasonNumber);
   const [expanded, setExpanded] = useState<number | false>(false);
 
   const castawayMap = useMemo(() => {
@@ -51,7 +59,7 @@ export default function ScoringHistory({
         const castaways = (roster.castawayIds || []).map((id) => {
           const castaway = castawayMap.get(id);
           const events = castaway?.weeklyEvents?.[epStr] || [];
-          const episodePoints = calculatePointsFromEvents(events);
+          const episodePoints = calculateSeasonPoints(events, seasonNumber);
           return {
             id,
             name: castaway?.name || "Unknown",
@@ -70,7 +78,7 @@ export default function ScoringHistory({
           castaways,
         };
       });
-  }, [weeklyRosters, castawayMap]);
+  }, [weeklyRosters, castawayMap, seasonNumber]);
 
   if (weeks.length === 0) {
     return (
@@ -143,7 +151,7 @@ export default function ScoringHistory({
                 {castaway.events.length > 0 ? (
                   <Box sx={{ pl: 1 }}>
                     {castaway.events.map((event) => {
-                      const pts = event.count * (SCORING_CONFIG[event.eventType] || 0);
+                      const pts = event.count * (scoringConfig[event.eventType] || 0);
                       return (
                         <Box
                           key={event.eventType}

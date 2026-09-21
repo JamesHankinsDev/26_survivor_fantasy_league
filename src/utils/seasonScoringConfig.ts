@@ -5,8 +5,8 @@
  * rules like a weekly score floor. New seasons should be added here rather than
  * mutating SCORING_CONFIG, which is the legacy / S50 baseline.
  *
- * Source of truth for the Season 51 rule proposal — backtest + modal both read
- * from here.
+ * Source of truth for every season's point values — the scoring engine, the
+ * About page and the how-to-play walkthrough all read from here.
  */
 
 import { ScoringEventType } from "@/types/league";
@@ -69,8 +69,27 @@ export const getSeasonRuleExtras = (seasonNumber: number): SeasonRuleExtras =>
   SEASON_RULES[seasonNumber] ?? {};
 
 /**
+ * Total the points for a set of events **using that season's rules**.
+ *
+ * This is the season-aware replacement for `calculatePointsFromEvents` in
+ * `eventScoringConfig`, which reads the flat S50 baseline. Every scoring path —
+ * the engine that writes to Firestore and the UI that displays totals — must go
+ * through here, or a season's own point values silently never apply.
+ */
+export const calculateSeasonPoints = (
+  events: Array<{ eventType: ScoringEventType; count: number }>,
+  seasonNumber: number,
+): number => {
+  const config = getScoringConfig(seasonNumber);
+  return events.reduce(
+    (total, event) => total + (config[event.eventType] ?? 0) * event.count,
+    0,
+  );
+};
+
+/**
  * Apply the per-season weekly floor (if any) to a raw weekly score.
- * Used by the backtest and by S51+ scoring paths.
+ * Used by the scoring engine on write and by the live client-side recompute.
  */
 export const applyWeeklyFloor = (
   weekScore: number,
@@ -79,16 +98,4 @@ export const applyWeeklyFloor = (
   const extras = getSeasonRuleExtras(seasonNumber);
   if (typeof extras.weeklyScoreFloor !== "number") return weekScore;
   return Math.max(extras.weeklyScoreFloor, weekScore);
-};
-
-/** Calculate total points for a list of events under a specific season's rules. */
-export const calculatePointsFromEventsForSeason = (
-  events: Array<{ eventType: ScoringEventType; count: number }>,
-  seasonNumber: number,
-): number => {
-  const config = getScoringConfig(seasonNumber);
-  return events.reduce(
-    (sum, e) => sum + (config[e.eventType] ?? 0) * e.count,
-    0,
-  );
 };

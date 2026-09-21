@@ -2,12 +2,65 @@
 
 import { useState } from "react";
 import { Box, Container, Typography, Paper, Button } from "@mui/material";
-import { useAuth } from "@/lib/auth-context";
 import SchoolIcon from "@mui/icons-material/School";
-import AppTutorial from "@/components/AppTutorial";
+import HowToPlayWalkthrough from "@/components/HowToPlayWalkthrough";
+import { CURRENT_SEASON } from "@/data/seasons";
+import {
+  getScoringConfig,
+  getSeasonRuleExtras,
+} from "@/utils/seasonScoringConfig";
+import {
+  ALL_EVENT_TYPES,
+  getEventDescription,
+} from "@/utils/eventScoringConfig";
+import { getRosterRules } from "@/utils/rosterRules";
+import type { ScoringEventType } from "@/types/league";
+
+const EVENT_EMOJI: Record<ScoringEventType, string> = {
+  immunity_win: "🏆",
+  team_challenge_win: "🎯",
+  found_idol: "💎",
+  found_advantage: "🃏",
+  used_idol_successfully: "⚡",
+  used_advantage_successfully: "✨",
+  voted_at_tribal: "🗳️",
+  survived_episode: "🌴",
+  fire_making_win: "🔥",
+  made_final_three: "🥉",
+  season_winner: "👑",
+  made_jury: "📋",
+  voted_out: "❌",
+};
+
+/**
+ * The scoring list is generated from the active season's config rather than
+ * written out by hand — the hand-written version carried S50 values and folded
+ * idols and advantages together ("Found Idol/Advantage +5"), so it disagreed
+ * with what the engine actually awarded once S51 split and re-valued them.
+ *
+ * Events worth zero this season are left out entirely, which is what retires
+ * "Survived the Episode" from the S51 list.
+ */
+const SEASON_SCORING = getScoringConfig(CURRENT_SEASON.number);
+
+const scoredEvents = ALL_EVENT_TYPES.filter(
+  (eventType) => SEASON_SCORING[eventType] !== 0,
+)
+  .map((eventType) => ({
+    eventType,
+    points: SEASON_SCORING[eventType],
+    ...getEventDescription(eventType),
+  }))
+  .sort((a, b) => b.points - a.points);
+
+const { weeklyScoreFloor } = getSeasonRuleExtras(CURRENT_SEASON.number);
+
+// Both halves of the season, so the copy can state the allowance either side of
+// the merge without depending on which week it happens to be right now.
+const preMergeRules = getRosterRules(CURRENT_SEASON.number, 1, null);
+const postMergeRules = getRosterRules(CURRENT_SEASON.number, 10, 7);
 
 export default function AboutPage() {
-  const { user } = useAuth();
   const [showTutorial, setShowTutorial] = useState(false);
 
   return (
@@ -37,7 +90,7 @@ export default function AboutPage() {
             },
           }}
         >
-          Replay Tutorial
+          How to play
         </Button>
       </Box>
 
@@ -111,91 +164,40 @@ export default function AboutPage() {
         </Typography>
 
         <Box sx={{ ml: 2, mb: 3 }}>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            🏆 <strong>Immunity Win (+5):</strong> Castaway won an individual
-            immunity challenge and cannot be voted out.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            🎯 <strong>Team Challenge Win (+3):</strong> Castaway's team won a
-            reward or immunity challenge.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            💎 <strong>Found Idol/Advantage (+5):</strong> Castaway discovered a
-            hidden immunity idol or other game advantage.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            ⚡ <strong>Successfully Used Idol/Advantage (+3):</strong> Castaway
-            played an idol or advantage that helped them in the game.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            🗳️ <strong>Voted at Tribal Council (+3):</strong> Castaway
-            participated in voting at tribal council. Points awarded per vote.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            🌴 <strong>Survived the Episode (+1):</strong> Castaway was not
-            voted out and survived to the next episode.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            🔥 <strong>Fire-Making Challenge Win (+5):</strong> Castaway won a
-            fire-making tiebreaker challenge.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            🥉 <strong>Made Final 3 (+5):</strong> Castaway made it to the final
-            three of the season.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            👑 <strong>Season Winner (+10):</strong> Castaway was crowned Sole
-            Survivor and won the game.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
-          >
-            📋 <strong>Made Jury (+3):</strong> Castaway was voted out but made
-            the jury.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", lineHeight: 1.8 }}
-          >
-            ❌ <strong>Voted Out (-10):</strong> Castaway was voted out of the
-            game and eliminated.
-          </Typography>
+          {scoredEvents.map(({ eventType, points, title, description }) => (
+            <Typography
+              key={eventType}
+              variant="body2"
+              sx={{ color: "text.secondary", lineHeight: 1.8, mb: 1.5 }}
+            >
+              <span role="img" aria-hidden="true">
+                {EVENT_EMOJI[eventType]}
+              </span>{" "}
+              <strong>
+                {title} ({points > 0 ? "+" : ""}
+                {points}):
+              </strong>{" "}
+              {description}
+            </Typography>
+          ))}
         </Box>
+
+        {typeof weeklyScoreFloor === "number" && (
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
+          >
+            <strong>Weekly floor:</strong> however rough the week, a tribe&apos;s
+            score for it can&apos;t drop below {weeklyScoreFloor}.
+          </Typography>
+        )}
 
         <Typography
           variant="body2"
           sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
         >
-          <strong>Total Points:</strong> Your castaway's total points for the
-          episode is the sum of all four categories above.
+          <strong>Total Points:</strong> A castaway's points for an episode are
+          the sum of every event above that they recorded that week.
         </Typography>
 
         <Typography
@@ -223,18 +225,20 @@ export default function AboutPage() {
           variant="body2"
           sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
         >
-          <strong>Add/Drop:</strong> Throughout the season, you can add
-          castaways who were not drafted and drop castaways from your roster.
-          Only castaways on your roster when scores are recorded will earn
-          points for your tribe.
+          <strong>Add/Drop:</strong> Throughout the season you can swap
+          castaways in and out. You get{" "}
+          <strong>{preMergeRules.swapsPerWeek} swaps a week before the merge</strong>{" "}
+          and <strong>{postMergeRules.swapsPerWeek} after it</strong>. Rosters lock
+          Wednesday at 8:00 PM ET. Only castaways on your roster when scores are
+          recorded earn points for your tribe.
         </Typography>
         <Typography
           variant="body2"
           sx={{ color: "text.secondary", lineHeight: 1.8, mb: 2 }}
         >
-          <strong>Eliminations:</strong> When a castaway is eliminated from
-          Survivor, league managers mark them as eliminated. Eliminated
-          castaways no longer earn points and cannot be added to new rosters.
+          <strong>Eliminations:</strong> When a castaway is voted out, league
+          managers mark them as eliminated. They stop earning points and can't be
+          added to a roster again.
         </Typography>
 
         <Box
@@ -254,7 +258,7 @@ export default function AboutPage() {
               mb: 1,
             }}
           >
-            ⚠️ Important: Eliminated Castaways Impact
+            ⚠️ Important: Voted-Out Castaways
           </Typography>
           <Typography
             variant="body2"
@@ -263,10 +267,12 @@ export default function AboutPage() {
               lineHeight: 1.8,
             }}
           >
-            Once a castaway is eliminated, you <strong>cannot drop them</strong>{" "}
-            to free up a roster spot. If one of your drafted castaways is
-            eliminated early, you effectively lose that roster spot for the
-            remainder of the season. Choose your draft picks wisely!
+            <strong>Before the merge</strong>, a voted-out castaway can be
+            dropped like anyone else — you free the slot and swap in a
+            replacement. <strong>After the merge they stay on your roster</strong>{" "}
+            for the rest of the season: no drop, no replacement. By the finale
+            you may be down to one or two surviving castaways carrying your whole
+            tribe, so pick your late-game roster carefully.
           </Typography>
         </Box>
       </Paper>
@@ -296,14 +302,11 @@ export default function AboutPage() {
         </Typography>
       </Paper>
 
-      {/* Tutorial Dialog */}
-      {user && (
-        <AppTutorial
-          userId={user.uid}
-          open={showTutorial}
-          onClose={() => setShowTutorial(false)}
-        />
-      )}
+      {/* Replaying from here never re-marks the flag — it's already set. */}
+      <HowToPlayWalkthrough
+        open={showTutorial}
+        onClose={() => setShowTutorial(false)}
+      />
     </Container>
   );
 }

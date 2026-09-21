@@ -3,24 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Alert,
   Box,
-  Button,
   CircularProgress,
   Container,
   Typography,
 } from "@mui/material";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
-import { doc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/lib/auth-context";
-import { db } from "@/lib/firebase";
-import { dbLogger } from "@/lib/logger";
 import { useUserLeagues } from "@/hooks/useLeagues";
+import { useWalkthrough } from "@/hooks/useWalkthrough";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
-import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
 import { pickActiveLeague } from "@/utils/activeLeague";
-import AppTutorial from "@/components/AppTutorial";
-import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
+import HowToPlayWalkthrough from "@/components/HowToPlayWalkthrough";
+import WelcomeBackBanner from "@/components/WelcomeBackBanner";
 import ActiveDashboardView from "@/components/dashboard/ActiveDashboardView";
 import SeasonHubView from "@/components/dashboard/SeasonHubView";
 import PriorSeasonTools from "@/components/dashboard/PriorSeasonTools";
@@ -34,13 +28,14 @@ import PriorSeasonTools from "@/components/dashboard/PriorSeasonTools";
  * multi-season hub so users can still navigate to their archive and see
  * upcoming "Notify me" cards.
  *
- * Cross-cutting state (auth redirect, tutorial trigger, S51 rule-proposal
- * alert + replay modal) lives here so both views inherit it.
+ * Cross-cutting state (auth redirect, how-to-play walkthrough) lives here so
+ * both views inherit it.
  */
 export default function DashboardHome() {
   const { user, isDemoMode } = useAuth();
   const router = useRouter();
-  const [showTutorial, setShowTutorial] = useState(false);
+  // `null` = nobody has opened or closed it yet, so the auto-open rule decides.
+  const [walkthroughOverride, setWalkthroughOverride] = useState<boolean | null>(null);
 
   const { data: leagues = [], isLoading: loadingLeagues } = useUserLeagues(
     user?.uid || null,
@@ -54,29 +49,32 @@ export default function DashboardHome() {
     [leagues, seasons],
   );
 
-  const proposal = useS51RuleProposal(activeLeague ?? leagues[0] ?? null);
-  const [proposalReplayOpen, setProposalReplayOpen] = useState(false);
-
   // Auth gate — bounce unauthenticated users back to the landing page.
   useEffect(() => {
     if (!user) router.push("/");
   }, [user, router]);
 
-  // First-run tutorial trigger.
-  useEffect(() => {
-    const checkTutorialStatus = async () => {
-      if (!user || isDemoMode) return;
-      try {
-        const userRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userRef);
-        const userData = userDoc.data();
-        if (!userData?.tutorialCompleted) setShowTutorial(true);
-      } catch (err) {
-        dbLogger.error("Error checking tutorial status:", err);
-      }
-    };
-    checkTutorialStatus();
-  }, [user, isDemoMode]);
+  // How-to-play walkthrough. Everyone who hasn't seen the current version is
+  // offered it — the flag is separate from the legacy `tutorialCompleted`
+  // boolean, which every existing player already has set.
+  //
+  // Demo mode still *sees* it (that's a useful place to preview it); it just
+  // can't be recorded, since the demo uid isn't a real account.
+  const walkthrough = useWalkthrough(user?.uid ?? null, {
+    canPersist: !isDemoMode,
+  });
+  const offerWalkthrough = walkthrough.seen === false;
+
+  // A first-ever login has no context to work from, so it opens for them. A
+  // returning player gets the banner instead and decides for themselves.
+  // Derived rather than set from an effect, so there's no render cascade.
+  const walkthroughOpen =
+    walkthroughOverride ?? (offerWalkthrough && walkthrough.isFirstEver);
+
+  const finishWalkthrough = () => {
+    setWalkthroughOverride(false);
+    void walkthrough.markSeen();
+  };
 
   if (!user) return null;
 
@@ -110,44 +108,39 @@ export default function DashboardHome() {
             mb: 4,
             display: "flex",
             alignItems: { xs: "flex-start", md: "flex-end" },
-            justifyContent: "space-between",
+            // With the greeting stood down, the tools are the only child —
+            // keep them right-aligned instead of sliding to the start.
+            justifyContent: offerWalkthrough ? "flex-end" : "space-between",
             flexDirection: { xs: "column", md: "row" },
             gap: 2,
           }}
         >
-          <Box sx={{ minWidth: 0 }}>
-            <Typography
-              variant="h4"
-              sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}
-            >
-              Welcome back, {user.displayName || user.email}
-            </Typography>
-            <Typography variant="body1" sx={{ color: "text.secondary" }}>
-              Your Survivor Fantasy League home.
-            </Typography>
-          </Box>
+          {/* The banner carries its own "welcome back", so the plain greeting
+           * stands down while it's up rather than stacking two of them. */}
+          {!offerWalkthrough && (
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="h4"
+                sx={{ fontWeight: 700, color: "text.primary", mb: 0.5 }}
+              >
+                Welcome back, {user.displayName || user.email}
+              </Typography>
+              <Typography variant="body1" sx={{ color: "text.secondary" }}>
+                Your Survivor Fantasy League home.
+              </Typography>
+            </Box>
+          )}
           <PriorSeasonTools leagues={leagues} />
         </Box>
 
-        {/* S51 rule-proposal info alert — kept on both views for discoverability */}
-        {proposal.proposalRelevant && proposal.hasContent && (
-          <Alert
-            severity="info"
-            icon={<CompareArrowsIcon />}
-            sx={{ mb: 4, alignItems: "center" }}
-            action={
-              <Button
-                size="small"
-                onClick={() => setProposalReplayOpen(true)}
-                sx={{ fontWeight: 700 }}
-              >
-                View Comparison
-              </Button>
-            }
-          >
-            <strong>Survivor 51 rule proposal.</strong> See how the new scoring
-            rules would have shaped Season {proposal.sourceSeasonNumber}.
-          </Alert>
+        {offerWalkthrough && (
+          <Box sx={{ mb: 4 }}>
+            <WelcomeBackBanner
+              displayName={user.displayName || user.email || "there"}
+              onStart={() => setWalkthroughOverride(true)}
+              onDismiss={finishWalkthrough}
+            />
+          </Box>
         )}
 
         {/* Hybrid routing */}
@@ -158,24 +151,12 @@ export default function DashboardHome() {
         )}
       </Container>
 
-      {user && (
-        <AppTutorial
-          userId={user.uid}
-          open={showTutorial}
-          onClose={() => setShowTutorial(false)}
-        />
-      )}
+      <HowToPlayWalkthrough
+        open={walkthroughOpen}
+        onClose={finishWalkthrough}
+        persists={walkthrough.persists}
+      />
 
-      {proposal.proposalRelevant && (activeLeague ?? leagues[0]) && (
-        <SeasonRuleProposalModal
-          open={proposalReplayOpen}
-          league={(activeLeague ?? leagues[0])!}
-          backtest={proposal.backtest}
-          sourceSeasonNumber={proposal.sourceSeasonNumber ?? 50}
-          targetSeasonNumber={proposal.targetSeasonNumber}
-          onClose={() => setProposalReplayOpen(false)}
-        />
-      )}
     </Box>
   );
 }

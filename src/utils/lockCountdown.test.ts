@@ -10,6 +10,18 @@ describe("getNextRosterLockDate", () => {
     expect(lock.toISOString()).toBe("2025-03-06T01:00:00.000Z");
   });
 
+  it("stays on today's 8pm lock when called Wednesday morning", () => {
+    // The case a duplicated copy of this logic in AddDropDraft got wrong: its
+    // `(3 - day + 7) % 7 || 7` turned "0 days away" into "7 days away", so on
+    // lock day itself the countdown pointed a full week out and the "locks in
+    // N min" warning could never fire.
+    const now = new Date("2025-03-05T14:00:00Z"); // Wed 9am EST
+    const lock = getNextRosterLockDate(now);
+    expect(lock.toISOString()).toBe("2025-03-06T01:00:00.000Z"); // same day, 8pm EST
+    const hoursAway = (lock.getTime() - now.getTime()) / 3.6e6;
+    expect(hoursAway).toBeCloseTo(11, 5);
+  });
+
   it("rolls to next week when called after 8pm ET on Wednesday", () => {
     // Wed 2025-03-05 23:00 ET = Thu 2025-03-06 04:00 UTC, past the 8pm lock
     const now = new Date("2025-03-06T04:00:00Z");

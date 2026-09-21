@@ -24,11 +24,6 @@ export interface FirestoreLeagueData {
   addDropRestrictionEnabled?: boolean;
   leagueStartDate?: string;
   seasonNumber: number;
-  proposalVotes?: Record<string, Record<string, "yay" | "nay">>;
-  proposalOutcomes?: Record<
-    string,
-    { outcome: "adopted" | "rejected"; decidedAt: Timestamp; decidedBy: string }
-  >;
 }
 
 /**
@@ -39,7 +34,17 @@ export interface FirestoreUserData {
   email: string;
   avatar: string;
   joinedAt: Timestamp;
+  /** @deprecated Legacy first-run tour flag. Superseded by `walkthroughVersion`. */
   tutorialCompleted: boolean;
+  /**
+   * Highest how-to-play walkthrough version this user has seen. Absent or lower
+   * than `WALKTHROUGH_VERSION` means they're offered it again — bumping that
+   * constant re-offers the tour to everyone.
+   *
+   * Only ever written from production; see `utils/persistEnvironment.ts`.
+   */
+  walkthroughVersion?: number;
+  walkthroughSeenAt?: Timestamp;
   /**
    * Recap keys the user has already dismissed.
    * Format: `${leagueId}__${seasonNumber}`.
@@ -47,11 +52,6 @@ export interface FirestoreUserData {
   recapsSeen?: string[];
   /** Season numbers the user has opted into a launch notification for. */
   seasonNotifications?: number[];
-  /**
-   * One-off proposal / announcement modals the user has dismissed.
-   * Keyed by proposal slug, e.g. "s51_rules": true.
-   */
-  proposalsSeen?: Record<string, boolean>;
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -8,19 +8,15 @@ import {
   MenuItem,
   ListItemText,
   ListItemIcon,
-  Typography,
 } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import type { League } from "@/types/league";
 import { useSeasonsWithOverrides } from "@/hooks/useSeasonsWithOverrides";
-import { useS51RuleProposal } from "@/hooks/useS51RuleProposal";
-import { getSeasonLabel, getSeasonStatus } from "@/data/seasons";
+import { getSeasonLabel } from "@/data/seasons";
 import { listPastSeasons, type PastSeasonEntry } from "@/utils/pastSeasons";
 import PastSeasonRecapModal from "./PastSeasonRecapModal";
 import StandingsTableModal from "./StandingsTableModal";
-import SeasonRuleProposalModal from "@/components/SeasonRuleProposalModal";
 
 interface PriorSeasonToolsProps {
   leagues: League[];
@@ -34,12 +30,9 @@ interface PriorSeasonToolsProps {
  *    live league still pointed at a concluded season).
  *  - **Final Standings** — read-only standings table per past season for
  *    quick reference.
- *  - **Rule Proposals** — re-opens the active rule-proposal modal (S51
- *    pitch) with voting controls. Hidden once the proposal becomes
- *    irrelevant (S51 launches or is otherwise marked past).
  *
- * Renders nothing when the user has no past-season history *and* no relevant
- * proposal — the toolbar should never be an empty hover target.
+ * Renders nothing when the user has no past-season history — the toolbar
+ * should never be an empty hover target.
  */
 export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
   const { seasons } = useSeasonsWithOverrides();
@@ -48,30 +41,18 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
     [leagues, seasons],
   );
 
-  // Use the user's most-recent past league as the proposal's source league.
-  // The proposal modal needs *a* league to backtest against.
-  const proposalLeague = useMemo(() => {
-    if (pastEntries.length > 0) {
-      const first = pastEntries[0];
-      return leagues.find((l) => l.id === first.leagueId) ?? leagues[0] ?? null;
-    }
-    return leagues[0] ?? null;
-  }, [pastEntries, leagues]);
-
-  const proposalHook = useS51RuleProposal(proposalLeague);
-
   // Menu anchors
-  const recapAnchorRef = useRef<HTMLButtonElement | null>(null);
-  const standingsAnchorRef = useRef<HTMLButtonElement | null>(null);
-  const [recapMenuOpen, setRecapMenuOpen] = useState(false);
-  const [standingsMenuOpen, setStandingsMenuOpen] = useState(false);
+  // The anchor element lives in state, not a ref: MUI reads `anchorEl` during
+  // render, and a ref's `.current` is not a render-safe value (null on the
+  // render that opens the menu, so the popover anchors to the top-left corner).
+  const [recapAnchorEl, setRecapAnchorEl] = useState<HTMLElement | null>(null);
+  const [standingsAnchorEl, setStandingsAnchorEl] = useState<HTMLElement | null>(null);
 
   // Open-modal targets (null = closed)
   const [openRecap, setOpenRecap] = useState<PastSeasonEntry | null>(null);
   const [openStandings, setOpenStandings] = useState<PastSeasonEntry | null>(
     null,
   );
-  const [proposalOpen, setProposalOpen] = useState(false);
 
   // Resolve the league object for the selected recap entry so the recap
   // modal has a `League` to render its chrome around (name, etc.).
@@ -80,18 +61,8 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
     : null;
 
   const hasHistory = pastEntries.length > 0;
-  // The hook's `proposalRelevant` flag is tuned for auto-pop (S51 must still
-  // be Upcoming or the pitch loses purpose). For the on-demand toolbar
-  // button we want a wider window: the modal stays useful reference material
-  // (rule comparison + per-league votes) until S51 fully concludes. So hide
-  // only on "past" status. The modal handles a null/empty backtest with a
-  // tasteful fallback, so missing weeklyEvents data isn't a blocker either.
-  const s51 = seasons.find((s) => s.number === 51);
-  const proposalAvailable =
-    s51 != null && getSeasonStatus(s51) !== "past" && proposalLeague != null;
-  const hasProposal = proposalAvailable;
 
-  if (!hasHistory && !hasProposal) return null;
+  if (!hasHistory) return null;
 
   return (
     <>
@@ -109,11 +80,10 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
         {hasHistory && (
           <>
             <Button
-              ref={recapAnchorRef}
               variant="outlined"
               size="small"
               startIcon={<HistoryIcon />}
-              onClick={() => setRecapMenuOpen(true)}
+              onClick={(e) => setRecapAnchorEl(e.currentTarget)}
               sx={{
                 borderColor: "var(--line-strong)",
                 color: "var(--ink)",
@@ -127,15 +97,15 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
               Recap
             </Button>
             <Menu
-              anchorEl={recapAnchorRef.current}
-              open={recapMenuOpen}
-              onClose={() => setRecapMenuOpen(false)}
+              anchorEl={recapAnchorEl}
+              open={Boolean(recapAnchorEl)}
+              onClose={() => setRecapAnchorEl(null)}
             >
               {pastEntries.map((entry) => (
                 <MenuItem
                   key={`recap-${entry.leagueId}-${entry.seasonNumber}`}
                   onClick={() => {
-                    setRecapMenuOpen(false);
+                    setRecapAnchorEl(null);
                     setOpenRecap(entry);
                   }}
                 >
@@ -151,11 +121,10 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
             </Menu>
 
             <Button
-              ref={standingsAnchorRef}
               variant="outlined"
               size="small"
               startIcon={<EmojiEventsIcon />}
-              onClick={() => setStandingsMenuOpen(true)}
+              onClick={(e) => setStandingsAnchorEl(e.currentTarget)}
               sx={{
                 borderColor: "var(--line-strong)",
                 color: "var(--ink)",
@@ -169,15 +138,15 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
               Final Standings
             </Button>
             <Menu
-              anchorEl={standingsAnchorRef.current}
-              open={standingsMenuOpen}
-              onClose={() => setStandingsMenuOpen(false)}
+              anchorEl={standingsAnchorEl}
+              open={Boolean(standingsAnchorEl)}
+              onClose={() => setStandingsAnchorEl(null)}
             >
               {pastEntries.map((entry) => (
                 <MenuItem
                   key={`standings-${entry.leagueId}-${entry.seasonNumber}`}
                   onClick={() => {
-                    setStandingsMenuOpen(false);
+                    setStandingsAnchorEl(null);
                     setOpenStandings(entry);
                   }}
                 >
@@ -194,25 +163,6 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
           </>
         )}
 
-        {hasProposal && (
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<CompareArrowsIcon />}
-            onClick={() => setProposalOpen(true)}
-            sx={{
-              borderColor: "var(--flame)",
-              color: "var(--flame-deep)",
-              textTransform: "none",
-              "&:hover": {
-                borderColor: "var(--flame-deep)",
-                bgcolor: "color-mix(in oklch, var(--flame) 6%, transparent)",
-              },
-            }}
-          >
-            Rule Proposals
-          </Button>
-        )}
       </Box>
 
       {/* Modals */}
@@ -233,38 +183,6 @@ export default function PriorSeasonTools({ leagues }: PriorSeasonToolsProps) {
           memberDetails={openStandings.memberDetails}
           onClose={() => setOpenStandings(null)}
         />
-      )}
-      {proposalOpen && proposalAvailable && proposalLeague && (
-        <SeasonRuleProposalModal
-          open
-          league={proposalLeague}
-          // Hardcode the comparison to S50 vs S51 regardless of what season
-          // the focused league is currently on. Once a league carries over to
-          // S51, `league.seasonNumber === 51` would make the hook pass
-          // source=target=51 to the modal, which collapses every comparison
-          // row into "Unchanged" and the table renders empty.
-          sourceSeasonNumber={50}
-          targetSeasonNumber={51}
-          // Backtest is only meaningful when the focused league still has the
-          // S50 weeklyRosters intact. After carry-over those are zeroed, so
-          // pass null to surface the modal's "Not enough roster data" fallback
-          // rather than rendering misleading goose-eggs.
-          backtest={
-            proposalLeague.seasonNumber === 50 ? proposalHook.backtest : null
-          }
-          onClose={() => setProposalOpen(false)}
-        />
-      )}
-
-      {/* Sub-toolbar helper text when there's nothing in history yet but the
-          rule proposal is the only thing to surface. */}
-      {!hasHistory && hasProposal && (
-        <Typography
-          variant="caption"
-          sx={{ color: "text.secondary", display: "none" }}
-        >
-          {/* Reserved for future copy. */}
-        </Typography>
       )}
     </>
   );

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { TribeMember } from "@/types/league";
 import { useEpisodeScores, useEpisodeScoresPerEpisode } from "./useEpisodes";
+import { applyWeeklyFloor } from "@/utils/seasonScoringConfig";
 
 export interface ComputedMember extends TribeMember {
   castawayPoints: Record<string, number>;
@@ -44,7 +45,10 @@ export function useComputedScores(
           for (const castawayId of roster.castawayIds || []) {
             weekScore += epScores[castawayId] || 0;
           }
-          liveTotal += weekScore;
+          // Same weekly floor the engine applies on write (S51+: no negative
+          // weeks). Without it this live recompute would quietly disagree with
+          // the stored totals the moment anyone had a bad week.
+          liveTotal += applyWeeklyFloor(weekScore, seasonNumber);
         }
       }
 
@@ -58,7 +62,7 @@ export function useComputedScores(
         castawayPoints,
       };
     });
-  }, [members, castawaySeasonScores, episodeScoresMap]);
+  }, [members, castawaySeasonScores, episodeScoresMap, seasonNumber]);
 
   return {
     computedMembers,

@@ -32,6 +32,9 @@ function Notice({ children }: { children: React.ReactNode }) {
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const router = useRouter();
+  // The user's explicit pick. `null` (or a stale id, after the league list
+  // changes) means "no pick yet" and the effective selection falls back to the
+  // first visible league — see `selectedLeague` below.
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
 
   const { data: leagues = [], isLoading: loading } = useUserLeagues(user?.uid || null);
@@ -53,17 +56,13 @@ export default function LeaderboardPage() {
     if (!user) router.push("/");
   }, [user, router]);
 
-  useEffect(() => {
-    if (visibleLeagues.length === 0) {
-      if (selectedLeagueId !== null) setSelectedLeagueId(null);
-      return;
-    }
-    if (!selectedLeagueId || !visibleLeagues.some((l) => l.id === selectedLeagueId)) {
-      setSelectedLeagueId(visibleLeagues[0].id);
-    }
-  }, [visibleLeagues, selectedLeagueId]);
-
-  const selectedLeague = visibleLeagues.find((l) => l.id === selectedLeagueId);
+  // Derived, not synced. Mirroring `visibleLeagues` into state through an
+  // effect meant an extra render pass on every league-list change (and a frame
+  // where the page rendered with no league selected); falling back here keeps
+  // the two in lockstep with no cascade.
+  const selectedLeague =
+    visibleLeagues.find((l) => l.id === selectedLeagueId) ?? visibleLeagues[0];
+  const effectiveLeagueId = selectedLeague?.id ?? null;
   const seasonForScoring = selectedLeague?.seasonNumber ?? 0;
 
   const { data: eliminatedCastawayIds = [] } = useEliminatedCastaways(seasonForScoring);
@@ -147,9 +146,9 @@ export default function LeaderboardPage() {
           {visibleLeagues.map((league) => (
             <button
               key={league.id}
-              className={`sfl-btn sm${selectedLeagueId === league.id ? "" : " ghost"}`}
+              className={`sfl-btn sm${effectiveLeagueId === league.id ? "" : " ghost"}`}
               onClick={() => setSelectedLeagueId(league.id)}
-              aria-pressed={selectedLeagueId === league.id}
+              aria-pressed={effectiveLeagueId === league.id}
             >
               {league.name}
             </button>

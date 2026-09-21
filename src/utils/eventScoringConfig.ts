@@ -49,7 +49,11 @@ export const getEventLabel = (eventType: ScoringEventType): string => {
   return labels[eventType];
 };
 
-// Get event description for about page
+/**
+ * What an event *is*. Point values deliberately live in the per-season config
+ * (`seasonScoringConfig.ts`) and are never repeated here — this prose used to
+ * carry S50 numbers, which silently went stale the moment S51 changed them.
+ */
 export const getEventDescription = (
   eventType: ScoringEventType
 ): { title: string; description: string } => {
@@ -60,66 +64,66 @@ export const getEventDescription = (
     immunity_win: {
       title: "Immunity Win",
       description:
-        "Castaway won an individual immunity challenge. Worth +5 points.",
+        "Castaway won an individual immunity challenge.",
     },
     team_challenge_win: {
       title: "Team Challenge Win",
       description:
-        "Castaway's team won a reward or immunity challenge. Worth +3 points.",
+        "Castaway's team won a reward or immunity challenge.",
     },
     found_idol: {
       title: "Found Idol",
       description:
-        "Castaway found a hidden immunity idol. Worth +5 points.",
+        "Castaway found a hidden immunity idol.",
     },
     found_advantage: {
       title: "Found Advantage",
       description:
-        "Castaway found a non-idol advantage (extra vote, steal-a-vote, etc.). Worth +2 points (Season 51+).",
+        "Castaway found a non-idol advantage — an extra vote, steal-a-vote, and the like.",
     },
     used_idol_successfully: {
       title: "Successfully Used Idol",
       description:
-        "Castaway successfully played an idol that helped them. Worth +3 points.",
+        "Castaway played an idol and it worked — it saved them or changed the vote.",
     },
     used_advantage_successfully: {
       title: "Successfully Used Advantage",
       description:
-        "Castaway successfully played a non-idol advantage. Worth +1 point (Season 51+).",
+        "Castaway played a non-idol advantage and it worked.",
     },
     voted_at_tribal: {
       title: "Voted at Tribal Council",
       description:
-        "Castaway participated in voting at tribal council. Worth +3 points each vote.",
+        "Castaway voted at tribal council. Scored per vote.",
     },
     survived_episode: {
       title: "Survived the Episode",
       description:
-        "Castaway survived the episode and was not voted out. Worth +1 point.",
+        "Castaway was not voted out and survived to the next episode.",
     },
     fire_making_win: {
       title: "Fire-Making Challenge Win",
       description:
-        "Castaway won a fire-making tiebreaker challenge. Worth +5 points.",
+        "Castaway won a fire-making tiebreaker challenge.",
     },
     made_final_three: {
       title: "Made Final 3",
       description:
-        "Castaway made it to the final three of the season. Worth +5 points.",
+        "Castaway made it to the final three of the season.",
     },
     season_winner: {
       title: "Season Winner",
       description:
-        "Castaway won the season and was crowned Sole Survivor. Worth +10 points.",
+        "Castaway won the season and was crowned Sole Survivor.",
     },
     made_jury: {
       title: "Made the Jury",
-      description: "Castaway was voted out but made the jury. Worth +3 points.",
+      description: "Castaway was voted out but made the jury.",
     },
     voted_out: {
       title: "Voted Out",
       description:
-        "Castaway was voted out of the game. Deducts -10 points from their total.",
+        "Castaway was voted out of the game.",
     },
   };
   return descriptions[eventType];

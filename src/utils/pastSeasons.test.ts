@@ -170,7 +170,6 @@ describe("listPastSeasons", () => {
             archivedAt: new Date(),
             memberDetails: [member()],
           },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           junk: { seasonNumber: 0, archivedAt: new Date(), memberDetails: [] } as any,
         },
       }),

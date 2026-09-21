@@ -1,8 +1,12 @@
 /**
- * Sidebar / topnav nav config. Glyphs come from the prototype; routes mirror
- * the current Next.js app structure. Items that the redesign mentions but
- * don't have routes yet (Draft, Recap, Trash Talk, per-league My Tribe) live
- * in later phases — add them here as those phases ship.
+ * Sidebar / topnav / tab-bar nav config.
+ *
+ * Split into a *primary* set — what the bottom tab bar shows on a phone — and a
+ * *secondary* set that lives in the account menu. Six tabs across a 390px
+ * viewport gave each one 65px, which ellipsised "Hall of Fame" to "Hall" and
+ * "Standings" to "Ranks"; four tabs leave ~97px and fit the real words. Admin
+ * and About are also the two nobody taps weekly, and Admin is meaningful to
+ * exactly one person per league.
  */
 export interface NavItem {
   id: string;
@@ -13,16 +17,16 @@ export interface NavItem {
   href: string;
   /** Optional unread/notification count. */
   badge?: number;
-  /** Hidden unless the user has a matching role. */
+  /** Hidden unless the user owns a league or is a site admin. */
   requiresAdmin?: boolean;
 }
 
+/** The weekly loop: where am I, what's my move, who's left. */
 export const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Home", glyph: "◐", href: "/dashboard" },
   {
     id: "standings",
     label: "Standings",
-    shortLabel: "Ranks",
     glyph: "≡",
     href: "/dashboard/leaderboard",
   },
@@ -30,15 +34,20 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "hall",
     label: "Hall of Fame",
-    shortLabel: "Hall",
+    shortLabel: "Hall of Fame",
     glyph: "★",
     href: "/dashboard/hall-of-fame",
   },
+];
+
+/** Rendered inside the account menu rather than the tab bar. */
+export const SECONDARY_NAV_ITEMS: NavItem[] = [
   {
     id: "admin",
-    label: "Admin",
+    label: "Admin tools",
     glyph: "✦",
     href: "/dashboard/admin",
+    requiresAdmin: true,
   },
   { id: "about", label: "About", glyph: "ⓘ", href: "/dashboard/about" },
 ];

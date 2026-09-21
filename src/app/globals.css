@@ -474,6 +474,25 @@ body {
 .sfl-ls-item:hover {
   background: var(--bg-inset);
 }
+/* Secondary nav (Admin / About) renders as <a> in this menu. */
+a.sfl-ls-item {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.sfl-ls-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sfl-ls-item:disabled:hover {
+  background: transparent;
+}
+/* Inline error under the push toggle. */
+.sfl-ls-note {
+  padding: 4px 10px 6px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--danger);
+}
 .sfl-ls-item.current {
   font-weight: 700;
 }
@@ -1883,8 +1902,7 @@ body {
 .sfl-pack-overlay {
   position: fixed;
   inset: 0;
-  /* Above the fixed notification bell (1400) + chat FAB so nothing bleeds
-   * through the draft. */
+  /* Above the chat FAB so nothing bleeds through the draft. */
   z-index: 1500;
   display: flex;
   flex-direction: column;
@@ -2524,9 +2542,6 @@ body {
   .sfl-topnav .sfl-side-profile > div { display: none; }
   .sfl-topnav .sfl-side-profile { gap: 6px; padding: 2px; border: 0; background: transparent; }
   .sfl-topnav-right { gap: 8px; flex-shrink: 0; }
-  /* Reserve space at the far right for the fixed notification bell so it
-   * doesn't sit on top of the user menu. */
-  .sfl-topnav-right { padding-right: 38px; }
   /* Leave room for the fixed tab bar at the bottom of the scroll area. */
   .sfl-main { padding-bottom: 80px; }
 
@@ -2546,4 +2561,741 @@ body {
 @media (max-width: 640px) {
   .sfl-main { padding-left: 14px; padding-right: 14px; gap: 18px; }
   .sfl-page { gap: 18px; }
+}
+
+/* ═══════════ SWAP SHEET — mobile-first weekly add/drop ═══════════
+ * Replaces the drag-and-drop pack overlay. Three fixed bands: a header, a
+ * scrolling row list, and a sticky footer holding the one primary action, so
+ * Confirm is always reachable by thumb without scrolling the list. */
+
+.sfl-swapsheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: sfl-sheet-up 0.24s var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-swapsheet { animation: none; }
+}
+
+/* Header */
+.sfl-swapsheet-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-paper);
+  backdrop-filter: var(--blur-chrome);
+}
+.sfl-swapsheet-back {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sfl-swapsheet-back:disabled { opacity: 0.45; cursor: default; }
+.sfl-swapsheet-headtext { min-width: 0; }
+.sfl-swapsheet-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.sfl-swapsheet-kicker.urgent { color: var(--danger); }
+.sfl-swapsheet-title {
+  margin: 2px 0 0;
+  font-family: var(--font-display-stack);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+/* Search */
+.sfl-swapsheet-search {
+  flex-shrink: 0;
+  padding: 12px 16px 4px;
+}
+.sfl-swapsheet-input {
+  width: 100%;
+  /* 16px min, or iOS Safari zooms the viewport on focus. */
+  font-size: 16px;
+  font-family: var(--font-body-stack);
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--ink);
+}
+.sfl-swapsheet-input:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-flame);
+  border-color: var(--flame);
+}
+
+/* Scroll body */
+.sfl-swapsheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px 20px;
+}
+.sfl-swapsheet-label {
+  margin: 4px 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.sfl-swapsheet-empty {
+  padding: 32px 8px;
+  text-align: center;
+  color: var(--ink-mute);
+  font-size: 14px;
+}
+
+/* Staged move banner */
+.sfl-swapsheet-staged {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in oklch, var(--flame) 40%, var(--line));
+  background: color-mix(in oklch, var(--flame) 8%, var(--bg-paper));
+}
+.sfl-swapsheet-staged-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+.sfl-swapsheet-staged-text b {
+  display: inline-block;
+  min-width: 30px;
+  margin-right: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sfl-swapsheet-staged-text b.out { color: var(--danger); }
+.sfl-swapsheet-staged-text b.in { color: var(--jungle); }
+.sfl-swapsheet-undo {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-body-stack);
+  cursor: pointer;
+}
+
+/* Footer */
+.sfl-swapsheet-foot {
+  flex-shrink: 0;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--bg-paper);
+  backdrop-filter: var(--blur-chrome);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sfl-swapsheet-warn {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+  background: color-mix(in oklch, var(--danger) 10%, var(--bg));
+  border-radius: var(--r-sm);
+  padding: 8px 11px;
+}
+.sfl-swapsheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sfl-swapsheet-actions .sfl-btn.block { flex: 1; }
+
+/* ───────── Castaway rows ───────── */
+
+.sfl-rowlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sfl-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-paper);
+  overflow: hidden;
+}
+.sfl-row.is-in {
+  border-color: color-mix(in oklch, var(--jungle) 55%, var(--line));
+  background: color-mix(in oklch, var(--jungle) 7%, var(--bg-paper));
+}
+.sfl-row.is-empty {
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 10px;
+  border-style: dashed;
+  background: transparent;
+}
+
+/* Row body — its own button so the card art is one tap away. */
+.sfl-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* 60px total height clears the 44px touch-target minimum with room to spare. */
+  padding: 8px 4px 8px 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-family: var(--font-body-stack);
+  cursor: pointer;
+  color: inherit;
+}
+.sfl-row-main:focus-visible {
+  outline: none;
+  box-shadow: inset var(--ring-flame);
+  border-radius: var(--r-md);
+}
+.sfl-row-thumb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--bg-inset);
+  display: block;
+  position: relative;
+}
+.sfl-row-thumb > * { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sfl-row-thumb.is-out { filter: grayscale(1); opacity: 0.6; }
+.sfl-row-thumb.empty {
+  display: grid;
+  place-items: center;
+  color: var(--ink-mute);
+  font-size: 20px;
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+}
+.sfl-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sfl-row-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sfl-row-idol {
+  margin-left: 5px;
+  color: var(--flame);
+  font-style: normal;
+  font-size: 12px;
+}
+.sfl-row-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sfl-row-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-mute);
+}
+.sfl-row-dot.active { background: var(--jungle); }
+.sfl-row-dot.jury { background: var(--ocean); }
+.sfl-row-dot.out { background: var(--danger); }
+.sfl-row-tribe { overflow: hidden; text-overflow: ellipsis; }
+.sfl-row-pts {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+  padding-right: 2px;
+}
+.sfl-row-pts b {
+  font-family: var(--font-mono-stack);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.sfl-row-pts i {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* Row action — full-height tap column so the target is generous. */
+.sfl-row-action {
+  flex-shrink: 0;
+  min-width: 74px;
+  padding: 0 14px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--bg-inset);
+  color: var(--ink);
+  font-family: var(--font-body-stack);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sfl-row-action.swap { color: var(--flame); }
+.sfl-row-action.add { color: var(--jungle); }
+.sfl-row-action.undo { color: var(--ink-soft); }
+.sfl-row-action:disabled { opacity: 0.4; cursor: default; }
+.sfl-row-action:focus-visible { outline: none; box-shadow: inset var(--ring-flame); }
+.sfl-row.is-empty .sfl-row-action {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  min-height: 38px;
+  background: transparent;
+}
+
+/* Tablet and up: cap the reading width so rows don't stretch to 1200px. */
+@media (min-width: 768px) {
+  .sfl-swapsheet-head,
+  .sfl-swapsheet-search,
+  .sfl-swapsheet-scroll,
+  .sfl-swapsheet-foot > * {
+    max-width: 620px;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .sfl-swapsheet-head { padding-inline: 0; }
+  .sfl-swapsheet-foot { align-items: center; }
+}
+
+/* ═══════════ THIS WEEK — the primary action card on Home ═══════════
+ * Sized so rank, countdown, tribe and the CTA all clear the fold on a 390×844
+ * phone. Everything else on the dashboard is reference material below it. */
+
+.sfl-thisweek {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid color-mix(in oklch, var(--flame) 30%, var(--line));
+  background:
+    radial-gradient(
+      420px 200px at 100% 0%,
+      color-mix(in oklch, var(--flame) 12%, transparent),
+      transparent 70%
+    ),
+    var(--bg-paper);
+}
+.sfl-thisweek-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sfl-thisweek-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.sfl-thisweek-lock.urgent { color: var(--danger); }
+.sfl-thisweek-lockdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sfl-thisweek-lock.urgent .sfl-thisweek-lockdot {
+  animation: sfl-pulse-dot 1.8s ease-in-out infinite;
+}
+@keyframes sfl-pulse-dot {
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-thisweek-lock.urgent .sfl-thisweek-lockdot { animation: none; }
+}
+
+/* Stats */
+.sfl-thisweek-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.sfl-thisweek-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.sfl-thisweek-num {
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+.sfl-thisweek-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11.5px;
+  color: var(--ink-mute);
+}
+.sfl-thisweek-lbl b { font-size: 11.5px; font-weight: 700; }
+.sfl-thisweek-lbl b.up { color: var(--jungle); }
+.sfl-thisweek-lbl b.down { color: var(--danger); }
+
+/* Tribe strip — five faces, tap-free; the CTA below is the action. */
+.sfl-thisweek-tribe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.sfl-thisweek-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.sfl-thisweek-face > :first-child {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 56px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  object-fit: cover;
+  background: var(--bg-inset);
+  display: block;
+}
+.sfl-thisweek-face.is-out > :first-child { filter: grayscale(1); opacity: 0.5; }
+.sfl-thisweek-face.is-gap > :first-child {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--ink-mute);
+  font-size: 16px;
+}
+.sfl-thisweek-facename {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sfl-thisweek-face.is-out .sfl-thisweek-facename {
+  text-decoration: line-through;
+}
+
+.sfl-thisweek-say {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.sfl-thisweek-note {
+  margin: -6px 0 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--ink-mute);
+}
+
+/* The CTA is the biggest touch target on the page. */
+.sfl-thisweek .sfl-btn.block.lg {
+  min-height: 52px;
+  font-size: 15.5px;
+}
+
+@media (min-width: 768px) {
+  .sfl-thisweek { padding: 22px 24px; gap: 16px; }
+  .sfl-thisweek-num { font-size: 32px; }
+  .sfl-thisweek-face > :first-child { max-width: 72px; }
+}
+
+/* Tabular numerals for stats that sit in a column or tick upward. Referenced by
+ * StatStrip / ActiveDashboardView / ThisWeekCard, but never actually defined
+ * until now — those numbers had been rendering in the body face. */
+.sfl-mono {
+  font-family: var(--font-mono-stack);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ═══════════ WELCOME BACK BANNER ═══════════ */
+
+.sfl-welcome {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid color-mix(in oklch, var(--ocean) 35%, var(--line));
+  background:
+    radial-gradient(
+      500px 220px at 0% 0%,
+      color-mix(in oklch, var(--ocean) 12%, transparent),
+      transparent 70%
+    ),
+    var(--bg-paper);
+}
+.sfl-welcome-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sfl-welcome-x:hover { background: var(--bg-inset); color: var(--ink); }
+.sfl-welcome-body { display: flex; flex-direction: column; gap: 6px; padding-right: 32px; }
+.sfl-welcome-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ocean);
+}
+.sfl-welcome-title {
+  margin: 0;
+  font-family: var(--font-display-stack);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.sfl-welcome-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.sfl-welcome-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sfl-welcome-actions .sfl-btn { flex: 1 1 auto; min-height: 44px; }
+
+@media (min-width: 768px) {
+  .sfl-welcome { padding: 22px 24px; }
+  .sfl-welcome-actions .sfl-btn { flex: 0 0 auto; }
+}
+
+/* ═══════════ HOW-TO-PLAY WALKTHROUGH ═══════════
+ * Same three-band shape as SwapSheet so Next is always thumb-reachable. */
+
+.sfl-walkthrough {
+  position: fixed;
+  inset: 0;
+  z-index: 1550;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: sfl-sheet-up 0.24s var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sfl-walkthrough { animation: none; }
+}
+
+.sfl-wt-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+}
+.sfl-wt-dots { display: flex; gap: 6px; align-items: center; }
+.sfl-wt-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+  transition: width 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+.sfl-wt-dot.done { background: color-mix(in oklch, var(--flame) 55%, var(--line-strong)); }
+.sfl-wt-dot.active { width: 22px; background: var(--flame); }
+.sfl-wt-skip {
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  font-family: var(--font-body-stack);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 4px;
+  cursor: pointer;
+}
+.sfl-wt-skip:hover { color: var(--ink); }
+
+.sfl-wt-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  /* Vertically centre short slides, let long ones scroll from the top. */
+  justify-content: center;
+}
+.sfl-wt-kicker {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--flame);
+}
+.sfl-wt-title {
+  margin: 0 0 14px;
+  font-family: var(--font-display-stack);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.12;
+  color: var(--ink);
+}
+.sfl-wt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.sfl-wt-body p { margin: 0; }
+.sfl-wt-body b { color: var(--ink); }
+.sfl-wt-muted { color: var(--ink-mute); font-size: 13.5px; }
+
+/* Score table */
+.sfl-wt-scores {
+  list-style: none;
+  margin: 2px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.sfl-wt-scores li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  background: var(--bg-paper);
+}
+.sfl-wt-scores li + li { border-top: 1px solid var(--line); }
+.sfl-wt-scores b {
+  font-family: var(--font-mono-stack);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+.sfl-wt-scores b.up { color: var(--jungle); }
+.sfl-wt-scores b.down { color: var(--danger); }
+
+.sfl-wt-foot {
+  flex-shrink: 0;
+  padding: 12px 20px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--bg-paper);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sfl-wt-actions { display: flex; gap: 10px; align-items: center; }
+.sfl-wt-actions .sfl-btn { min-height: 48px; }
+.sfl-wt-actions .sfl-btn.block { flex: 1; }
+.sfl-wt-count {
+  margin: 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--ink-mute);
+}
+.sfl-wt-devnote {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: color-mix(in oklch, var(--ocean) 12%, var(--bg));
+  color: var(--ocean);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .sfl-wt-scroll,
+  .sfl-wt-head,
+  .sfl-wt-foot > * {
+    max-width: 560px;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .sfl-wt-title { font-size: 32px; }
+  .sfl-wt-foot { align-items: center; }
 }

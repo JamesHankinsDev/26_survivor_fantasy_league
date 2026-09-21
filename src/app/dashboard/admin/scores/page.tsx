@@ -34,11 +34,17 @@ import {
   ScoringEventType,
 } from "@/types/league";
 import { CURRENT_SEASON, isSeasonActive } from "@/data/seasons";
+import {
+  getScoringConfig,
+  calculateSeasonPoints,
+} from "@/utils/seasonScoringConfig";
+
+/** Point values for the season being scored — not the S50 baseline. */
+const SEASON_SCORING_CONFIG = getScoringConfig(CURRENT_SEASON.number);
 import { useSeasonCastaways } from "@/hooks/useCastaways";
 import { useOwnedLeagues } from "@/hooks/useLeagues";
 import {
-  SCORING_CONFIG,
-  calculatePointsFromEvents,
+
   getEventLabel,
   ALL_EVENT_TYPES,
 } from "@/utils/eventScoringConfig";
@@ -130,7 +136,7 @@ export default function AdminScoresPage() {
 
   const getTotalForCastaway = (castawayId: string): number => {
     const castawayEvents = episodes[castawayId]?.events || [];
-    return calculatePointsFromEvents(castawayEvents);
+    return calculateSeasonPoints(castawayEvents, CURRENT_SEASON.number);
   };
 
   const allLeagueIds = ownedLeagues.map(l => l.id);
@@ -571,8 +577,8 @@ export default function AdminScoresPage() {
                     {getEventLabel(eventType)}
                     <br />
                     <span style={{ fontSize: "0.75rem", color: "text.secondary" }}>
-                      {SCORING_CONFIG[eventType] > 0 ? "+" : ""}
-                      {SCORING_CONFIG[eventType]}
+                      {SEASON_SCORING_CONFIG[eventType] > 0 ? "+" : ""}
+                      {SEASON_SCORING_CONFIG[eventType]}
                     </span>
                   </TableCell>
                 ))}
@@ -672,7 +678,7 @@ export default function AdminScoresPage() {
                 <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
                   {existingEpisodeEvents.slice(0, 5).map((c) => {
                     const existing = c.weeklyEvents?.[effectiveEpisodeNumber.toString()] || [];
-                    const pts = calculatePointsFromEvents(existing);
+                    const pts = calculateSeasonPoints(existing, CURRENT_SEASON.number);
                     return (
                       <li key={c.id}>
                         <strong>{c.name}</strong>: {existing.length} event{existing.length !== 1 ? "s" : ""} ({pts > 0 ? "+" : ""}{pts} pts)
