@@ -61,7 +61,7 @@ function setup(props: Partial<React.ComponentProps<typeof SwapSheet>> = {}) {
     /** The row whose name cell reads `Cast {i}`. */
     row: (i: number) =>
       rows().find((r) => within(r).queryByText(`Cast ${i}`)) as HTMLElement,
-    confirm: () => screen.getByRole("button", { name: /Confirm swap|Pick a swap above/ }),
+    confirm: () => screen.getByRole("button", { name: /Confirm|Pick a swap above/ }),
   };
 }
 
@@ -107,7 +107,7 @@ describe("SwapSheet", () => {
     expect(screen.getByText("Cast 0")).toBeInTheDocument(); // staged "Out" banner
     expect(s.confirm()).toBeEnabled();
     fireEvent.click(s.confirm());
-    expect(s.onSubmit).toHaveBeenCalledWith("c0", "c9");
+    expect(s.onSubmit).toHaveBeenCalledWith({ drops: ["c0"], adds: ["c9"] });
   });
 
   it("tapping the row body opens the card rather than performing the swap", () => {
@@ -230,6 +230,76 @@ describe("SwapSheet", () => {
     expect(within(s.row(9)).getByRole("button", { name: "Swap" })).toBeEnabled();
   });
 
+  /** Stage "swap out Cast {out} for Cast {inn}" from the tribe view. */
+  const stage = (s: ReturnType<typeof setup>, out: number, inn: number) => {
+    fireEvent.click(within(s.row(out)).getByRole("button", { name: "Swap" }));
+    fireEvent.click(within(s.row(inn)).getByRole("button", { name: "Add" }));
+  };
+
+  it("pre-merge: two swaps staged together are both submitted", () => {
+    const s = setup({
+      rules: PRE_MERGE,
+      addDropRestrictionEnabled: true,
+      tribeMember: lockedLastWeek(["c0", "c1", "c2", "c3", "c4"]),
+    });
+    stage(s, 0, 9);
+    // The first staged swap counts against the allowance right away.
+    expect(s.container.querySelector(".sfl-swapsheet-title")?.textContent).toBe(
+      "1 swap left this week",
+    );
+    stage(s, 1, 8);
+    // Both outgoing castaways leave the tribe list; both incomers join it.
+    expect(s.row(0)).toBeUndefined();
+    expect(s.row(1)).toBeUndefined();
+    expect(s.row(9)).toBeDefined();
+    expect(s.row(8)).toBeDefined();
+    expect(s.confirm()).toHaveTextContent("Confirm 2 swaps");
+    fireEvent.click(s.confirm());
+    expect(s.onSubmit).toHaveBeenCalledWith({ drops: ["c0", "c1"], adds: ["c9", "c8"] });
+  });
+
+  it("pre-merge: staging both swaps locks the rest of the tribe", () => {
+    const s = setup({
+      rules: PRE_MERGE,
+      addDropRestrictionEnabled: true,
+      tribeMember: lockedLastWeek(["c0", "c1", "c2", "c3", "c4"]),
+    });
+    stage(s, 0, 9);
+    stage(s, 1, 8);
+    expect(within(s.row(2)).getByRole("button", { name: "Swap" })).toBeDisabled();
+    // Staged incomers can still be changed.
+    expect(within(s.row(9)).getByRole("button", { name: "Change" })).toBeEnabled();
+  });
+
+  it("post-merge: staging one swap locks the rest of the tribe", () => {
+    const s = setup({
+      rules: POST_MERGE,
+      addDropRestrictionEnabled: true,
+      tribeMember: lockedLastWeek(["c0", "c1", "c2", "c3", "c4"]),
+    });
+    stage(s, 0, 9);
+    expect(within(s.row(1)).getByRole("button", { name: "Swap" })).toBeDisabled();
+  });
+
+  it("Change re-picks a staged swap rather than adding another", () => {
+    const s = setup({ rules: PRE_MERGE });
+    stage(s, 0, 9);
+    fireEvent.click(within(s.row(9)).getByRole("button", { name: "Change" }));
+    expect(screen.getByText(/Swapping out Cast 0/)).toBeInTheDocument();
+    fireEvent.click(within(s.row(7)).getByRole("button", { name: "Add" }));
+    fireEvent.click(s.confirm());
+    expect(s.onSubmit).toHaveBeenCalledWith({ drops: ["c0"], adds: ["c7"] });
+  });
+
+  it("Undo removes only its own staged swap", () => {
+    const s = setup({ rules: PRE_MERGE });
+    stage(s, 0, 9);
+    stage(s, 1, 8);
+    fireEvent.click(screen.getAllByRole("button", { name: "Undo" })[0]);
+    fireEvent.click(s.confirm());
+    expect(s.onSubmit).toHaveBeenCalledWith({ drops: ["c1"], adds: ["c8"] });
+  });
+
   it("announces the remaining allowance in the header", () => {
     const s = setup({ rules: PRE_MERGE, addDropRestrictionEnabled: true });
     expect(
@@ -245,7 +315,7 @@ describe("SwapSheet", () => {
     const pick = s.rows().find((r) => within(r).queryByText("Cast 9"))!;
     fireEvent.click(within(pick).getByRole("button", { name: "Add" }));
     fireEvent.click(s.confirm());
-    expect(s.onSubmit).toHaveBeenCalledWith(null, "c9");
+    expect(s.onSubmit).toHaveBeenCalledWith({ drops: [], adds: ["c9"] });
   });
 
   it("filters the replacement pool by search", () => {
@@ -274,7 +344,7 @@ describe("SwapSheet", () => {
     expect(screen.queryByRole("button", { name: /Reset to last week/ })).toBeNull();
   });
 
-  it("submits the reset sentinel when the roster drifted from the locked one", () => {
+  it("submits a reset when the roster drifted from the locked one", () => {
     const s = setup({
       tribeMember: member({
         roster: ["c0", "c1", "c2", "c3", "c9"],
@@ -289,6 +359,6 @@ describe("SwapSheet", () => {
       }),
     });
     fireEvent.click(screen.getByRole("button", { name: /Reset to last week/ }));
-    expect(s.onSubmit).toHaveBeenCalledWith("__RESET_TO_PRIOR_WEEK__", null);
+    expect(s.onSubmit).toHaveBeenCalledWith({ reset: true });
   });
 });

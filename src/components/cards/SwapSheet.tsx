@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import type { TribeMember } from "@/types/league";
 import type { Castaway } from "@/types/castaway";
-import { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/scoring";
+import {
+  MAX_ROSTER,
+  getLatestLockedRoster,
+  isNetRosterChangeAllowed,
+  type RosterChange,
+} from "@/utils/rosterSwap";
 import type { RosterRules } from "@/utils/rosterRules";
 import { castawayEventBreakdown } from "@/utils/castawayEvents";
 import { getNextRosterLockDate, getLockRemaining } from "@/utils/lockCountdown";
@@ -11,13 +16,17 @@ import { useNow } from "@/hooks/useNow";
 import CastawayRow from "./CastawayRow";
 import CardDetail from "./CardDetail";
 
-const MAX_ROSTER = 5;
-const RESET_SENTINEL = "__RESET_TO_PRIOR_WEEK__";
+/** One staged move: who goes out (null = filling an open spot) and who comes in. */
+interface StagedSwap {
+  drop: string | null;
+  add: string;
+}
 
 export interface SwapSheetProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (dropId: string | null, addId: string | null) => Promise<void>;
+  /** Every staged swap at once, or a roll back to last week's locked roster. */
+  onSubmit: (change: RosterChange) => Promise<void>;
   tribeMember: TribeMember;
   allCastaways: Castaway[];
   eliminatedCastawayIds: string[];
@@ -45,7 +54,8 @@ function formatLockIn(totalMs: number): string {
  * SwapSheet — the weekly add/drop, built thumb-first.
  *
  * The whole move is three taps: **Swap** on a roster row, tap a replacement,
- * **Confirm**. No dragging, no precision targets — the old drag surface put a
+ * **Confirm**. Pre-merge, when two swaps are allowed, both can be staged before
+ * a single Confirm. No dragging, no precision targets — the old drag surface put a
  * 65px card inside a 3-across scroller on a phone, which is the single biggest
  * reason the weekly move didn't happen.
  *
@@ -71,10 +81,14 @@ export default function SwapSheet({
   seasonNumber = 0,
   rules,
 }: SwapSheetProps) {
-  const [dropId, setDropId] = useState<string | null>(null);
-  const [addId, setAddId] = useState<string | null>(null);
-  /** Non-null while the replacement picker is open. "" = adding into an empty slot. */
-  const [pickingFor, setPickingFor] = useState<string | null>(null);
+  const [staged, setStaged] = useState<StagedSwap[]>([]);
+  /**
+   * Non-null while the replacement picker is open: who's going out (null =
+   * filling an empty slot) and, when re-picking a staged swap, its index.
+   */
+  const [picking, setPicking] = useState<{ drop: string | null; index: number | null } | null>(
+    null,
+  );
   const [query, setQuery] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -87,9 +101,8 @@ export default function SwapSheet({
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (!open) {
-      setDropId(null);
-      setAddId(null);
-      setPickingFor(null);
+      setStaged([]);
+      setPicking(null);
       setQuery("");
       setDetailId(null);
       setError("");
@@ -114,43 +127,40 @@ export default function SwapSheet({
     [eliminatedCastawayIds],
   );
 
+  const stagedDrops = staged.flatMap((s) => (s.drop ? [s.drop] : []));
+  const stagedAdds = staged.map((s) => s.add);
+  const proposed = [
+    ...currentRoster.filter((id) => !stagedDrops.includes(id)),
+    ...stagedAdds,
+  ];
+
   // ── Weekly swap allowance ──
   // `rules.swapsPerWeek` is 2 pre-merge and 1 post-merge from S51 (1 always,
-  // before that). Castaways on the working roster who weren't on last week's
-  // locked roster are the swaps already spent this week.
+  // before that). Castaways in the proposed tribe who weren't on last week's
+  // locked roster are the swaps spent this week — saved ones plus staged ones,
+  // so staging a swap counts against the allowance straight away.
   //
   // Gating is done on the rows, not just on Confirm: the old drag UI let you
   // stage an illegal move and only discover it when Confirm stayed dead.
-  const addedThisWeek = useMemo(
-    () =>
-      latestLockedRoster.length > 0
-        ? currentRoster.filter((id) => !latestLockedRoster.includes(id))
-        : [],
-    [currentRoster, latestLockedRoster],
-  );
-  const swapsUsed = addedThisWeek.length;
+  const swapsUsed =
+    latestLockedRoster.length > 0
+      ? proposed.filter((id) => !latestLockedRoster.includes(id)).length
+      : 0;
   const swapsLeft = Math.max(0, rules.swapsPerWeek - swapsUsed);
   const changeSpent = addDropRestrictionEnabled && swapsLeft === 0;
 
   // Post-merge a voted-out castaway is locked to the roster; pre-merge (S51+)
-  // dropping them frees the slot.
-  let droppable = currentRoster.filter(
-    (id) => rules.canDropEliminated || !eliminatedSet.has(id),
+  // dropping them frees the slot. With the allowance spent, only castaways
+  // added since the lock can still be swapped (it's like-for-like).
+  const droppableSet = new Set(
+    currentRoster.filter(
+      (id) =>
+        !stagedDrops.includes(id) &&
+        (rules.canDropEliminated || !eliminatedSet.has(id)) &&
+        (!changeSpent || !latestLockedRoster.includes(id)),
+    ),
   );
-  if (changeSpent) {
-    const addedSet = new Set(addedThisWeek);
-    droppable = droppable.filter((id) => addedSet.has(id));
-  }
-  const droppableSet = new Set(droppable);
-  const canAdd =
-    (currentRoster.length < MAX_ROSTER || !!dropId) && (!changeSpent || !!dropId);
-
-  const proposed = useMemo(() => {
-    let r = [...currentRoster];
-    if (dropId) r = r.filter((id) => id !== dropId);
-    if (addId) r.push(addId);
-    return r;
-  }, [currentRoster, dropId, addId]);
+  const canAdd = proposed.length < MAX_ROSTER && !changeSpent;
 
   // A subscribed clock, not a bare Date.now(): render stays pure and the
   // countdown actually advances. `0` = subscription not live yet (SSR/first paint).
@@ -163,13 +173,12 @@ export default function SwapSheet({
   // ── Validation ──
   let warning: string | null = null;
   let submitDisabled = false;
-  if (!addDropRestrictionEnabled || !seasonStarted) {
-    submitDisabled = proposed.length > MAX_ROSTER;
-    warning = submitDisabled ? `Your tribe can hold at most ${MAX_ROSTER} castaways.` : null;
-  } else if (currentRoster.length >= MAX_ROSTER && !dropId) {
-    warning = "Your tribe is full — swap someone out to bring someone in.";
+  if (proposed.length > MAX_ROSTER) {
+    warning = `Your tribe can hold at most ${MAX_ROSTER} castaways.`;
     submitDisabled = true;
   } else if (
+    addDropRestrictionEnabled &&
+    seasonStarted &&
     latestLockedRoster.length > 0 &&
     !isNetRosterChangeAllowed(latestLockedRoster, proposed, rules.swapsPerWeek)
   ) {
@@ -178,7 +187,7 @@ export default function SwapSheet({
         ? "One swap a week after the merge — you can only swap back the castaway you added."
         : `That's ${rules.swapsPerWeek + 1} swaps — you get ${rules.swapsPerWeek} a week. Swap one back to free a move.`;
     submitDisabled = true;
-  } else if (!dropId && !addId) {
+  } else if (staged.length === 0) {
     submitDisabled = true;
   }
 
@@ -188,29 +197,24 @@ export default function SwapSheet({
   const lockSoon = lockMs < 3.6e6;
 
   // ── Row data ──
-  const tribeIds = [
-    ...currentRoster.filter((id) => id !== dropId),
-    ...(addId ? [addId] : []),
-  ];
-  const tribeCards = tribeIds
+  const tribeCards = proposed
     .map((id) => byId.get(id))
     .filter((c): c is Castaway => Boolean(c));
 
   const availableCards = useMemo(() => {
     const pool = allCastaways.filter(
-      (c) => !currentRoster.includes(c.id) && !eliminatedSet.has(c.id) && c.id !== addId,
+      (c) =>
+        !currentRoster.includes(c.id) && !eliminatedSet.has(c.id) && !stagedAdds.includes(c.id),
     );
     const q = query.trim().toLowerCase();
     const matched = q ? pool.filter((c) => c.name.toLowerCase().includes(q)) : pool;
     // Highest scorers first — the useful default when you're shopping for points.
     return [...matched].sort((a, b) => scoreOf(b.id) - scoreOf(a.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allCastaways, currentRoster, eliminatedSet, addId, query, castawaySeasonScores]);
+  }, [allCastaways, currentRoster, eliminatedSet, staged, query, castawaySeasonScores]);
 
-  const dropCard = dropId ? byId.get(dropId) ?? null : null;
-  const addCard = addId ? byId.get(addId) ?? null : null;
   const detailCard = detailId ? byId.get(detailId) ?? null : null;
-  const pickingForCard = pickingFor ? byId.get(pickingFor) ?? null : null;
+  const pickingForCard = picking?.drop ? byId.get(picking.drop) ?? null : null;
 
   const canResetToPrior =
     latestLockedRoster.length > 0 &&
@@ -218,30 +222,41 @@ export default function SwapSheet({
       JSON.stringify([...latestLockedRoster].sort());
 
   const emptySlots = Math.max(0, MAX_ROSTER - tribeCards.length);
-  const staged = Boolean(dropId || addId);
-  const ready = !submitDisabled && staged;
+  const isStaged = staged.length > 0;
+  const ready = !submitDisabled && isStaged;
 
   if (!open) return null;
 
   // ── Actions ──
   const startSwap = (id: string) => {
-    setPickingFor(id);
+    setPicking({ drop: id, index: null });
     setQuery("");
   };
   const startAdd = () => {
-    setPickingFor("");
+    setPicking({ drop: null, index: null });
+    setQuery("");
+  };
+  /** Re-pick who comes in for an already staged swap. */
+  const changeStaged = (addId: string) => {
+    const index = staged.findIndex((s) => s.add === addId);
+    if (index === -1) return;
+    setPicking({ drop: staged[index].drop, index });
     setQuery("");
   };
   const choose = (id: string) => {
-    if (pickingFor) setDropId(pickingFor);
-    setAddId(id);
-    setPickingFor(null);
+    if (!picking) return;
+    const { drop, index } = picking;
+    setStaged((prev) =>
+      index === null
+        ? [...prev, { drop, add: id }]
+        : prev.map((s, i) => (i === index ? { drop, add: id } : s)),
+    );
+    setPicking(null);
     setQuery("");
     setDetailId(null);
   };
-  const undoStaged = () => {
-    setDropId(null);
-    setAddId(null);
+  const undoStaged = (addId: string) => {
+    setStaged((prev) => prev.filter((s) => s.add !== addId));
   };
 
   const submit = async () => {
@@ -249,7 +264,7 @@ export default function SwapSheet({
     setError("");
     setLoading(true);
     try {
-      await onSubmit(dropId, addId);
+      await onSubmit({ drops: stagedDrops, adds: stagedAdds });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save your swap");
@@ -261,7 +276,7 @@ export default function SwapSheet({
     setError("");
     setLoading(true);
     try {
-      await onSubmit(RESET_SENTINEL, null);
+      await onSubmit({ reset: true });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reset roster");
@@ -270,7 +285,7 @@ export default function SwapSheet({
   };
 
   // ── Replacement picker ──
-  if (pickingFor !== null) {
+  if (picking !== null) {
     return (
       <div
         className="sfl-swapsheet"
@@ -281,7 +296,7 @@ export default function SwapSheet({
         <header className="sfl-swapsheet-head">
           <button
             className="sfl-swapsheet-back"
-            onClick={() => setPickingFor(null)}
+            onClick={() => setPicking(null)}
             aria-label="Back to your tribe"
           >
             ←
@@ -387,25 +402,33 @@ export default function SwapSheet({
       </header>
 
       <div className="sfl-swapsheet-scroll">
-        {staged && (
-          <div className="sfl-swapsheet-staged">
-            <div className="sfl-swapsheet-staged-text">
-              {dropCard && (
-                <span>
-                  <b className="out">Out</b> {dropCard.name}
-                </span>
-              )}
-              {addCard && (
-                <span>
-                  <b className="in">In</b> {addCard.name}
-                </span>
-              )}
+        {staged.map((s) => {
+          const dropCard = s.drop ? byId.get(s.drop) : undefined;
+          const addCard = byId.get(s.add);
+          return (
+            <div key={s.add} className="sfl-swapsheet-staged">
+              <div className="sfl-swapsheet-staged-text">
+                {dropCard && (
+                  <span>
+                    <b className="out">Out</b> {dropCard.name}
+                  </span>
+                )}
+                {addCard && (
+                  <span>
+                    <b className="in">In</b> {addCard.name}
+                  </span>
+                )}
+              </div>
+              <button
+                className="sfl-swapsheet-undo"
+                onClick={() => undoStaged(s.add)}
+                disabled={loading}
+              >
+                Undo
+              </button>
             </div>
-            <button className="sfl-swapsheet-undo" onClick={undoStaged} disabled={loading}>
-              Undo
-            </button>
-          </div>
-        )}
+          );
+        })}
 
         <p className="sfl-swapsheet-label">
           Your tribe · tap a name to see their card
@@ -413,7 +436,7 @@ export default function SwapSheet({
 
         <ul className="sfl-rowlist">
           {tribeCards.map((c) => {
-            const isIncoming = c.id === addId;
+            const isIncoming = stagedAdds.includes(c.id);
             const eliminated = eliminatedSet.has(c.id);
             const canSwap = isIncoming || droppableSet.has(c.id);
             return (
@@ -436,7 +459,7 @@ export default function SwapSheet({
                 actionDisabled={!canSwap || loading}
                 // The staged banner owns Undo; the incoming row offers the
                 // other thing you'd want here — picking someone else instead.
-                onAction={() => (isIncoming ? setPickingFor(dropId ?? "") : startSwap(c.id))}
+                onAction={() => (isIncoming ? changeStaged(c.id) : startSwap(c.id))}
                 onOpenCard={() => setDetailId(c.id)}
               />
             );
@@ -480,7 +503,13 @@ export default function SwapSheet({
             </button>
           )}
           <button className="sfl-btn block" disabled={!ready || loading} onClick={submit}>
-            {loading ? "Saving…" : staged ? "Confirm swap" : "Pick a swap above"}
+            {loading
+              ? "Saving…"
+              : staged.length > 1
+                ? `Confirm ${staged.length} swaps`
+                : isStaged
+                  ? "Confirm swap"
+                  : "Pick a swap above"}
           </button>
         </div>
       </footer>
@@ -496,12 +525,12 @@ export default function SwapSheet({
             onClose={() => setDetailId(null)}
             actions={(() => {
               const id = detailCard.id;
-              if (id === addId)
+              if (stagedAdds.includes(id))
                 return (
                   <button
                     className="sfl-btn ghost block"
                     onClick={() => {
-                      undoStaged();
+                      undoStaged(id);
                       setDetailId(null);
                     }}
                   >
