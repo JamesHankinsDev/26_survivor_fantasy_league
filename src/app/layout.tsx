@@ -8,7 +8,6 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { FeedbackWidget } from "@/components/FeedbackWidget";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import { QueryProvider } from "@/lib/query-client";
 import { Analytics } from "@vercel/analytics/react";
@@ -107,7 +106,6 @@ export default function RootLayout({
             <ThemeProvider>
               <AuthProvider>
                 {children}
-                <FeedbackWidget />
                 <ServiceWorkerRegistrar />
               </AuthProvider>
             </ThemeProvider>
