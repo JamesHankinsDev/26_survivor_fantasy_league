@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ScoringEventType } from "@/types/league";
 import { getScoringConfig } from "@/utils/seasonScoringConfig";
 import { useSeasonCastaways } from "./useCastaways";
+import { buildEpisodeScoresMap } from "@/utils/liveScores";
 
 export interface CastawayEventSummary {
   eventType: ScoringEventType;
@@ -34,24 +35,10 @@ export function useEpisodeScores(seasonNumber: number) {
 export function useEpisodeScoresPerEpisode(seasonNumber: number) {
   const { data: castaways = [], ...rest } = useSeasonCastaways(seasonNumber);
 
-  const scoresMap = useMemo(() => {
-    const config = getScoringConfig(seasonNumber);
-    const map: Record<number, Record<string, number>> = {};
-
-    for (const castaway of castaways) {
-      for (const [epStr, events] of Object.entries(castaway.weeklyEvents || {})) {
-        const epNum = parseInt(epStr);
-        if (!map[epNum]) map[epNum] = {};
-        let total = 0;
-        for (const event of events) {
-          total += event.count * (config[event.eventType] || 0);
-        }
-        map[epNum][castaway.id] = total;
-      }
-    }
-
-    return map;
-  }, [castaways, seasonNumber]);
+  const scoresMap = useMemo(
+    () => buildEpisodeScoresMap(castaways, seasonNumber),
+    [castaways, seasonNumber],
+  );
 
   return { data: scoresMap, ...rest };
 }

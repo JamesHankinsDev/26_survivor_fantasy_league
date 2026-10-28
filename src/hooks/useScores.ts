@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { TribeMember } from "@/types/league";
 import { useEpisodeScores, useEpisodeScoresPerEpisode } from "./useEpisodes";
-import { applyWeeklyFloor } from "@/utils/seasonScoringConfig";
+import { computeLiveTotal } from "@/utils/liveScores";
 
 export interface ComputedMember extends TribeMember {
   castawayPoints: Record<string, number>;
@@ -32,29 +32,10 @@ export function useComputedScores(
         castawayPoints[castawayId] = castawaySeasonScores[castawayId] || 0;
       }
 
-      // Recompute totalPoints from weekly roster snapshots + live episode scores.
-      // Each weekly roster maps to an episode; sum each rostered castaway's
-      // episode score for that week.
-      const weeklyRosters = member.weeklyRosters || [];
-      let liveTotal = 0;
-
-      if (weeklyRosters.length > 0) {
-        for (const roster of weeklyRosters) {
-          const epScores = episodeScoresMap[roster.week] || {};
-          let weekScore = 0;
-          for (const castawayId of roster.castawayIds || []) {
-            weekScore += epScores[castawayId] || 0;
-          }
-          // Same weekly floor the engine applies on write (S51+: no negative
-          // weeks). Without it this live recompute would quietly disagree with
-          // the stored totals the moment anyone had a bad week.
-          liveTotal += applyWeeklyFloor(weekScore, seasonNumber);
-        }
-      }
-
-      // Use the live-computed total if we have weekly rosters, otherwise
-      // fall back to the stored value (covers pre-roster-lock / draft phase).
-      const totalPoints = weeklyRosters.length > 0 ? liveTotal : (member.totalPoints || 0);
+      // Recomputed live from weekly roster snapshots + episode scores, so the
+      // leaderboard reflects the latest castaway scores even before the admin
+      // re-runs score propagation.
+      const totalPoints = computeLiveTotal(member, episodeScoresMap, seasonNumber);
 
       return {
         ...member,

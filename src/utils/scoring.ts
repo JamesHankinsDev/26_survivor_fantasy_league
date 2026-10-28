@@ -17,8 +17,11 @@ import {
   applyWeeklyFloor,
 } from "@/utils/seasonScoringConfig";
 import { getCurrentWeek } from "@/utils/week";
+import { getLatestLockedRoster } from "@/utils/rosterSwap";
 
 export { getCurrentWeek };
+// Moved to the Firebase-free rosterSwap module; re-exported for existing callers.
+export { isNetRosterChangeAllowed, getLatestLockedRoster } from "@/utils/rosterSwap";
 
 /**
  * Get available castaways for add/drop (not on current roster, not eliminated)
@@ -34,36 +37,6 @@ export const getAvailableCastaways = (
   return allCastaways.filter(
     (c) => !rosterSet.has(c.id) && !eliminatedSet.has(c.id),
   );
-};
-
-/**
- * Is this week's net roster change within the allowance?
- *
- * `maxChanges` is how many castaways may be swapped out relative to last
- * week's locked roster — 1 historically, and from S51 it's 2 pre-merge and 1
- * post-merge (see `utils/rosterRules.ts`). Measured against the *previous*
- * roster's size rather than a hardcoded five, so a short roster (someone who
- * drafted fewer than five) isn't accidentally handed extra moves.
- */
-export const isNetRosterChangeAllowed = (
-  previousRoster: string[],
-  proposedRoster: string[],
-  maxChanges = 1,
-): boolean => {
-  const sameCount = previousRoster.filter((id) => proposedRoster.includes(id)).length;
-  return sameCount >= previousRoster.length - maxChanges;
-};
-
-/**
- * Get the most recent locked roster for a team member.
- * Returns the weeklyRoster with the highest week number.
- */
-export const getLatestLockedRoster = (
-  weeklyRosters: WeeklyRoster[],
-): string[] => {
-  if (weeklyRosters.length === 0) return [];
-  const sorted = [...weeklyRosters].sort((a, b) => b.week - a.week);
-  return sorted[0].castawayIds || [];
 };
 
 /**

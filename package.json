@@ -17,6 +17,7 @@
     "test:push-service": "node --test \"push-service/**/*.test.js\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
@@ -35,7 +36,8 @@
     "firebase-admin": "^13.7.0",
     "next": "^16.3.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@opentelemetry/api": "^1.9.0",

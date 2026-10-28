@@ -20,6 +20,7 @@ import { useTheme } from "@/lib/theme-context";
 import { useUserLeagues } from "@/hooks/useLeagues";
 import PWAInstallButton from "@/components/PWAInstallButton";
 import MessageBoard from "@/components/MessageBoard";
+import AssistantChat from "@/components/chat/AssistantChat";
 import SeasonRecapModal from "@/components/SeasonRecapModal";
 import { useSeasonRecap } from "@/hooks/useSeasonRecap";
 import Sidebar from "@/components/shell/Sidebar";
@@ -161,6 +162,9 @@ export default function DashboardLayout({
           onClose={handleRecapClose}
         />
       )}
+
+      {/* AI assistant — real accounts only; it reads and writes live league data */}
+      {user && !isDemoMode && userLeagues.length > 0 && <AssistantChat />}
 
       {/* Global message board drawer */}
       {user && activeLeague && (
