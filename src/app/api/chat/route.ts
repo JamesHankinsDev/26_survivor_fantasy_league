@@ -96,7 +96,14 @@ export async function POST(request: NextRequest) {
   }
   if (!history) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
-  if (!(await consumeDailyQuota(uid))) {
+  let withinQuota: boolean;
+  try {
+    withinQuota = await consumeDailyQuota(uid);
+  } catch (err) {
+    apiLogger.error("chat quota check failed", err);
+    return NextResponse.json({ error: "Something went wrong. Try again." }, { status: 500 });
+  }
+  if (!withinQuota) {
     return NextResponse.json(
       { error: "You've hit today's assistant limit. Try again tomorrow." },
       { status: 429 },
